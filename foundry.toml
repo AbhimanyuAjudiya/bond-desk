@@ -1,0 +1,41 @@
+[profile.default]
+src = "contracts/src"
+test = "contracts/test"
+script = "contracts/script"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.28"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+fs_permissions = [
+  { access = "read-write", path = "./deployments" },
+  { access = "read-write", path = "./ats" },
+]
+remappings = [
+  "forge-std/=lib/forge-std/src/",
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "hedera-harness/=harness/src/",
+  "ats/=ats/src/",
+]
+
+[profile.default.fuzz]
+runs = 256
+
+[profile.default.invariant]
+runs = 32
+depth = 32
+fail_on_revert = false
+
+# `FOUNDRY_PROFILE=harness forge test` -- the harness is a standalone deliverable with its own tests
+[profile.harness]
+src = "harness/src"
+test = "harness/test"
+script = "harness/script"
+
+# `FORK=1 FOUNDRY_PROFILE=fork forge test --fork-url hedera`
+[profile.fork]
+test = "contracts/test/fork"
+
+[rpc_endpoints]
+hedera = "${HEDERA_RPC_URL}"
