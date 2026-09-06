@@ -1,0 +1,10 @@
+{
+  "chainId": 296,
+  "atsTag": "v.8.0.0-ats",
+  "atsCommit": "be4f860e408e",
+  "factory": "0xd1F118A40f3b02883D35909eF2517e7EDd78379d",
+  "blr": "0xBA2D5FC2083A0b8f164c50e65d782087fBA18E0a",
+  "bondConfigId": "0x0000000000000000000000000000000000000000000000000000000000000002",
+  "bondConfigVersion": 1,
+  "bond": {}
+}
