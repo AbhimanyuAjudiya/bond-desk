@@ -42,3 +42,21 @@ Other behaviour verified in source and relied on by the scripts: `grantKyc` need
 | Config ids (all version 1) | equity `0x…01`, **bond `0x…02` (used)**, bondFixedRate `0x…03`, bondKpiLinkedRate `0x…04`, depositToken `0x…05`, loan `0x…06` |
 
 `deployBond` initialises the fixed-rate facet with `{0, 0}`; the demo bond keeps ATS's rate at zero and prices coupons from `BondRegistry` terms. Scripts must guard `factory.code.length > 0 && blr.code.length > 0` before use.
+
+## Create the bond
+
+`script/CreateBond.s.sol` issues the demo bond through the testnet factory (`deployBond`, config `0x…02` v1), then — in the order ATS enforces — `addIssuer(issuer)` → `grantKyc(issuer, INVESTOR1, INVESTOR2)` → `mint(issuer, BOND_SUPPLY)`. `INVESTOR3_NOKYC` is never KYC'd. The issuer (`HEDERA_PRIVATE_KEY`) is the token's `DEFAULT_ADMIN`, SSI manager, issuer, controller, corporate-action and interest-rate manager; `COMPLIANCE_OFFICER` holds KYC (shared with the issuer), freeze and pause.
+
+```sh
+# .env: HEDERA_RPC_URL, HEDERA_PRIVATE_KEY, COMPLIANCE_OFFICER, INVESTOR1, INVESTOR2, INVESTOR3_NOKYC
+#       optional BOND_SUPPLY (100), MATURITY_DELAY (31536000 = 365 days)
+forge script ats/script/CreateBond.s.sol:CreateBond --rpc-url hedera --broadcast --slow -vvvv
+```
+
+The script guards `factory` / `blr` code length, verifies the ISIN checksum (`US0378331005`, Luhn over `3028 0378331005` = 50), asserts KYC statuses, supply and maturity after the run, and writes the `bond` section of `testnet.json` (`token, isin, issuer, complianceOfficer, investors, nonKyc, supply, maturityDate`). `contracts/script/Deploy.s.sol` reads `bond.token` from there; `contracts/test/fork/AtsFork.t.sol` skips until it is filled. If the factory rejects the `bond` config, set `BOND_CONFIG_ID` to `0x…03` (`bondFixedRate`) in `src/ATSRoles.sol` and retry.
+
+Encoding proof without a chain (selector `0x29002951`, positional struct order verbatim from `IFactory.sol`):
+
+```sh
+forge script ats/script/CreateBond.s.sol:CreateBond --sig "dryRun()"
+```
