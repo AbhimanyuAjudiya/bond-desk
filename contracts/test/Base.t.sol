@@ -2,15 +2,20 @@
 pragma solidity 0.8.28;
 
 import {HederaTest} from "hedera-harness/HederaTest.sol";
+import {ROLE_SNAPSHOT, ROLE_MATURITY_REDEEMER} from "ats/ATSRoles.sol";
 import {BondRegistry} from "../src/BondRegistry.sol";
 import {NavOracle} from "../src/NavOracle.sol";
+import {CollateralVault} from "../src/CollateralVault.sol";
+import {BondMarket} from "../src/BondMarket.sol";
+import {BondLifecycle} from "../src/BondLifecycle.sol";
+import {RiskGate} from "../src/RiskGate.sol";
 import {MockATSBond} from "../src/mocks/MockATSBond.sol";
 import {MockUSDC} from "../src/mocks/MockUSDC.sol";
 import {MockAggregatorV3} from "../src/mocks/MockAggregatorV3.sol";
 
 /// @notice Shared fixture: HSS/HTS mocks etched at 0x16b/0x167, mocks + registry + oracle, seven actors, bond 1 registered.
-/// @dev Integration (E): deploy vault / market / lifecycle / riskGate inside `_deployExtensions`.
-///      `warpAndExecute` / `executeDueSchedules` (HederaTest) drive scheduled calls in C / E tests.
+/// @dev Unit suites (A / B / C) deploy only their own contract in `_deployExtensions`; the full desk lives in
+///      `BondDeskFullTest` below. `warpAndExecute` / `executeDueSchedules` (HederaTest) drive scheduled calls.
 abstract contract BondDeskTest is HederaTest {
     uint256 internal constant START = 1_700_000_000; // fixture clock; keeps `now - x` away from timestamp 1
     uint256 internal constant SIGNER_PK = 0xA11CE;
@@ -62,8 +67,7 @@ abstract contract BondDeskTest is HederaTest {
         _deployExtensions();
     }
 
-    /// @dev Hook: A / B / C deploy only their own contract here; E deploys vault, market, lifecycle, riskGate and
-    ///      grants GATE_ROLE (registry) / ROLE_SNAPSHOT, ROLE_MATURITY_REDEEMER (token).
+    /// @dev Hook: A / B / C deploy only their own contract here; `BondDeskFullTest` deploys the whole desk.
     function _deployExtensions() internal virtual {}
 
     function _kyc(address who) internal {
@@ -75,6 +79,57 @@ abstract contract BondDeskTest is HederaTest {
         vm.prank(admin);
         registry.grantRole(gate, who);
     }
+}
 
-    // `signVerdict(...)` / `verdict(bondId, action, cov, nonce)` helpers land with RiskGate (A / E).
+/// @notice The whole desk wired exactly as `contracts/script/Deploy.s.sol` wires it: vault (minCov 300 bps),
+///         market (no fee), lifecycle (20 HBAR HSS float), riskGate (signer, freshness 900), registry GATE_ROLE for
+///         riskGate + lifecycle, ATS ROLE_SNAPSHOT for lifecycle + vault, ROLE_MATURITY_REDEEMER for lifecycle,
+///         and every actor pre-approved on market + lifecycle. Storyline / fork tests extend this.
+/// @dev Kept separate from `BondDeskTest` because the unit suites declare same-named members locally.
+abstract contract BondDeskFullTest is BondDeskTest {
+    CollateralVault internal vault;
+    BondMarket internal market;
+    BondLifecycle internal lifecycle;
+    RiskGate internal riskGate;
+    address internal treasury = makeAddr("treasury");
+
+    function _deployExtensions() internal virtual override {
+        vault = new CollateralVault(registry, oracle, 300);
+        market = new BondMarket(registry, oracle, treasury, 0);
+        lifecycle = new BondLifecycle(registry);
+        riskGate = new RiskGate(registry, vault, oracle, signer, 900);
+        _grantGate(address(riskGate));
+        _grantGate(address(lifecycle));
+        token.grantRole(ROLE_SNAPSHOT, address(lifecycle));
+        token.grantRole(ROLE_SNAPSHOT, address(vault));
+        token.grantRole(ROLE_MATURITY_REDEEMER, address(lifecycle));
+        vm.deal(issuer, hbar(1_000));
+        vm.deal(address(lifecycle), hbar(20)); // HSS payer float
+
+        address[4] memory all = [issuer, inv1, inv2, inv3];
+        for (uint256 i; i < all.length; ++i) {
+            vm.startPrank(all[i]);
+            token.approve(address(market), type(uint256).max);
+            usdc.approve(address(market), type(uint256).max);
+            usdc.approve(address(lifecycle), type(uint256).max);
+            vm.stopPrank();
+        }
+    }
+
+    /// @dev Signs `v` with SIGNER_PK over the gate's EIP-712 digest (r || s || v, 65 bytes).
+    ///      Call before any `vm.prank`: `hashVerdict` is an external call and would consume it.
+    function signVerdict(RiskGate.Verdict memory v) internal view returns (bytes memory) {
+        (uint8 v8, bytes32 r, bytes32 s) = vm.sign(SIGNER_PK, riskGate.hashVerdict(v));
+        return abi.encodePacked(r, s, v8);
+    }
+
+    function verdict(uint256 bondId_, uint8 action, uint256 cov, uint64 nonce)
+        internal
+        view
+        returns (RiskGate.Verdict memory)
+    {
+        return RiskGate.Verdict({
+            bondId: bondId_, action: action, coverageObserved: cov, issuedAt: uint64(block.timestamp), nonce: nonce
+        });
+    }
 }
