@@ -1,0 +1,17 @@
+{
+  "schedule": "*/30 * * * * *",
+  "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+  "chainId": 11155111,
+  "lending": "0x88574e7Cc0027afd04951daa09B64d4441931ba1",
+  "veth": "0x5dED1a40c3D56dA42E7f932f781c0432556c9814",
+  "vusd": "0x6Fe92Ead5299040f50F095860b5A0A7A2D4041A2",
+  "gasLimit": "150000",
+  "secretIds": {
+    "walletKey": "LIQ_WALLET_KEY",
+    "triggerHf": "LIQ_TRIGGER_HF",
+    "targetHf": "LIQ_TARGET_HF",
+    "maxRepay": "LIQ_MAX_REPAY_VUSD",
+    "maxDeposit": "LIQ_MAX_DEPOSIT_VETH",
+    "cooldownSecs": "LIQ_COOLDOWN_SECS"
+  }
+}
