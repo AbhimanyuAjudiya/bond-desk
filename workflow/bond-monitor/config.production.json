@@ -1,0 +1,17 @@
+{
+  "schedule": "0 */2 * * * *",
+  "hederaRpcUrl": "https://testnet.hashio.io/api",
+  "chainId": 296,
+  "riskGate": "0x0000000000000000000000000000000000000000",
+  "bondId": 1,
+  "deliver": "direct",
+  "gasLimit": "500000",
+  "donReport": false,
+  "secretIds": {
+    "signerKey": "VERDICT_SIGNER_KEY",
+    "submitKey": "HEDERA_SUBMIT_KEY",
+    "warnBps": "BOND_WARN_BPS",
+    "freezeBps": "BOND_FREEZE_BPS",
+    "defaultBps": "BOND_DEFAULT_BPS"
+  }
+}
