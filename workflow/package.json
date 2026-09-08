@@ -1,0 +1,20 @@
+{
+  "name": "bond-desk-workflows",
+  "private": true,
+  "workspaces": ["bond-monitor", "liquidation-protection"],
+  "scripts": {
+    "test": "bun test shared bond-monitor",
+    "typecheck": "tsc -p bond-monitor --noEmit && tsc -p liquidation-protection --noEmit",
+    "setup:challenge": "bun scripts/setup-challenge.ts",
+    "sim:bond": "cre workflow simulate bond-monitor --target staging-settings --non-interactive --trigger-index 0",
+    "sim:liq": "cre workflow simulate liquidation-protection --target staging-settings --non-interactive --trigger-index 0"
+  },
+  "dependencies": {
+    "@chainlink/cre-sdk": "1.20.0",
+    "viem": "^2.54.2",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,10 @@
+# CRE project settings. Hedera (chain 296) is not a CRE-supported chain, so it never
+# appears here: both workflows reach it over plain JSON-RPC from inside the TEE.
+staging-settings:
+  rpcs:
+    - chain-name: ethereum-testnet-sepolia
+      url: https://ethereum-sepolia-rpc.publicnode.com
+production-settings:
+  rpcs:
+    - chain-name: ethereum-testnet-sepolia
+      url: https://ethereum-sepolia-rpc.publicnode.com

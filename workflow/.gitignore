@@ -1,0 +1,7 @@
+.env
+node_modules/
+.cre_build_tmp.js
+.workflow-temp-*
+*.wasm
+binary.wasm.br.b64
+dist/
