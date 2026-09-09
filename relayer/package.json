@@ -1,0 +1,18 @@
+{
+  "name": "bond-desk-relayer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "relayer": "node --env-file-if-exists=.env --experimental-strip-types src/index.ts",
+    "check": "node --experimental-strip-types src/index.ts submit --file test/fixture.json --dry",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "^2.54.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "5.9.3"
+  }
+}

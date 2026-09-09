@@ -1,0 +1,91 @@
+[
+  {
+    "type": "function",
+    "name": "snapshot",
+    "stateMutability": "view",
+    "inputs": [{ "name": "bondId", "type": "uint256" }],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "components": [
+          { "name": "coverageBps", "type": "uint256" },
+          { "name": "feedFresh", "type": "bool" },
+          { "name": "status", "type": "uint8" },
+          { "name": "mark", "type": "uint256" },
+          { "name": "collateral", "type": "uint256" },
+          { "name": "lastNonce", "type": "uint64" },
+          { "name": "lastAction", "type": "uint8" },
+          { "name": "nextCoupon", "type": "uint64" },
+          { "name": "maturity", "type": "uint64" },
+          { "name": "timestamp", "type": "uint64" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "submit",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "name": "v",
+        "type": "tuple",
+        "components": [
+          { "name": "bondId", "type": "uint256" },
+          { "name": "action", "type": "uint8" },
+          { "name": "coverageObserved", "type": "uint256" },
+          { "name": "issuedAt", "type": "uint64" },
+          { "name": "nonce", "type": "uint64" }
+        ]
+      },
+      { "name": "sig", "type": "bytes" }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "signer",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address" }]
+  },
+  {
+    "type": "function",
+    "name": "lastNonce",
+    "stateMutability": "view",
+    "inputs": [{ "name": "bondId", "type": "uint256" }],
+    "outputs": [{ "name": "", "type": "uint64" }]
+  },
+  {
+    "type": "function",
+    "name": "hashVerdict",
+    "stateMutability": "view",
+    "inputs": [
+      {
+        "name": "v",
+        "type": "tuple",
+        "components": [
+          { "name": "bondId", "type": "uint256" },
+          { "name": "action", "type": "uint8" },
+          { "name": "coverageObserved", "type": "uint256" },
+          { "name": "issuedAt", "type": "uint64" },
+          { "name": "nonce", "type": "uint64" }
+        ]
+      }
+    ],
+    "outputs": [{ "name": "", "type": "bytes32" }]
+  },
+  {
+    "type": "event",
+    "name": "VerdictApplied",
+    "anonymous": false,
+    "inputs": [
+      { "name": "bondId", "type": "uint256", "indexed": true },
+      { "name": "action", "type": "uint8", "indexed": false },
+      { "name": "coverageObserved", "type": "uint256", "indexed": false },
+      { "name": "nonce", "type": "uint64", "indexed": false },
+      { "name": "relayer", "type": "address", "indexed": false }
+    ]
+  }
+]

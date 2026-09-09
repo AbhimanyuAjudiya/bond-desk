@@ -1,0 +1,14 @@
+{
+  "verdict": {
+    "bondId": "1",
+    "action": 2,
+    "coverageObserved": "10500",
+    "issuedAt": "1789012345",
+    "nonce": "4"
+  },
+  "signature": "0xdf9b2500d80c68f5fff4ba99192e4a028d85603b41bc995c2efa1cc42fc87fc64b758a264bff6ec3668d5390b8ccec1a02df34b72ec6b7cf35dfd98c6ec4adc61b",
+  "chainId": 296,
+  "riskGate": "0x0000000000000000000000000000000000000000",
+  "txHash": null,
+  "signer": "0x63C75b2979C2c096e1503584723F08a9747340cA"
+}
