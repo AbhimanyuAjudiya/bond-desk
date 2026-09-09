@@ -1,0 +1,9 @@
+# Read by BuildKit for `docker build -f api/Dockerfile .` (a plain api/.dockerignore is ignored when the context is the repo root).
+# Keeps the Foundry tree, node_modules and secrets out of the build context; the Dockerfile only COPYs api/ and deployments/.
+*
+!api/package.json
+!api/package-lock.json
+!api/src
+!deployments
+**/.env
+**/.env.*

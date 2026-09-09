@@ -1,0 +1,19 @@
+# Render Blueprint for the Bond Desk API. Render only auto-detects render.yaml at the repo root:
+# copy this file there (or pass it when creating the Blueprint) and keep dockerContext = repo root.
+services:
+  - type: web
+    name: bond-desk-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: PUBLIC_URL
+        sync: false # e.g. https://bond-desk-api.onrender.com — used in links and openapi servers[]
+      - key: HEDERA_RPC_URL
+        value: https://testnet.hashio.io/api
+      - key: MIRROR_URL
+        value: https://testnet.mirrornode.hedera.com/api/v1
+      - key: CACHE_TTL_MS
+        value: "10000"
