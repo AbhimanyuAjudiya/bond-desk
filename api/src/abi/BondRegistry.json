@@ -1,0 +1,23 @@
+[
+  { "type": "function", "name": "bondCount", "stateMutability": "view", "inputs": [], "outputs": [{ "name": "", "type": "uint256" }] },
+  {
+    "type": "function", "name": "terms", "stateMutability": "view",
+    "inputs": [{ "name": "bondId", "type": "uint256" }],
+    "outputs": [{
+      "name": "", "type": "tuple",
+      "components": [
+        { "name": "token", "type": "address" },
+        { "name": "settlement", "type": "address" },
+        { "name": "issuer", "type": "address" },
+        { "name": "bondDecimals", "type": "uint8" },
+        { "name": "settlementDecimals", "type": "uint8" },
+        { "name": "faceValue", "type": "uint256" },
+        { "name": "couponRateBps", "type": "uint256" },
+        { "name": "couponInterval", "type": "uint64" },
+        { "name": "nextCoupon", "type": "uint64" },
+        { "name": "maturity", "type": "uint64" },
+        { "name": "status", "type": "uint8" }
+      ]
+    }]
+  }
+]

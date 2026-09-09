@@ -1,0 +1,49 @@
+[
+  { "type": "function", "name": "nextOrderId", "stateMutability": "view", "inputs": [], "outputs": [{ "name": "", "type": "uint256" }] },
+  {
+    "type": "function", "name": "orders", "stateMutability": "view",
+    "inputs": [{ "name": "orderId", "type": "uint256" }],
+    "outputs": [
+      { "name": "bondId", "type": "uint256" },
+      { "name": "maker", "type": "address" },
+      { "name": "isSell", "type": "bool" },
+      { "name": "amount", "type": "uint128" },
+      { "name": "price", "type": "uint128" },
+      { "name": "expiry", "type": "uint64" }
+    ]
+  },
+  {
+    "type": "function", "name": "quote", "stateMutability": "view",
+    "inputs": [{ "name": "bondId", "type": "uint256" }],
+    "outputs": [{ "name": "bestBid", "type": "uint128" }, { "name": "bestAsk", "type": "uint128" }]
+  },
+  {
+    "type": "event", "name": "OrderPlaced", "anonymous": false,
+    "inputs": [
+      { "name": "orderId", "type": "uint256", "indexed": true },
+      { "name": "bondId", "type": "uint256", "indexed": true },
+      { "name": "maker", "type": "address", "indexed": true },
+      { "name": "isSell", "type": "bool", "indexed": false },
+      { "name": "amount", "type": "uint128", "indexed": false },
+      { "name": "price", "type": "uint128", "indexed": false },
+      { "name": "expiry", "type": "uint64", "indexed": false }
+    ]
+  },
+  {
+    "type": "event", "name": "OrderCancelled", "anonymous": false,
+    "inputs": [{ "name": "orderId", "type": "uint256", "indexed": true }]
+  },
+  {
+    "type": "event", "name": "Filled", "anonymous": false,
+    "inputs": [
+      { "name": "bondId", "type": "uint256", "indexed": true },
+      { "name": "orderId", "type": "uint256", "indexed": true },
+      { "name": "maker", "type": "address", "indexed": false },
+      { "name": "taker", "type": "address", "indexed": false },
+      { "name": "amount", "type": "uint128", "indexed": false },
+      { "name": "price", "type": "uint128", "indexed": false },
+      { "name": "cost", "type": "uint256", "indexed": false },
+      { "name": "fee", "type": "uint256", "indexed": false }
+    ]
+  }
+]

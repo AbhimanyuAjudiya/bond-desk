@@ -1,0 +1,15 @@
+[
+  { "type": "function", "name": "couponCount", "stateMutability": "view", "inputs": [{ "name": "bondId", "type": "uint256" }], "outputs": [{ "name": "", "type": "uint256" }] },
+  {
+    "type": "function", "name": "coupons", "stateMutability": "view",
+    "inputs": [{ "name": "bondId", "type": "uint256" }, { "name": "couponId", "type": "uint256" }],
+    "outputs": [
+      { "name": "snapshotId", "type": "uint256" },
+      { "name": "amount", "type": "uint256" },
+      { "name": "claimedTotal", "type": "uint256" },
+      { "name": "paidAt", "type": "uint64" }
+    ]
+  },
+  { "type": "function", "name": "funded", "stateMutability": "view", "inputs": [{ "name": "bondId", "type": "uint256" }], "outputs": [{ "name": "", "type": "uint256" }] },
+  { "type": "function", "name": "scheduleOf", "stateMutability": "view", "inputs": [{ "name": "bondId", "type": "uint256" }], "outputs": [{ "name": "", "type": "address" }] }
+]

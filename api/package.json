@@ -1,0 +1,23 @@
+{
+  "name": "bond-desk-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.9" },
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env --experimental-strip-types src/index.ts",
+    "start": "node --env-file-if-exists=.env --experimental-strip-types src/index.ts",
+    "check": "node --experimental-strip-types test/smoke.mjs",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.0",
+    "hono": "^4.9.0",
+    "viem": "^2.54.2",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "5.9.3"
+  }
+}

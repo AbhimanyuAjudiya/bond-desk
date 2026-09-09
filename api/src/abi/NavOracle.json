@@ -1,0 +1,4 @@
+[
+  { "type": "function", "name": "mark", "stateMutability": "view", "inputs": [{ "name": "bondId", "type": "uint256" }], "outputs": [{ "name": "", "type": "uint256" }] },
+  { "type": "function", "name": "hbarUsd", "stateMutability": "view", "inputs": [], "outputs": [{ "name": "", "type": "uint256" }] }
+]
