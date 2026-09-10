@@ -24,7 +24,7 @@ contract BondLifecycle is RegistryAuth, ReentrancyGuard {
     }
 
     uint256 public constant YEAR = 365 days;
-    uint256 public constant SCHEDULE_GAS = 2_000_000;
+    uint256 public constant SCHEDULE_GAS = 4_000_000; // testnet: payCoupon + nested re-schedule needs ~1.9M, HSS charges a markup
     uint256 public constant PROBE_MAX = 8;
 
     // ponytail: one pool per bond serves coupons and principal; split into two if issuers need earmarking
