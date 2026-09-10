@@ -7,10 +7,13 @@ bond the wallet cannot buy or refuses a bond it can.**
 ## Setup
 
 Identical prompt, identical model and settings, identical tool access in both arms. The only difference is the
-Recipe text from `api/bazantic/recipe.md` ("Best eligible Hedera bond for a wallet"), given to arm B and withheld
+Recipe text from `api/bazantic/recipe.md` ("Best Eligible Hedera Bond Recommendation"), given to arm B and withheld
 from arm A. Both arms call the public API `https://wd6nrvmajt.ap-south-1.awsapprunner.com` and the public Hedera
-Mirror Node directly (the Bazantic gateway `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` was still `draft`
-and 404s until activated), so x402 spend is 0 in both arms.
+Mirror Node directly rather than the Bazantic gateway (now live at
+`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`), so x402 spend is 0 in both arms and the comparison is
+about agent behaviour. The Recipe itself is published as
+<https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation>; its dashboard test run on the kyc
+wallet recommended the same bond in 4 calls (`api/bazantic/recipe.md`).
 
 | Item | Value |
 |---|---|
@@ -66,8 +69,9 @@ concluding.
 
 Give the same prompt to the same model twice with the inputs above, from a fresh session each time, and save the
 transcript with the Calls list and the Answer paragraph. Score with the rubric in `api/bazantic/ab-test.md`.
-To run through the gateway instead of the API, set `BOND_DESK` to the gateway endpoint once it is active and pay
-with `baz curl`; the Recipe's five calls cost 25000 USDC base units per run at the suggested prices.
+To run through the gateway instead of the API, set `BOND_DESK` to
+`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` and pay with `baz curl`; the Recipe's five calls cost 2500
+millicents ($0.025) per run at the live prices, plus the mirror-node gateway's calls.
 
 ## Artifacts
 

@@ -3,9 +3,11 @@
 Read-only HTTP API over the Bond Desk contracts on Hedera testnet, written for LLM agents: every response is plain JSON
 with decimal-string big numbers, and `/openapi.json` carries agent-oriented descriptions plus `x-agent-hints`.
 
-It is hosted at **https://wd6nrvmajt.ap-south-1.awsapprunner.com** and registered as a Bazantic gateway in
-`draft` status, slug `axuvor5zujgk5hdcydzjdi742m`. Pricing, activation and the Recipe are dashboard-only; see
-`bazantic/gateway.md` for the registration record and the remaining steps.
+It is hosted at **https://wd6nrvmajt.ap-south-1.awsapprunner.com** and is live as a Bazantic gateway at
+**https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com** (slug `axuvor5zujgk5hdcydzjdi742m`, status active, MCP at
+`/mcp`, published to the marketplace pending Bazantic's listing verification). An unpaid `GET /bonds` on the
+gateway answers `402` with an x402 challenge. Prices, checks and the activation record are in
+`bazantic/gateway.md`; the published Recipe is in `bazantic/recipe.md`.
 
 Stack: Hono + `@hono/node-server` + viem + zod on Node 22 (`--experimental-strip-types`, no build step).
 

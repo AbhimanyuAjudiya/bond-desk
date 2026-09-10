@@ -45,7 +45,8 @@ above from `deployments/testnet.json`.
 | Coupon 2, self-scheduled from inside coupon 1 | [`0.0.10457462`](https://hashscan.io/testnet/schedule/0.0.10457462) (EVM `0x…009F9176`, `wait_for_expiry: true`, due `1789121682`) |
 | Chainlink liquidation challenge, `join()` on Sepolia | [`0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9`](https://sepolia.etherscan.io/tx/0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9) |
 | Bond Desk API (AWS App Runner, `ap-south-1`) | [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com) — `/healthz`, `/openapi.json`, six operations |
-| Bazantic gateway (status `draft`) | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`, MCP at `/mcp` — 404s until priced and activated |
+| Bazantic gateway (LIVE) | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`, MCP at `/mcp` — unpaid `GET /bonds` returns 402 with an x402 challenge |
+| Bazantic Recipe (published) | [Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation) — chains the mirror-node gateway `https://txrkgk2mezhbln4aeo2tdji6s4.bazgateway.com` with the Bond Desk gateway |
 
 Machine-readable source of truth: [`deployments/testnet.json`](deployments/testnet.json) and
 [`ats/testnet.json`](ats/testnet.json).
@@ -198,7 +199,7 @@ snapshot the decision used, so a resubmitted verdict is rejected.
 | Hedera, improve the harness | [`harness/README.md`](harness/README.md) (tiers, API table, before/after line counts), [`harness/src/HederaHarness.sol`](harness/src/HederaHarness.sol), [`harness/src/HederaTest.sol`](harness/src/HederaTest.sol), [`harness/src/mocks/MockHSS.sol`](harness/src/mocks/MockHSS.sol), [`harness/scripts/`](harness/scripts) (`doctor.sh`, `verify.sh`, `validate-schedule.sh`, `loc.sh`) |
 | Chainlink, confidential workflow | [`workflow/bond-monitor/handler.ts`](workflow/bond-monitor/handler.ts), [`workflow/shared/decide.ts`](workflow/shared/decide.ts), [`workflow/shared/rpc.ts`](workflow/shared/rpc.ts), evidence in [`docs/cre-evidence/`](docs/cre-evidence) |
 | Chainlink, liquidation challenge | [`workflow/liquidation-protection/main.ts`](workflow/liquidation-protection/main.ts), [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md) |
-| Bazantic | Live API [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com), gateway `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` (status `draft`); [`api/src/openapi.ts`](api/src/openapi.ts), registration record and remaining dashboard steps in [`api/bazantic/gateway.md`](api/bazantic/gateway.md), [`api/bazantic/recipe.md`](api/bazantic/recipe.md), [`api/bazantic/ab-test.md`](api/bazantic/ab-test.md), A/B protocol and status — (run 2026-09-10: Recipe 4/4 correct vs 2/4 raw) — in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) |
+| Bazantic | Live API [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com), live gateway `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` (402 + MCP) and published Recipe [Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation); [`api/src/openapi.ts`](api/src/openapi.ts), registration, prices and activation record in [`api/bazantic/gateway.md`](api/bazantic/gateway.md), Recipe source and its dashboard test run in [`api/bazantic/recipe.md`](api/bazantic/recipe.md), [`api/bazantic/ab-test.md`](api/bazantic/ab-test.md), A/B results — (run 2026-09-10: Recipe 4/4 correct vs 2/4 raw) — in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) |
 
 Demo script and shot list: [`docs/DEMO.md`](docs/DEMO.md). Sponsor feedback:
 [`docs/FEEDBACK/`](docs/FEEDBACK).
@@ -348,14 +349,15 @@ log and independent of `.env`. The check, and that caveat, are in
 - **Demo thresholds are scaled to faucet-sized collateral.** 100 HBAR against a 100-bond issue gives coverage in
   the hundreds of bps, so the demo policy sits far below anything a real bond would use. The ladder is the same;
   only the numbers are small.
-- **The Bazantic gateway is registered, but still a draft.** The API is hosted on AWS App Runner at
-  [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com), and the
-  gateway was registered from the CLI on 2026-09-10 as `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` with
-  `status: draft`. Per-method pricing, activation and the Recipe are dashboard-only — the CLI has no command for
-  any of them — and a draft gateway answers `404 page not found` rather than a 402, so those three steps
-  ([`api/bazantic/gateway.md`](api/bazantic/gateway.md)) and the A/B run in
-  [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) are still outstanding. The A/B run calls the public
-  API directly in both arms, so it does not wait on activation.
+- **The Bazantic gateway is live; only the marketplace listing is pending.** The API is hosted on AWS App
+  Runner at [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com);
+  the gateway `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` is active, priced per operation, serving 402
+  challenges and MCP, and the Recipe is published. What is outstanding is Bazantic's verification of the
+  marketplace listing, which is on their side. Pricing, activation and Recipe authoring are dashboard-only — the
+  CLI has no command for any of them ([`api/bazantic/gateway.md`](api/bazantic/gateway.md),
+  [`docs/FEEDBACK/bazantic.md`](docs/FEEDBACK/bazantic.md)). The A/B run in
+  [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) calls the public API directly in both arms, so its
+  x402 spend is `0` by design rather than by omission.
 - **CRE deploy access is requested, not granted.** The deploy-access form was submitted on 2026-09-10, so both
   workflows are exercised through `cre workflow simulate` only. The Sepolia `join()` and the position it created
   are live regardless.

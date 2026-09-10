@@ -1,20 +1,25 @@
-# Recipe — "Best eligible Hedera bond for a wallet"
+# Recipe — "Best Eligible Hedera Bond Recommendation"
 
-Recipes are authored in the bazantic.com UI. Everything between the two rules below is the text to paste into
-the Recipe body; the rest of this file is operator notes that stay in the repo.
+**Published:** <https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation>
+(slug `best-eligible-hedera-bond-recommendation`). Recipes are authored in the bazantic.com UI, so the live
+Recipe now lives in the dashboard; this file remains the source text and the operator notes.
 
-Prerequisites: both gateways are active and callable (`api/bazantic/gateway.md` steps 4–6b). A gateway URL is a
-subdomain per slug, `https://<slug>.bazgateway.com`. Substitute the mirror-node slug before pasting — the Recipe
-body must contain real, resolvable URLs.
+Tools bound in the dashboard: `getAccount` from **Hedera Mirror Node (testnet)**; `getWalletEligibility`,
+`listBonds`, `getBondRisk`, `getOrderbook` from the **Bond Desk API**. Input: a Hedera EVM wallet address.
 
-- `BOND_DESK = https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` (draft until activated in the dashboard)
-- `MIRROR = https://<hedera-mirror-node-slug>.bazgateway.com`
+Both gateways are active and callable (`api/bazantic/gateway.md` steps 4–6b). A gateway URL is a subdomain per
+slug, `https://<slug>.bazgateway.com`:
+
+- `BOND_DESK = https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` (active)
+- `MIRROR = https://txrkgk2mezhbln4aeo2tdji6s4.bazgateway.com` — our own **testnet** mirror-node gateway. The
+  pre-existing Bazantic "Hedera Mirror Node" service is mainnet-only and 404s for testnet wallets, and a tool
+  404 aborts the whole Recipe run (`tool_failed`), so step 1 must use this one.
 
 ---
 
 ## Title
 
-**Best eligible Hedera bond for a wallet**
+**Best Eligible Hedera Bond Recommendation**
 
 ## When to use this
 
@@ -29,7 +34,7 @@ recommendation that ignores eligibility is a recommendation to waste gas.
 
 ## Why two services
 
-- **Hedera Mirror Node** (existing Bazantic service) answers *does this wallet exist on Hedera and can it pay
+- **Hedera Mirror Node (testnet)** answers *does this wallet exist on Hedera and can it pay
   for gas*. An EVM address that has never been used has no Hedera account; nothing on-chain will work for it,
   and no amount of KYC changes that.
 - **Bond Desk API** (this project's gateway) answers *what does the compliance layer and the risk layer say* —
@@ -114,10 +119,21 @@ HashScan link, and an explicit list of what was excluded and why.
   may not be in `trades` yet. Never contradict `GET /bonds/{id}` (live `eth_call` state) with mirror-node
   history.
 
-## Example run
+## Example run — dashboard test run, 2026-09-11
 
-_To be filled in after deployment with a real transcript: input wallet, the five calls in order, the total x402
-spend in USDC, and the final answer. Recorded as `docs/bazantic-ab/B-run1.md`._
+Run from the Bazantic dashboard with the operator credential (no payment charged), wallet
+`0x8524F940EddC9EA98198Ee08071944a07C417D7b`: **4 tool calls, 43 s**.
+
+| Step | Result |
+|---|---|
+| 1 · `getAccount` | account `0.0.10455958`, 10 HBAR |
+| 3 · `getWalletEligibility` | `canHold: true` |
+| 4 · `listBonds` | bond 1 `BDB27`, `Active`, yield 505 bps, best ask 990000 |
+| 5 · `getBondRisk` | coverage 606 bps, `lastVerdict` FREEZE at nonce 2 |
+
+The answer recommended BDB27, disclosed the FREEZE as lifted (the bond is `Active`), and flagged both the thin
+coverage and the empty bid side of the book. Direct-API transcripts for the A/B arms are in
+`docs/bazantic-ab/`.
 
 ---
 
@@ -125,8 +141,8 @@ spend in USDC, and the final answer. Recorded as `docs/bazantic-ab/B-run1.md`._
 
 - The Recipe is deliberately five calls, not more: `getWalletEligibility` already folds the ATS KYC read and the
   bond status together, so there is no separate per-bond KYC call.
-- Cost per run on our gateway: `10000` (eligibility) + `5000` (bonds) + `10000` (risk) = `25000` USDC base units
-  = $0.025, plus the two mirror-node calls.
+- Cost per run on our gateway: `1000` (eligibility) + `500` (bonds) + `1000` (risk) = `2500` millicents =
+  $0.025, plus the mirror-node gateway's calls at `1000` mcents each.
 - Step 5's loop back into step 4 is the only branch. Keep it — it is what makes the frozen-bond demo land: the
   relayed CRE verdict flips `status` to `Frozen`, and the Recipe's answer changes without the Recipe changing.
 - The skip is gated on `status`, never on `lastVerdict`. An admin unfreeze cannot emit a new verdict —

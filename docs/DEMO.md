@@ -254,23 +254,23 @@ camera afterwards.
 
 ## 6 · 2:45–3:25 · The API is an agent-payable product
 
-The API is hosted on AWS App Runner at `$API`, and the gateway is registered as
-**`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`** — still `draft`, so it answers `404 page not found`
-rather than a 402. Three dashboard-only steps stand between here and the live shots below, all of them in
-`api/bazantic/gateway.md`: set the six prices, flip the status to active, and author the Recipe from
-`api/bazantic/recipe.md`. Then run the six-session protocol in `api/bazantic/ab-test.md`; until it runs, the A/B
-table has no numbers.
-
-Once the gateway is active, the shots are:
+The API is hosted on AWS App Runner at `$API`, and the gateway is **live** at
+**`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`**, priced per operation and published to the marketplace
+(`api/bazantic/gateway.md`). The shots:
 
 ```sh
 export GATEWAY=https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com
-curl -i "$GATEWAY/bonds" | head -20                                # 402 Payment Required + price
+curl -i "$GATEWAY/bonds" | head -20                                # 402 Payment Required + x402 challenge
 baz curl "$GATEWAY/bonds" --max-amount 0.02 --yes --json --verbose
 ```
 
-**On screen next:** the Bazantic UI running the Recipe *"Best eligible Hedera bond for a wallet"* against
-`$INVESTOR1`, a KYC'd wallet, asked about a bond that is still frozen from segment 5. The agent reaches
+The 402 challenge names `exact` on Base (`eip155:8453`), USDC `0x8335…2913`, `5000` base units ($0.005) to
+`0x8D67…DF40`. `baz curl` settles in **Base mainnet USDC**, so fund the account before recording — nothing has
+been spent from it yet.
+
+**On screen next:** the Bazantic UI running the published Recipe *"Best Eligible Hedera Bond Recommendation"*
+(<https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation>) against `$INVESTOR1`, a KYC'd wallet,
+asked about a bond that is still frozen from segment 5. The agent reaches
 `GET /bonds/{id}/risk`, reads `status: "Frozen"`, and refuses to recommend it, naming the coverage and the
 verdict nonce.
 
@@ -287,15 +287,15 @@ a HashScan link. The demo ends with a live book.
 Finish with the A/B table from `docs/bazantic-ab/README.md` on screen for three seconds: same model, same
 prompt, same tools, with and without the Recipe.
 
-**Say:** the Recipe chains an existing Bazantic service, Hedera Mirror Node, with this new one; the agent pays
-per call in USDC over x402; and the enclave's verdict from the previous segment, not a change to the Recipe, is
-what flipped the answer from a refusal to a recommendation.
+**Say:** the Recipe chains two gateways, Hedera Mirror Node (testnet) and this new one; the agent pays per call
+in USDC over x402; and the enclave's verdict from the previous segment, not a change to the Recipe, is what
+flipped the answer from a refusal to a recommendation.
 
-**Fallback if the gateway is still draft:** run `runUnfreeze()` on camera anyway, show
-`curl -s "$API/wallets/$INVESTOR1/eligibility?bondId=1"` next to
+**Fallback if the live Recipe run is slow or the USDC balance is short:** run `runUnfreeze()` on camera anyway,
+show `curl -s "$API/wallets/$INVESTOR1/eligibility?bondId=1"` next to
 `curl -s "$API/wallets/$INVESTOR3_NOKYC/eligibility?bondId=1"` (`canHold: true` versus `canHold: false, reason:
-"no-kyc"`) against the public URL, and say the gateway is registered but not yet priced or activated. Do not
-show a 402 that did not happen.
+"no-kyc"`) against the public URL, and cut to the recorded dashboard run in `api/bazantic/recipe.md`. Do not
+show a settlement that did not happen.
 
 Recorded unfreeze:
 `https://hashscan.io/testnet/transaction/0x00915e79ecb638a2713c5f4de923aea26c96b89bdc8994d8eac6a49b6bd8b10c`.
@@ -335,7 +335,7 @@ Cut in this order; each line is independent. All of them together are 110s, whic
 
 1. Segment 7 entirely (−25s). The harness and the challenge are links in the README, not the story.
 2. Segment 6's A/B table (−10s). It is in `docs/bazantic-ab/README.md` and in the written submission. If the
-   gateway is still draft, cut all of segment 6 except `runUnfreeze()` (−35s).
+   paid `baz curl` cannot be recorded, cut all of segment 6 except the 402 and `runUnfreeze()` (−35s).
 3. Segment 4's `curl …/risk` (−10s). The same coverage number is on screen again in segment 5.
 4. Segment 3's `runRejectedBuy()` script run (−15s), **only if** the `cast call` already printed decoded
    `ComplianceRejected(bytes1,bytes32)`. `cast` has no ABI for a project-local custom error and may print raw

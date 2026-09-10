@@ -5,10 +5,11 @@ APIs, not just prettier. This is the protocol that produces that evidence.
 
 ## Tracks entered, and why
 
-- **Best Recipe using sponsor APIs** — the Recipe chains **Hedera Mirror Node** (already a Bazantic service,
-  i.e. the sponsor API) with our own gateway. The mirror node is load-bearing, not decoration: it is the only
-  source for "does this EVM address have a Hedera account and enough HBAR for gas", which is the first
-  disqualifier in the flow.
+- **Best Recipe using sponsor APIs** — the Recipe chains the **Hedera Mirror Node** with our own gateway. The
+  mirror node is load-bearing, not decoration: it is the only source for "does this EVM address have a Hedera
+  account and enough HBAR for gas", which is the first disqualifier in the flow. Bazantic's existing mirror-node
+  service is mainnet-only, so we registered `Hedera Mirror Node (testnet)`
+  (`https://txrkgk2mezhbln4aeo2tdji6s4.bazgateway.com`) as a second gateway for it.
 - **Agentify a new API** — the **Bond Desk API** is new and is not a sponsor API. It exposes on-chain state that
   has no public endpoint anywhere: the ATS compliance verdict per wallet, the order book rebuilt from contract
   storage, and the last risk verdict signed inside a Chainlink CRE enclave.
@@ -21,10 +22,11 @@ Two arms, identical in everything except what the agent is given up front. **The
 arms is the Recipe text from `api/bazantic/recipe.md`.**
 
 Both arms call the public API directly at `https://wd6nrvmajt.ap-south-1.awsapprunner.com`, plus the public
-Hedera Mirror Node — not the Bazantic gateway, which is registered but still `draft` and therefore 404s
-(`gateway.md`). Same endpoints, same paths, same responses as the gateway will proxy; what direct calls do not
-produce is an x402 settlement, so the spend row of the template is `0` in both arms and the comparison is about
-agent behaviour rather than cost. Re-run through the gateway once it is active if a priced transcript is wanted.
+Hedera Mirror Node — not the Bazantic gateway. The gateway is live (`gateway.md`), but direct calls keep the two
+arms free of x402 settlement, so the spend row of the template is `0` in both arms and the comparison is about
+agent behaviour rather than cost. Point `BOND_DESK` at
+`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` and pay with `baz curl` for a priced transcript: same
+endpoints, same paths, same responses.
 
 | | Arm A (control) | Arm B (Recipe) |
 |---|---|---|
