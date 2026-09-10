@@ -66,7 +66,7 @@ flowchart LR
 
 ## The storyline, with receipts
 
-Every beat below is a transaction on Hedera testnet or a read against it, in the order it ran. Read-only beats
+Every beat below is a transaction on Hedera testnet or a read against it, in narrative order. Read-only beats
 are `cast call` reads, so they print a revert reason without spending gas.
 
 1. **Issuance through the live ATS factory.** `deployBond` on the factory already deployed on testnet, no fork
@@ -103,7 +103,9 @@ are `cast call` reads, so they print a revert reason without spending gas.
    The relay divides the 18-decimal value by 1e10, so the chain stores 1e10 tinybar. `coverageBps` is computed
    on-chain from `latestRoundData()` on the HBAR/USD feed, and read back as **762**.
 7. **A coupon the Hedera Schedule Service paid by itself, on the second attempt.** This is the beat that took a
-   redeploy, so it is worth reading in order.
+   redeploy, so it is worth reading in order. The redeploy and the working coupon were run last, after step 12,
+   which is why their timestamps (`1789035282`, `1789035662`) sit after the relay transactions in steps 8 and 10
+   (`issuedAt` `1789034121` and `1789034272`) and after the unfreeze.
 
    The first schedule was created at deploy time via HIP-1215 `scheduleCall` on the `0x16b` system contract
    ([`0x78dddb6a…a581686`](https://hashscan.io/testnet/transaction/0x78dddb6ab8bba5c4111ecbcbd31347b76e81091705849fcf985730f05a581686)),
@@ -141,9 +143,11 @@ are `cast call` reads, so they print a revert reason without spending gas.
 
    **The executed call also scheduled the next coupon from inside itself**, with no
    `NO_SCHEDULING_ALLOWED_AFTER_SCHEDULED_RECURSION`: entity
-   [`0.0.10457462`](https://hashscan.io/testnet/schedule/0.0.10457462), due `1789121682`, exactly 86,400 seconds
-   later. That is the self-scheduling timer, proved end to end. The mirror node is the authoritative record, not
-   the `SUCCESS` response code from `scheduleCall`, and
+   [`0.0.10457462`](https://hashscan.io/testnet/schedule/0.0.10457462), due `1789121682`. That is the coupon's
+   target second `1789035282` plus one 86,400-second interval: `payCoupon` advances `nextCoupon` by
+   `couponInterval` from the second the coupon was *due*, not from the second the Schedule Service happened to
+   execute it (`1789035662`). That is the self-scheduling timer, proved end to end. The mirror node is the
+   authoritative record, not the `SUCCESS` response code from `scheduleCall`, and
    `harness/scripts/validate-schedule.sh 0x00000000000000000000000000000000009F9174` exits 0 against it.
 8. **The enclave says WARN.** `cre workflow simulate bond-monitor` reads `RiskGate.snapshot(1)` over JSON-RPC
    from inside the TEE handler, decides against private thresholds, signs, and prints
@@ -161,7 +165,7 @@ are `cast call` reads, so they print a revert reason without spending gas.
     [`docs/cre-evidence/bond-monitor-20260910-1533-freeze.log`](docs/cre-evidence/bond-monitor-20260910-1533-freeze.log).
     Relayed:
     [`0x18d46f96…573db14e`](https://hashscan.io/testnet/transaction/0x18d46f9627d0e7808d2c78d73848c5aefd813d73147bd19abc74c8e0573db14e).
-    `RiskGate` recovered the signer, checked `nonce == lastNonce + 1`, and set the registry status to `Frozen`.
+    `RiskGate` recovered the signer, checked that the nonce had increased, and set the registry status to `Frozen`.
 11. **A KYC'd buyer with a valid order now cannot fill either.** Same `cast call` as step 4, from investor 1,
     reverts `BondNotActive` (selector `0x34823ce5`). Compliance and risk are separate gates and both are in the
     contract:
@@ -171,11 +175,15 @@ are `cast call` reads, so they print a revert reason without spending gas.
       --from 0x897f8b6F2876d61E661889b578F4435E406baFdf --rpc-url hedera
     ```
 
+    Only reproducible while the bond is `Frozen`. Step 12 unfroze it, so re-run today the call succeeds; relay a
+    FREEZE verdict again ([`docs/cre-evidence/README.md`](docs/cre-evidence/README.md)) to reproduce the revert.
+
 12. **Unfreezing is an admin action, not a verdict.** `RiskGate.unfreeze(1)`
     [`0x00915e79…6bd8b10c`](https://hashscan.io/testnet/transaction/0x00915e79ecb638a2713c5f4de923aea26c96b89bdc8994d8eac6a49b6bd8b10c).
     The gate only accepts enclave-signed verdicts, so it has no "clear" verdict; the bond keeps its last FREEZE
-    as history and consumers must gate on `status`. `GET /bonds/1/risk` shows exactly that today: `status`
-    `Active`, `coverageBps` 610, `lastNonce` 2, and `lastVerdict` still FREEZE at nonce 2.
+    as history and consumers must gate on `status`. `GET /bonds/1/risk` shows exactly that at the time of writing
+    (2026-09-10): `status` `Active`, `lastNonce` 2, and `lastVerdict` still FREEZE at nonce 2. `coverageBps` read
+    610 then; it is computed on-chain from the HBAR/USD feed and moves with it, so a fresh read will differ.
 
 Nonce 1 to nonce 2 across steps 8 and 10 is the replay guard doing its job: the nonce comes from the same
 snapshot the decision used, so a resubmitted verdict is rejected.
@@ -188,12 +196,16 @@ snapshot the decision used, so a resubmitted verdict is rejected.
 | Hedera, improve the harness | [`harness/README.md`](harness/README.md) (tiers, API table, before/after line counts), [`harness/src/HederaHarness.sol`](harness/src/HederaHarness.sol), [`harness/src/HederaTest.sol`](harness/src/HederaTest.sol), [`harness/src/mocks/MockHSS.sol`](harness/src/mocks/MockHSS.sol), [`harness/scripts/`](harness/scripts) (`doctor.sh`, `verify.sh`, `validate-schedule.sh`, `loc.sh`) |
 | Chainlink, confidential workflow | [`workflow/bond-monitor/handler.ts`](workflow/bond-monitor/handler.ts), [`workflow/shared/decide.ts`](workflow/shared/decide.ts), [`workflow/shared/rpc.ts`](workflow/shared/rpc.ts), evidence in [`docs/cre-evidence/`](docs/cre-evidence) |
 | Chainlink, liquidation challenge | [`workflow/liquidation-protection/main.ts`](workflow/liquidation-protection/main.ts), [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md) |
-| Bazantic | [`api/src/openapi.ts`](api/src/openapi.ts), [`api/bazantic/gateway.md`](api/bazantic/gateway.md), [`api/bazantic/recipe.md`](api/bazantic/recipe.md), [`api/bazantic/ab-test.md`](api/bazantic/ab-test.md), results in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) |
+| Bazantic | [`api/src/openapi.ts`](api/src/openapi.ts), [`api/bazantic/gateway.md`](api/bazantic/gateway.md), [`api/bazantic/recipe.md`](api/bazantic/recipe.md), [`api/bazantic/ab-test.md`](api/bazantic/ab-test.md), A/B protocol and status — not yet run — in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) |
 
 Demo script and shot list: [`docs/DEMO.md`](docs/DEMO.md). Sponsor feedback:
 [`docs/FEEDBACK/`](docs/FEEDBACK).
 
 ## Run it
+
+Toolchain, once: Foundry 1.5.x (`forge`), Node 22.9+ (`--experimental-strip-types`, no build step; `api` pins it
+in `engines`), Bun 1.2.21+ for the CRE workflows, and `jq`. `harness/scripts/doctor.sh` checks the
+Hedera-specific half of that.
 
 Contracts and harness, no credentials needed:
 
@@ -204,14 +216,14 @@ FOUNDRY_PROFILE=harness forge test           # 41 passed: HSS/HTS mocks, probe l
 FORK=1 forge test --match-path 'contracts/test/fork/*' --fork-url https://testnet.hashio.io/api
 ```
 
-Off-chain, no credentials needed:
+Off-chain, no credentials needed. Each line is run from the repo root and returns you there:
 
 ```sh
-cd workflow && bun install && bun test && bun run typecheck    # 16 tests: decide ladder, rpc, fake-runtime handler
-cd relayer && npm install && npm run check                     # offline: prints verified=true on test/fixture.json
-cd relayer && npm test && npm run typecheck
-cd api     && npm install && npm run check                     # boots against a placeholder deployment, asserts routes + openapi.json
-cd api     && npm start                                        # http://localhost:8787/healthz
+(cd workflow && bun install && bun test && bun run typecheck)   # 16 tests: decide ladder, rpc, fake-runtime handler
+(cd relayer  && npm install && npm run check)                   # offline: prints verified=true on test/fixture.json
+(cd relayer  && npm test && npm run typecheck)
+(cd api      && npm install && npm run check)                   # placeholder deployment: asserts routes + openapi.json
+(cd api      && npm start)                                      # http://localhost:8787/healthz
 ```
 
 CRE simulations need `cre login` (browser) and a `CRE_ETH_PRIVATE_KEY` in `workflow/.env`, even though the bond
@@ -283,7 +295,9 @@ exists only as a CRE secret and is only ever materialised inside the enclave, an
 signature as one log line.
 
 That signature is the trust boundary. `RiskGate.submit` recovers the signer, compares it to `signer()`, checks
-`nonce == lastNonce + 1` and an `issuedAt` freshness window, and does not care who sent the transaction. The
+`nonce > lastNonce` (strictly increasing) and an `issuedAt` freshness window, and does not care who sent the
+transaction. The workflow always signs `lastNonce + 1`, but the contract only requires the nonce to increase, so
+a verdict can never be replayed and a verdict that was signed and never relayed does not wedge the gate. The
 relayer is therefore a courier: it holds a funded Hedera key that can pay gas and nothing else, anyone can run
 one, and losing its key delays verdicts rather than forging them.
 
@@ -295,8 +309,12 @@ one, and losing its key delays verdicts rather than forging them.
 | the exact coverage in the workflow's own log line, which is bucketed to `>=150%` / `120-150%` / `100-120%` / `<100%` | `coverageObserved` in the verdict, because the contract needs it to be auditable |
 
 The private policy values live in `workflow/.env` and are shipped to CRE as secrets (`workflow/secrets.yaml`
-maps secret ids to env var names, never values). They are not in this repository and are not in any log:
-`docs/cre-evidence/README.md` carries the leak check that proves it.
+maps secret ids to env var names, never values). They are not in this repository, and the committed simulation
+logs were checked with a word-boundary match of every `.env` value of 4 or more characters: nothing the
+workflows write matches — no `[USER LOG]` line, no `VERDICT_JSON` field, and none of the private keys. The one
+word-boundary hit is a constant inside the CRE simulator's own fixed capability-limits banner, identical in every
+log and independent of `.env`. The check, and that caveat, are in
+[`docs/cre-evidence/README.md`](docs/cre-evidence/README.md).
 
 ## Known limits
 
@@ -337,6 +355,33 @@ maps secret ids to env var names, never values). They are not in this repository
   are live regardless.
 - **One process, one cache.** The API caches reads for 10 s in memory. It is a demo service, not an HA
   deployment.
+- **The relayer inbox is gitignored.** `relayer/inbox/*.json` and every `.env` are excluded, so the extracted
+  verdict files are not in the tree; both relayed verdicts are reproducible from the logs in
+  [`docs/cre-evidence/`](docs/cre-evidence) with `relayer/scripts/extract-verdict.sh`.
+
+The rest are contract behaviours as deployed. They are documented rather than changed, so the Sourcify
+exact-match verification above stays valid:
+
+- **`BondLifecycle.schedule()` reverts `AlreadyScheduled` on a stale pointer.** A scheduled run that executed and
+  then reverted leaves `scheduleOf` set and `scheduledFor == nextCoupon`, so the permissionless re-schedule
+  refuses even though nothing is armed. Recovery is a manual `payCoupon`, which clears the pointer and re-arms
+  the chain. A future version compares against the actual scheduled second instead of `nextCoupon`.
+- **Redeem before the final coupon.** The first `redeem()` sets `Matured` and `payCoupon` rejects `Matured`, so
+  any coupon still due at maturity has to be paid (`payCoupon`) before holders redeem. The demo terms leave no
+  coupon due at maturity.
+- **Seized collateral is shared pro-rata across the whole snapshot supply**, including the issuer's unsold
+  inventory. A production version would exclude the issuer's own balance.
+- **The settlement pool has no withdrawal path.** Over-funding, dust and unclaimable amounts stay in
+  `BondLifecycle`; only the HBAR payer float is recoverable (`withdrawHbar`).
+- **`BondMarket.quote()` scans every order id ever placed.** Enough spam orders push it past the relay's
+  `eth_call` gas cap. That is an order-book read only, so funds are unaffected. A per-bond index, or an
+  event-based off-chain book, is the upgrade.
+- **Four smaller ones.** `schedule()` has no status or maturity guard, so anyone can make an exhausted bond burn
+  one HSS run that reverts; `cost()` floors in the buyer's favour for bonds with `decimals > 0` (the demo bond
+  has 0 decimals); a DEFAULT verdict cannot land while the ATS token is paused, because `takeSnapshot` is
+  `onlyUnpaused`; and a fill against your own order is not rejected.
+- **The demo ISIN `US0378331005` was chosen only because the ATS factory validates the checksum.** It belongs to
+  a real listed equity and is not an issuance of that company. Testnet demo data.
 
 ## Repository layout
 

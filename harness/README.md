@@ -96,6 +96,8 @@ harness/scripts/validate-schedule.sh <schedule address> --wait 300         # Tie
 
 Mock semantics that match the network: expiry must be in `(now, now + 62 days]` (307 / 306), `to == 0` is 16, a schedule fires once even if the call reverts (`Executed(..., false, ...)`), `deleteSchedule` returns 201 / 212 / 213 / 22.
 
+Where `MockHSS` is more lenient than the real HSS, so a passing Tier 0 test is not proof on its own: `deleteSchedule` does not check that the caller created the schedule; execution does not debit a payer balance, so an underfunded payer never shows up; and `hasScheduleCapacity` ignores its gas argument entirely — it is gas-blind beyond the `noCapacity` flag and the `busy` map. Gas budgets and payer funding are Tier 3 / 3.5 findings.
+
 ## Before / after
 
 `harness/scripts/loc.sh` (non-blank, non-comment lines):

@@ -1,5 +1,10 @@
 # Bond Desk on Hedera — Project Blueprint
 
+> **Pre-build blueprint, kept for provenance.** The shipped design differs in places: the ATS pre-check is
+> `canTransferFrom(from, to, value, data)` returning `(bool, bytes1, bytes32)`; bond creation uses `deployBond`
+> on the existing testnet ATS factory; the CRE verdict is signed with viem inside `handlerInTee`. See
+> [`../README.md`](../README.md) for what actually runs.
+
 ## 1. One-line pitch
 
 A compliant corporate bond issued with Hedera's Asset Tokenization Studio, traded on an on-chain order book that enforces KYC at every fill, paying coupons on a self-scheduled timer, valued by Chainlink price data, and guarded by a confidential risk monitor whose rules never leave a secure enclave.

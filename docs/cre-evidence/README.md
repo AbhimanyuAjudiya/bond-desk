@@ -101,21 +101,28 @@ re-reads `RiskGate.snapshot(bondId)` and compares the nonce first.
 
 ```sh
 cd workflow
-for v in $(grep -v '^#' .env | grep -v '^$' | cut -d= -f2- | tr -d '"'); do
-  [ -n "$v" ] && grep -l -- "$v" ../docs/cre-evidence/*.log 2>/dev/null \
-    | sed "s/^/LEAK in /" | sed "s/$/ (matches an .env value)/"
-done
-echo "leak check done"
+while IFS= read -r l; do case "$l" in ''|\#*) continue;; esac; v="${l#*=}"; [ ${#v} -ge 4 ] || continue
+  grep -lE "(^|[^0-9A-Za-z])${v}([^0-9A-Za-z]|$)" ../docs/cre-evidence/*.log && echo "LEAK: $v"
+done < .env; echo "leak check done"
 ```
 
-Any output other than `leak check done` means a private key or a threshold reached a log file: delete the log,
-fix the offending log statement, re-run the simulation. Do not redact by hand. A redacted log is not evidence,
-and the underlying `console.log` will leak again on the next run.
+Two details matter. The match is **word-bounded**, not a substring: a bare `grep -F` on a short numeric policy
+value matches inside every unrelated number in the log and prints nothing but false hits. And values shorter
+than 4 characters are skipped for the same reason — a 1 to 3 digit threshold cannot be distinguished from
+coincidence, so the check would only produce noise. What is left is every private key and the longer policy
+values.
 
-The check covers every value in `.env`: the three bond thresholds, the five liquidation policy values, and all
-three private keys. It was run against the five logs in this directory before they were added, and printed
-`leak check done`. Run it again after any change to a log statement in `workflow/`, and once more immediately
-before the submission.
+Run as written against the five logs in this directory, the check reports exactly one hit, and it is not a
+leak: the CRE simulator opens every run with a fixed capability-limits banner (the
+`HTTP: … | ChainWrite … | WASM binary=…` line), whose numbers are the simulator's own constants and are byte
+for byte identical in all five logs — one of them collides with a short policy value. Nothing the workflows
+themselves write matches: no `[USER LOG]` line, no `VERDICT_JSON` field, and none of the three private keys
+appears anywhere.
+
+A hit on any other line is real: delete the log, fix the offending log statement, re-run the simulation. Do not
+redact by hand. A redacted log is not evidence, and the underlying log statement will leak again on the next
+run. Re-run the check after any change to a log statement in `workflow/`, and once more immediately before the
+submission.
 
 ## What these logs do not prove
 

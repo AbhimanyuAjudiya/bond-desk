@@ -11,8 +11,9 @@ so every shot is linkable afterwards.
 ## Before you hit record
 
 ```sh
-cd /Users/abhimanyu/Desktop/ethGlobal
-source .env                     # HEDERA_PRIVATE_KEY, RISK_SIGNER_KEY, INVESTOR1_KEY, INVESTOR3_KEY, RELAYER_PRIVATE_KEY
+cd bond-desk                    # the clone directory
+source .env                     # from .env.example: HEDERA_PRIVATE_KEY, RISK_SIGNER_KEY, INVESTOR1_KEY, INVESTOR3_KEY
+                                # RELAYER_PRIVATE_KEY is not in this file: it lives in relayer/.env (see relayer/.env.example)
 export HEDERA_RPC_URL=https://testnet.hashio.io/api
 
 # addresses come from the deploy artifact, never retyped
@@ -255,7 +256,7 @@ camera afterwards.
 **TODO: pending hosting.** Bazantic pins the endpoint URL at registration, so the gateway cannot be created
 until the API has a stable public HTTPS origin. Until then this segment has no live shots and the A/B table has
 no numbers. What has to happen first, in order, is in `api/bazantic/gateway.md`: deploy the API (Render
-blueprint in `api/render.yaml`), `baz gateway add --spec-url $PUBLIC_URL/openapi.json --endpoint $PUBLIC_URL`,
+blueprint `render.yaml` at the repo root), `baz gateway add --spec-url $PUBLIC_URL/openapi.json --endpoint $PUBLIC_URL`,
 set the six prices in the dashboard, author the Recipe from `api/bazantic/recipe.md`, then run the six-session
 protocol in `api/bazantic/ab-test.md`.
 

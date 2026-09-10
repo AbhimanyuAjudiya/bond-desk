@@ -17,7 +17,7 @@ curl -sSL https://app.chain.link/cre/install.sh | bash && cre version
 cre login && cre whoami                        # required even for simulate
 
 cd workflow
-cp .env.example .env                           # fill CRE_ETH_PRIVATE_KEY, VERDICT_SIGNER_KEY, thresholds
+cp .env.example .env                           # fill CRE_ETH_PRIVATE_KEY, CRE_VERDICT_SIGNER_KEY, CRE_BOND_*_BPS
 bun install
 bun test                                       # decide ladder + liquidation math + fake-runtime handler test
 bun run typecheck
@@ -42,10 +42,14 @@ cre workflow list --registry private
 Before committing any simulation log, make sure nothing from `.env` leaked into it:
 
 ```sh
-for v in $(grep -v '^#' .env | cut -d= -f2); do [ ${#v} -lt 8 ] && continue; grep -qF -- "$v" ../docs/cre-evidence/*.log && echo LEAK; done
+while IFS= read -r l; do case "$l" in ''|\#*) continue;; esac; v="${l#*=}"; [ ${#v} -ge 4 ] || continue
+  grep -lE "(^|[^0-9A-Za-z])${v}([^0-9A-Za-z]|$)" ../docs/cre-evidence/*.log && echo "LEAK: $v"
+done < .env; echo "leak check done"
 ```
 
-`bond-monitor/config.staging.json` ships `riskGate: 0x000…0`; point it at the deployed RiskGate (from `deployments/testnet.json`) before simulating against testnet.
+The match is word-bounded and values under 4 characters are skipped: a plain substring grep on a short numeric threshold hits inside every unrelated number in the log. `docs/cre-evidence/README.md` has the full check, including the one benign hit inside the simulator's own banner.
+
+Both committed configs (`bond-monitor/config.staging.json` and `config.production.json`) already point `riskGate` at the testnet deployment `0x1dFF1d5458D6a6f6af46014de76474DC3170C31B`; change it only if you redeploy `RiskGate` (the address is in `deployments/testnet.json`).
 
 ## What stays inside the enclave
 
@@ -61,9 +65,9 @@ Time comes from `runtime.now()` only; no `Date.now`, no `Math.random` (the SDK's
 
 ## Why Hedera over JSON-RPC, and why a relayed EIP-712 verdict
 
-Hedera is **not a CRE-supported chain**, so the EVM capability (`EVMClient`, `runtime.report` + forwarder) cannot read or write it. Inside the TEE the only I/O primitive is `HTTPClient.sendRequest`, so `shared/rpc.ts` speaks JSON-RPC to `https://testnet.hashio.io/api` directly and packs every read into one batch request (one HTTP call). The budget is 5 HTTP calls per execution; bond-monitor uses 1 (return mode) or 2 (direct mode: batch of reads + `eth_sendRawTransaction`), liquidation-protection uses 2 (batch of 8 reads + batch of 1–2 sends).
+Hedera is **not a CRE-supported chain**, so the EVM capability (`EVMClient`, `runtime.report` + forwarder) cannot read or write it. Inside the TEE the only I/O primitive is `HTTPClient.sendRequest`, so `shared/rpc.ts` speaks JSON-RPC to `https://testnet.hashio.io/api` directly and packs every read into one batch request (one HTTP call). The budget is 5 HTTP calls per execution; bond-monitor uses 1 (return mode) or 2 (direct mode: batch of reads + `eth_sendRawTransaction`), liquidation-protection uses 2 (one batch of nine sub-calls — eight reads plus the `onlyActive` probe — then a batch of 1–2 sends).
 
-Because no Chainlink forwarder exists on Hedera, the verdict has to carry its own proof: it is an EIP-712 `Verdict(uint256 bondId,uint8 action,uint256 coverageObserved,uint64 issuedAt,uint64 nonce)` under domain `{ BondDeskRiskGate, "1", 296, <RiskGate> }`, signed by a key that only exists as a CRE secret. `RiskGate.submit` recovers the signer, checks `nonce == lastNonce + 1` and freshness, and applies the action — so *anyone* can relay it (the `relayer/` CLI, or the enclave itself in direct mode) and nobody can forge or replay it. The relayer reads the `VERDICT_JSON {…}` log line verbatim:
+Because no Chainlink forwarder exists on Hedera, the verdict has to carry its own proof: it is an EIP-712 `Verdict(uint256 bondId,uint8 action,uint256 coverageObserved,uint64 issuedAt,uint64 nonce)` under domain `{ BondDeskRiskGate, "1", 296, <RiskGate> }`, signed by a key that only exists as a CRE secret. `RiskGate.submit` recovers the signer, checks `nonce > lastNonce` (strictly increasing) and freshness, and applies the action — the workflow always signs `lastNonce + 1`, but the contract only requires the nonce to increase — so *anyone* can relay it (the `relayer/` CLI, or the enclave itself in direct mode) and nobody can forge or replay it. The relayer reads the `VERDICT_JSON {…}` log line verbatim:
 
 ```json
 { "verdict": { "bondId": "1", "action": 2, "coverageObserved": "10500", "issuedAt": "1789012345", "nonce": "5" },
