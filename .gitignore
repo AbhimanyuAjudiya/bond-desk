@@ -13,3 +13,6 @@ binary.wasm.br.b64
 bun.lockb
 relayer/inbox/*.json
 .DS_Store
+broadcast/**/run-1*.json
+broadcast/**/run[A-Z]*-1*.json
+broadcast/**/dry-run/
