@@ -1,12 +1,16 @@
 # Bazantic A/B — does the Recipe change what the agent does?
 
-**Status: not yet run.** The protocol below is fixed, but the gateway it needs does not exist yet: Bazantic pins
-a gateway's endpoint URL at registration, and the Bond Desk API has no stable public HTTPS origin yet
-(`api/bazantic/gateway.md` has the blocked steps). None of the artifact files listed below have been produced.
-This README is the protocol and the scoring sheet, not a result.
+**Status: not yet run; results will be appended by a later commit.** The protocol below is fixed and the API it
+needs is live at `https://wd6nrvmajt.ap-south-1.awsapprunner.com`. Both arms call that public API directly, plus
+the public Hedera Mirror Node — not the Bazantic gateway, which is registered as
+`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` but still `draft` and therefore 404s until it is priced and
+activated in the dashboard (`api/bazantic/gateway.md`). Calling direct costs no x402, so the spend rows below
+are `0` in both arms. None of the artifact files listed below have been produced yet; this README is the
+protocol and the scoring sheet, not a result.
 
-Raw transcripts from the A/B test defined in `api/bazantic/ab-test.md`. Six runs, identical prompt and tools;
-the only difference is that arm B is given the Recipe *"Best eligible Hedera bond for a wallet"*.
+Raw transcripts from the A/B test defined in `api/bazantic/ab-test.md`. Six runs, identical prompt and identical
+tools; **the only difference is the Recipe text from `api/bazantic/recipe.md`** — *"Best eligible Hedera bond for
+a wallet"* — given to arm B and withheld from arm A.
 
 The claim under test is narrow and falsifiable: **without the Recipe an agent recommends a bond the wallet
 cannot legally buy.** These files are the evidence for or against it.
@@ -29,7 +33,7 @@ response wrong.
 |---|---|
 | `expected.md` | The hand-computed correct answer, produced **before** any run, from `GET /wallets/{addr}/eligibility`, `GET /bonds` and `GET /bonds/{id}/risk`. Everything is scored against this, not against intuition. |
 | `chain-state-before.json`, `chain-state-after.json` | Bond id, status, `bestAsk` and `coverageBps` captured either side of the six runs. They must be identical — if they are not, the arms saw different worlds and the comparison is void. |
-| `A-run1.md` … `A-run3.md` | Control arm: OpenAPI + Hedera Mirror Node over MCP, no Recipe. Full transcript, every tool call with its arguments. |
+| `A-run1.md` … `A-run3.md` | Control arm: Bond Desk OpenAPI + Hedera Mirror Node, called directly, no Recipe. Full transcript, every tool call with its arguments. |
 | `B-run1.md` … `B-run3.md` | Recipe arm: identical tools, plus the Recipe text. |
 | `recording-A.mp4`, `recording-B.mp4` | One screen recording per arm, back-to-back. The side-by-side is the demo-video segment. |
 

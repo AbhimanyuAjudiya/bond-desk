@@ -17,11 +17,18 @@ Both submissions point at the same gateway and the same recording; the A/B run i
 
 ## Protocol
 
-Two arms, identical in everything except what the agent is given up front.
+Two arms, identical in everything except what the agent is given up front. **The only difference between the
+arms is the Recipe text from `api/bazantic/recipe.md`.**
+
+Both arms call the public API directly at `https://wd6nrvmajt.ap-south-1.awsapprunner.com`, plus the public
+Hedera Mirror Node — not the Bazantic gateway, which is registered but still `draft` and therefore 404s
+(`gateway.md`). Same endpoints, same paths, same responses as the gateway will proxy; what direct calls do not
+produce is an x402 settlement, so the spend row of the template is `0` in both arms and the comparison is about
+agent behaviour rather than cost. Re-run through the gateway once it is active if a priced transcript is wanted.
 
 | | Arm A (control) | Arm B (Recipe) |
 |---|---|---|
-| Tools | Bond Desk OpenAPI + Hedera Mirror Node spec, over the Bazantic MCP endpoint | Same tools, unchanged |
+| Tools | Bond Desk OpenAPI + Hedera Mirror Node spec, called directly | Same tools, unchanged |
 | Extra context | none | the Recipe text from `api/bazantic/recipe.md` |
 | Prompt | identical | identical |
 | Model, temperature | same model, temperature 0 | same model, temperature 0 |
@@ -38,6 +45,7 @@ Run the six sessions back-to-back against the same chain state — do not deploy
 run 1 and run 6, or the arms are not comparable. Pin the chain state first:
 
 ```sh
+export PUBLIC_URL=https://wd6nrvmajt.ap-south-1.awsapprunner.com
 curl -s "$PUBLIC_URL/bonds" | jq -c '[.bonds[] | {id, status, bestAsk, coverageBps}]' \
   > docs/bazantic-ab/chain-state-before.json
 # … six runs …
@@ -66,7 +74,7 @@ Copy this table into each transcript's header and fill it from the run.
 | Risk / freeze check performed? | yes / no |
 | Tool calls, total | |
 | Tool calls, wasted (repeated, wrong endpoint, wrong arguments) | |
-| x402 spend, USDC base units | |
+| x402 spend, USDC base units (`0` while both arms call the API directly) | |
 | Wall-clock time to final answer | |
 | Hallucinated fields or numbers (list them) | |
 | Exclusions explained in the answer? | none / partial / all |

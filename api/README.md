@@ -1,9 +1,11 @@
 # Bond Desk API
 
 Read-only HTTP API over the Bond Desk contracts on Hedera testnet, written for LLM agents: every response is plain JSON
-with decimal-string big numbers, and `/openapi.json` carries agent-oriented descriptions plus `x-agent-hints`. It is the
-service the `bazantic/` runbook registers as a Bazantic gateway (not yet registered: Bazantic pins the endpoint
-URL at registration and the API is not hosted yet; see the root README `Known limits`).
+with decimal-string big numbers, and `/openapi.json` carries agent-oriented descriptions plus `x-agent-hints`.
+
+It is hosted at **https://wd6nrvmajt.ap-south-1.awsapprunner.com** and registered as a Bazantic gateway in
+`draft` status, slug `axuvor5zujgk5hdcydzjdi742m`. Pricing, activation and the Recipe are dashboard-only; see
+`bazantic/gateway.md` for the registration record and the remaining steps.
 
 Stack: Hono + `@hono/node-server` + viem + zod on Node 22 (`--experimental-strip-types`, no build step).
 
@@ -43,12 +45,16 @@ contract unfiltered and matches topics locally.
 
 ## Deploy
 
+Live on **AWS App Runner** (`ap-south-1`, smallest instance) at
+`https://wd6nrvmajt.ap-south-1.awsapprunner.com`, from this image pushed to ECR:
+
 ```sh
 docker build -f api/Dockerfile -t bond-desk-api .        # from the repo root; needs deployments/testnet.json
 docker run -p 8787:8787 -e PUBLIC_URL=https://<host> bond-desk-api
 ```
 
-`render.yaml` at the repo root is a Render Blueprint (`runtime: docker`, `dockerfilePath: ./api/Dockerfile`, context =
-repo root, health check `/healthz`); Render picks it up from there. Demo fallback without hosting:
-`cloudflared tunnel --url http://localhost:8787` and set `PUBLIC_URL` to the tunnel URL (Bazantic pins the endpoint at
-registration, so a new tunnel URL means a new gateway).
+App Runner health-checks `/healthz` and supplies `PUBLIC_URL`, which is what `servers[0].url` in
+`/openapi.json` reports. `render.yaml` at the repo root is a Render Blueprint (`runtime: docker`,
+`dockerfilePath: ./api/Dockerfile`, context = repo root, health check `/healthz`) kept as an alternative host
+rather than the deployment in use. Bazantic pins a gateway's endpoint at registration, so moving the API to a
+different host means a new gateway.

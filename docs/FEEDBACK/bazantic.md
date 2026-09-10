@@ -5,9 +5,36 @@ Most of this project's Bazantic work is registration and authoring rather than c
 provenance: **[observed]** = hit while building; **[to confirm]** = designed around, not yet exercised.
 
 State at the time of writing: signed in as **Abhimanyu** with scopes `gateway:read, gateway:write, recipe:read,
-recipe:write`. The gateway itself is not registered yet, because Bazantic pins the endpoint URL at registration
-and the Bond Desk API does not have a stable public HTTPS origin yet. Everything about the registration is
-scripted in `api/bazantic/gateway.md` and blocked on that one thing.
+recipe:write`. The gateway is registered — `baz gateway add` on 2026-09-10 11:40 UTC against the API's App
+Runner URL, returning id `05e95747-b9a2-4cae-9c62-c0f291a3fcd3` and slug `axuvor5zujgk5hdcydzjdi742m` — and sits
+in `draft`. What is left is pricing, activation and the Recipe, none of which the CLI can do; the full record is
+in `api/bazantic/gateway.md`.
+
+## Registration is genuinely one command **[observed]**
+
+`baz gateway add --spec-url … --endpoint … --name … --auth-type x402-mpp --status draft --json` worked first
+time and returned the whole record — `id`, `slug`, `endpointUrl`, `mcpUrl`, `category`, `status` — as JSON, with
+`category` inferred (`data`) rather than demanded. Nothing had to be clicked to get an API onto the platform.
+That is the strongest part of the product and the reason the gaps below are worth fixing: they are all in the
+half-step *after* the good CLI experience.
+
+## A draft gateway 404s instead of saying it is a draft **[observed]**
+
+While `status` is `draft`, `GET <endpointUrl>/bonds` and `POST <endpointUrl>/mcp` both return
+`404 page not found` from the edge (Fly). That is indistinguishable from a wrong slug, a wrong URL shape, or a
+gateway that was never created, and it sent us checking all three before concluding the status was the cause.
+A draft gateway is a known, named state on the platform's own side, so it should say so: `409` or `403` with
+`{"error":"gateway is in draft; activate it in the dashboard"}` costs nothing and removes the whole debugging
+detour. The same applies to an active-but-unpriced operation.
+
+## The gateway URL shape is a subdomain, not a path **[observed]**
+
+The real URL is `https://<slug>.bazgateway.com` (ours: `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`,
+MCP at `/mcp` under it). The public skill/docs page reads as though gateways are served as
+`https://bazgateway.com/<slug>`, so we wrote our first runbook and Recipe against the path form and had to fix
+every occurrence. Both forms look equally plausible from outside, and the wrong one fails as a 404 — the same
+404 a draft gateway returns, which compounds the previous item. Either the public page should show the
+subdomain form, or `bazgateway.com/<slug>` should redirect to it.
 
 ## The device sign-in link expires in 15 minutes **[observed]**
 
@@ -46,17 +73,21 @@ A Recipe is text; it is the part of this integration most worth version-controll
 right now it cannot be. `baz recipe create --file recipe.md` and `baz recipe get <id>` would make the whole
 integration reproducible from a repository, and the scopes suggest that was the intention.
 
-## Pricing is dashboard-only, so registration cannot be reproduced **[observed]**
+## Pricing and activation are dashboard-only, so a gateway cannot be reproduced **[observed]**
 
-`baz gateway add` takes `--spec-url`, `--endpoint`, `--name`, `--auth-type`, `--status`, but there is no way to
-set per-operation prices from the CLI. That means the interesting half of a gateway's configuration — the half a
-reviewer or a teammate would want to see — lives only in a dashboard and cannot be committed, diffed, code
-reviewed, or restored. Our repo can document the prices (`api/bazantic/gateway.md`) but cannot *apply* them.
+`baz --help` lists exactly `login`, `logout`, `whoami`, `gateway add`, `gateway list`, `curl`, `wallet` and
+`grant`. So `gateway add` can create a gateway but nothing can price it, activate it, or edit it afterwards —
+there is no `gateway update`, no pricing command, and no `recipe` command at all. The interesting half of a
+gateway's configuration, the half a reviewer or a teammate would want to see, lives only in a dashboard and
+cannot be committed, diffed, code reviewed, or restored. Our repo can document the prices
+(`api/bazantic/gateway.md`) but cannot *apply* them, and the one CLI-scriptable step deliberately ends in
+`draft` because shipping an active gateway with unpriced operations would mean giving the API away.
 
 Two options, either of which solves it:
 
 1. CLI flags or a config file: `baz gateway pricing set <id> --op listBonds --price 5000`, plus
-   `baz gateway pricing list <id> --json` so the current state is inspectable.
+   `baz gateway pricing list <id> --json` so the current state is inspectable, and a
+   `baz gateway activate <id>` so the last step of the lifecycle is scriptable too.
 2. Read prices from the OpenAPI document itself — an `x-bazantic-price` extension per operation. This is the
    better one: the price then lives next to the operation it prices, versioned with the API, and a redeploy of
    the spec updates the gateway. It also makes the whole registration a one-liner in CI.
@@ -66,12 +97,12 @@ unit label. Showing the USD equivalent live next to the input would prevent a cl
 
 ## The endpoint URL is fixed at registration **[to confirm]**
 
-Change the endpoint and you must create a new gateway. For anyone demoing from a tunnel (`cloudflared` URLs
-rotate on every restart) that means a fresh gateway, fresh pricing, and a fresh slug in every document and
-recording that referenced the old one. We have not hit this directly, because it is precisely why we have not
-registered yet: knowing the URL is pinned forced a hosting decision before the gateway could exist at all, and
-that decision is the one thing still outstanding in this integration. A team that discovers the constraint on
-demo day loses their gateway.
+Change the endpoint and you must create a new gateway — there is no `gateway update` to try. For anyone demoing
+from a tunnel (`cloudflared` URLs rotate on every restart) that means a fresh gateway, fresh pricing, and a
+fresh slug in every document and recording that referenced the old one. We did not hit it, because knowing the
+URL was pinned forced the hosting decision *before* registration: the API went onto App Runner first and the
+gateway was registered against that URL once. That is the right order, but it is only obvious to someone who
+already knows the constraint. A team that discovers it on demo day loses their gateway.
 
 Allowing the endpoint to be edited (with a re-fetch of the spec, and a warning) would be a small change with a
 large effect on the hackathon path specifically.
@@ -92,9 +123,10 @@ operations, price range — would directly increase the number and quality of Re
 platform actually wants. We will note in the A/B write-up whether the in-dashboard catalogue already covers
 this once we are logged in.
 
-## MCP surface **[to confirm during deployment]**
+## MCP surface **[to confirm after activation]**
 
-We are checking three things at registration time and will record what we find
+The gateway has an `mcpUrl` (`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/mcp`) but it 404s while the
+gateway is `draft`, so these three checks are blocked on the dashboard steps rather than on anything we control
 (`api/bazantic/gateway.md`, step 6):
 
 - Whether `tools/list` returns our OpenAPI `operationId` values as tool names, or generated slugs. Tool naming
@@ -117,4 +149,5 @@ response body makes the payment legible in a way a hidden metering dashboard nev
 `baz login` avoids putting a key anywhere near the repo, and it states the token's scope before you approve it.
 And the core idea, that an OpenAPI document plus a price is enough to make an API agent-payable with MCP for
 free, is a genuinely small amount of work for what it produces: our whole integration is one hosted spec, one
-`gateway add`, and six prices, and the only reason it is not done is the hosted spec.
+`gateway add`, and six prices. The first two took minutes from the CLI; the six prices are the part that still
+needs a browser.

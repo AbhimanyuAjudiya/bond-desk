@@ -25,7 +25,8 @@ export SCHEDULE=$(jq -r .schedule deployments/testnet.json)  # 0x000000000000000
 export BOND_ID=$(jq -r .bondId   deployments/testnet.json)   # 1
 export INVESTOR1=$(jq -r .wallets.investorKyc1 deployments/testnet.json)
 export INVESTOR3_NOKYC=$(jq -r .wallets.investorNoKyc deployments/testnet.json)
-export API=http://localhost:8787     # public URL pending hosting, see segment 6
+export API=https://wd6nrvmajt.ap-south-1.awsapprunner.com    # hosted on App Runner; `cd api && npm start` serves
+                                                             # the same routes on http://localhost:8787
 
 FS="forge script contracts/script/Demo.s.sol:Demo --rpc-url hedera --broadcast --slow --skip-simulation"
 ```
@@ -39,7 +40,7 @@ Pre-flight, all four must pass:
 ```sh
 cast chain-id --rpc-url "$HEDERA_RPC_URL"                                            # 296
 cast balance "$(cast wallet address --private-key $HEDERA_PRIVATE_KEY)" --rpc-url "$HEDERA_RPC_URL" --ether
-(cd api && npm start &) && sleep 3 && curl -sf "$API/healthz" | jq .                 # {"ok":true,"chainId":296,...}
+curl -sf "$API/healthz" | jq .                                                       # {"ok":true,"chainId":296,...}
 $FS --sig 'runApprovals()'                                                           # idempotent; do it now, not on camera
 ```
 
@@ -253,19 +254,19 @@ camera afterwards.
 
 ## 6 · 2:45–3:25 · The API is an agent-payable product
 
-**TODO: pending hosting.** Bazantic pins the endpoint URL at registration, so the gateway cannot be created
-until the API has a stable public HTTPS origin. Until then this segment has no live shots and the A/B table has
-no numbers. What has to happen first, in order, is in `api/bazantic/gateway.md`: deploy the API (Render
-blueprint `render.yaml` at the repo root), `baz gateway add --spec-url $PUBLIC_URL/openapi.json --endpoint $PUBLIC_URL`,
-set the six prices in the dashboard, author the Recipe from `api/bazantic/recipe.md`, then run the six-session
-protocol in `api/bazantic/ab-test.md`.
+The API is hosted on AWS App Runner at `$API`, and the gateway is registered as
+**`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`** — still `draft`, so it answers `404 page not found`
+rather than a 402. Three dashboard-only steps stand between here and the live shots below, all of them in
+`api/bazantic/gateway.md`: set the six prices, flip the status to active, and author the Recipe from
+`api/bazantic/recipe.md`. Then run the six-session protocol in `api/bazantic/ab-test.md`; until it runs, the A/B
+table has no numbers.
 
-Once the gateway exists, the intended shots are:
+Once the gateway is active, the shots are:
 
 ```sh
-# TODO: SLUG from `baz gateway list --json`
-curl -i "https://bazgateway.com/$SLUG/bonds" | head -20            # 402 Payment Required + price
-baz curl "https://bazgateway.com/$SLUG/bonds" --max-amount 0.02 --yes --json --verbose
+export GATEWAY=https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com
+curl -i "$GATEWAY/bonds" | head -20                                # 402 Payment Required + price
+baz curl "$GATEWAY/bonds" --max-amount 0.02 --yes --json --verbose
 ```
 
 **On screen next:** the Bazantic UI running the Recipe *"Best eligible Hedera bond for a wallet"* against
@@ -290,11 +291,11 @@ prompt, same tools, with and without the Recipe.
 per call in USDC over x402; and the enclave's verdict from the previous segment, not a change to the Recipe, is
 what flipped the answer from a refusal to a recommendation.
 
-**Fallback if hosting does not land:** run `runUnfreeze()` on camera anyway, show
+**Fallback if the gateway is still draft:** run `runUnfreeze()` on camera anyway, show
 `curl -s "$API/wallets/$INVESTOR1/eligibility?bondId=1"` next to
 `curl -s "$API/wallets/$INVESTOR3_NOKYC/eligibility?bondId=1"` (`canHold: true` versus `canHold: false, reason:
-"no-kyc"`), and say the gateway registration is documented and blocked on a public URL. Do not show a 402 that
-did not happen.
+"no-kyc"`) against the public URL, and say the gateway is registered but not yet priced or activated. Do not
+show a 402 that did not happen.
 
 Recorded unfreeze:
 `https://hashscan.io/testnet/transaction/0x00915e79ecb638a2713c5f4de923aea26c96b89bdc8994d8eac6a49b6bd8b10c`.
@@ -334,7 +335,7 @@ Cut in this order; each line is independent. All of them together are 110s, whic
 
 1. Segment 7 entirely (−25s). The harness and the challenge are links in the README, not the story.
 2. Segment 6's A/B table (−10s). It is in `docs/bazantic-ab/README.md` and in the written submission. If the
-   gateway is still unhosted, cut all of segment 6 except `runUnfreeze()` (−35s).
+   gateway is still draft, cut all of segment 6 except `runUnfreeze()` (−35s).
 3. Segment 4's `curl …/risk` (−10s). The same coverage number is on screen again in segment 5.
 4. Segment 3's `runRejectedBuy()` script run (−15s), **only if** the `cast call` already printed decoded
    `ComplianceRejected(bytes1,bytes32)`. `cast` has no ABI for a project-local custom error and may print raw

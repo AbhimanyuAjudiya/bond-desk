@@ -3,11 +3,12 @@
 Recipes are authored in the bazantic.com UI. Everything between the two rules below is the text to paste into
 the Recipe body; the rest of this file is operator notes that stay in the repo.
 
-Prerequisites: both gateways are active and callable (`api/bazantic/gateway.md` steps 4–6b). Substitute the two
-slugs before pasting — the Recipe body must contain real, resolvable URLs.
+Prerequisites: both gateways are active and callable (`api/bazantic/gateway.md` steps 4–6b). A gateway URL is a
+subdomain per slug, `https://<slug>.bazgateway.com`. Substitute the mirror-node slug before pasting — the Recipe
+body must contain real, resolvable URLs.
 
-- `BOND_DESK = https://bazgateway.com/<bond-desk-slug>`
-- `MIRROR = https://bazgateway.com/<hedera-mirror-node-slug>`
+- `BOND_DESK = https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` (draft until activated in the dashboard)
+- `MIRROR = https://<hedera-mirror-node-slug>.bazgateway.com`
 
 ---
 

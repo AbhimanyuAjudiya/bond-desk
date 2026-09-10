@@ -44,6 +44,8 @@ above from `deployments/testnet.json`.
 | Coupon 1, HSS schedule that paid it | [`0.0.10457460`](https://hashscan.io/testnet/schedule/0.0.10457460) (EVM `0x…009F9174`, executed at `1789035662.019`) |
 | Coupon 2, self-scheduled from inside coupon 1 | [`0.0.10457462`](https://hashscan.io/testnet/schedule/0.0.10457462) (EVM `0x…009F9176`, `wait_for_expiry: true`, due `1789121682`) |
 | Chainlink liquidation challenge, `join()` on Sepolia | [`0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9`](https://sepolia.etherscan.io/tx/0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9) |
+| Bond Desk API (AWS App Runner, `ap-south-1`) | [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com) — `/healthz`, `/openapi.json`, six operations |
+| Bazantic gateway (status `draft`) | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`, MCP at `/mcp` — 404s until priced and activated |
 
 Machine-readable source of truth: [`deployments/testnet.json`](deployments/testnet.json) and
 [`ats/testnet.json`](ats/testnet.json).
@@ -196,7 +198,7 @@ snapshot the decision used, so a resubmitted verdict is rejected.
 | Hedera, improve the harness | [`harness/README.md`](harness/README.md) (tiers, API table, before/after line counts), [`harness/src/HederaHarness.sol`](harness/src/HederaHarness.sol), [`harness/src/HederaTest.sol`](harness/src/HederaTest.sol), [`harness/src/mocks/MockHSS.sol`](harness/src/mocks/MockHSS.sol), [`harness/scripts/`](harness/scripts) (`doctor.sh`, `verify.sh`, `validate-schedule.sh`, `loc.sh`) |
 | Chainlink, confidential workflow | [`workflow/bond-monitor/handler.ts`](workflow/bond-monitor/handler.ts), [`workflow/shared/decide.ts`](workflow/shared/decide.ts), [`workflow/shared/rpc.ts`](workflow/shared/rpc.ts), evidence in [`docs/cre-evidence/`](docs/cre-evidence) |
 | Chainlink, liquidation challenge | [`workflow/liquidation-protection/main.ts`](workflow/liquidation-protection/main.ts), [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md) |
-| Bazantic | [`api/src/openapi.ts`](api/src/openapi.ts), [`api/bazantic/gateway.md`](api/bazantic/gateway.md), [`api/bazantic/recipe.md`](api/bazantic/recipe.md), [`api/bazantic/ab-test.md`](api/bazantic/ab-test.md), A/B protocol and status — not yet run — in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) |
+| Bazantic | Live API [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com), gateway `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` (status `draft`); [`api/src/openapi.ts`](api/src/openapi.ts), registration record and remaining dashboard steps in [`api/bazantic/gateway.md`](api/bazantic/gateway.md), [`api/bazantic/recipe.md`](api/bazantic/recipe.md), [`api/bazantic/ab-test.md`](api/bazantic/ab-test.md), A/B protocol and status — not yet run — in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) |
 
 Demo script and shot list: [`docs/DEMO.md`](docs/DEMO.md). Sponsor feedback:
 [`docs/FEEDBACK/`](docs/FEEDBACK).
@@ -346,10 +348,14 @@ log and independent of `.env`. The check, and that caveat, are in
 - **Demo thresholds are scaled to faucet-sized collateral.** 100 HBAR against a 100-bond issue gives coverage in
   the hundreds of bps, so the demo policy sits far below anything a real bond would use. The ladder is the same;
   only the numbers are small.
-- **The Bazantic gateway and the public API URL are pending hosting.** The API runs locally against testnet and
-  its OpenAPI document is complete, but the gateway registration, the Recipe and the A/B run in
-  [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) need a public HTTPS endpoint first, because
-  Bazantic pins the endpoint at registration.
+- **The Bazantic gateway is registered, but still a draft.** The API is hosted on AWS App Runner at
+  [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com), and the
+  gateway was registered from the CLI on 2026-09-10 as `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` with
+  `status: draft`. Per-method pricing, activation and the Recipe are dashboard-only — the CLI has no command for
+  any of them — and a draft gateway answers `404 page not found` rather than a 402, so those three steps
+  ([`api/bazantic/gateway.md`](api/bazantic/gateway.md)) and the A/B run in
+  [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) are still outstanding. The A/B run calls the public
+  API directly in both arms, so it does not wait on activation.
 - **CRE deploy access is requested, not granted.** The deploy-access form was submitted on 2026-09-10, so both
   workflows are exercised through `cre workflow simulate` only. The Sepolia `join()` and the position it created
   are live regardless.
