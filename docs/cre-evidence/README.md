@@ -1,0 +1,130 @@
+# CRE evidence
+
+Simulator output from the two confidential workflows, plus the Sepolia challenge record. A production TEE run
+produces no logs anyone can read, by design, so the simulator is the only place the behaviour is observable.
+
+Nothing here is written by hand. Every `.log` file is `tee`'d straight from the command in the table below,
+unedited, including the simulator's own banner stating that it is not a real TEE. `challenge.md` is the one
+hand-written file and every hash in it is pasted from a script's output.
+
+## Index
+
+| File | Command | What it proves |
+|---|---|---|
+| `bond-monitor-20260910-1527-warn.log` | `bun run sim:bond` | The confidential path runs end to end: the `Handler requested TEE Execution` banner, `[USER LOG]` lines, one batched `getSecrets`, one HTTP call (`eth_call RiskGate.snapshot(1)`), a decision, an in-enclave EIP-712 signature, and `VERDICT_JSON`. Verdict: `action=1` (WARN), `reason=below-warn`, `coverageObserved: 762`, `nonce: 1`. |
+| `bond-monitor-20260910-1533-freeze.log` | `bun run sim:bond`, after 20 HBAR left the vault | Same config (`Config hash 91df4789…` is identical in both runs), lower coverage, different verdict: `action=2` (FREEZE), `reason=below-freeze`, `coverageObserved: 610`, `nonce: 2`. Nonce 1 to 2 is the replay guard: the nonce comes from the same snapshot the decision used, so neither verdict can be resubmitted. |
+| `liquidation-protection-20260910-1424-nodebt.log` | `bun run sim:liq`, before `join()` | TEE banner, an empty position read from Sepolia (`hfChain` is `uint256` max, mapped to the sentinel `hf=1000000000`), `plan=no-debt`, result `SAFE`. No transaction is signed when there is nothing to defend. |
+| `liquidation-protection-20260910-1426-defend-reverted.log` | `bun run sim:liq`, right after `join()` | `hf=111` sits at or below the private trigger, so the enclave signed and broadcast `repay(100000)` (vUSD has 2 decimals, so 1,000.00 vUSD): [`0xf3e806bc…dc7effe8`](https://sepolia.etherscan.io/tx/0xf3e806bce55bc2ed87bd7bc3d9b7b3bbd604a4b1b4dc6f7514ace408dc7effe8), which **reverted with `Scenario has not started`**. The challenge contract's `onlyActive` gate only opens while Chainlink is running a scoring scenario. |
+| `liquidation-protection-20260910-1433-inactive.log` | `bun run sim:liq`, after adding the gate probe | A ninth sub-call in the same JSON-RPC batch simulates `repay(1)` with `eth_call`. The workflow sees the closed gate, logs `plan=scenario-inactive`, returns `INACTIVE`, and spends no gas. During a live scenario the probe succeeds and the defend path runs unchanged. |
+| `challenge.md` | `bun run setup:challenge` | The two `approve` hashes and the `join()` hash on Sepolia, the participant wallet, and the position `join()` created. Required for the Chainlink Automated Liquidation Protection Challenge. |
+
+## The verdicts that reached Hedera
+
+The two bond-monitor verdicts above were relayed to `RiskGate` at
+`0x1dFF1d5458D6a6f6af46014de76474DC3170C31B` on chain 296. The relayer verified each signature locally before
+spending gas, then submitted it.
+
+| Verdict | Action | Coverage | Nonce | Relay tx |
+|---|---|---|---|---|
+| `bond-monitor-20260910-1527-warn.log` | WARN | 762 bps | 1 | [`0xe534d72b…c6e085dd7b6`](https://hashscan.io/testnet/transaction/0xe534d72b2f9ec132756dc66b63e1476b05a50d13f8613b69a327ac6e085dd7b6) |
+| `bond-monitor-20260910-1533-freeze.log` | FREEZE | 610 bps | 2 | [`0x18d46f96…573db14e`](https://hashscan.io/testnet/transaction/0x18d46f9627d0e7808d2c78d73848c5aefd813d73147bd19abc74c8e0573db14e) |
+
+After the FREEZE landed, `BondRegistry.status(1)` is `Frozen` and a fill from a KYC'd wallet reverts
+`BondNotActive` (selector `0x34823ce5`). The full storyline with every transaction is in the root `README.md`.
+
+## Log line shape
+
+`bond-monitor` prints `bond=<id> status=<name> coverage=<bucket> action=<NAME> reason=<slug> nonce=<n>`, where
+the bucket is one of `>=150%` / `120-150%` / `100-120%` / `<100%`. The exact coverage and every threshold stay
+inside the enclave. `VERDICT_JSON` carries only fields that are about to be published on-chain anyway: `bondId`,
+`action`, `coverageObserved`, `issuedAt`, `nonce`, the signature, the chain id and the `RiskGate` address.
+
+`liquidation-protection` prints `liq hf=<sentinel-or-value> hfChain=<raw> plan=<slug> txs=<sent>/<planned>`, or
+`liq plan=scenario-inactive`. The private trigger, target, caps and cooldown never appear.
+
+## Reproduce
+
+```sh
+cd workflow
+cp .env.example .env        # then fill it in; .env is gitignored
+bun install
+bun test                    # decide ladder, rpc batching, fake-runtime handler test
+bun run typecheck
+
+mkdir -p ../docs/cre-evidence
+bun run sim:bond 2>&1 | tee ../docs/cre-evidence/bond-monitor-$(date +%Y%m%d-%H%M)-warn.log
+bun run sim:liq  2>&1 | tee ../docs/cre-evidence/liquidation-protection-$(date +%Y%m%d-%H%M)-nodebt.log
+```
+
+`cre workflow simulate` (what `sim:bond` and `sim:liq` wrap) requires `cre login` in a browser **and** a
+`CRE_ETH_PRIVATE_KEY` in `.env` just to boot, even for a simulation that spends nothing. See
+`docs/FEEDBACK/chainlink.md`. Without a login the reproduction stops at `bun test && bun run typecheck`, which
+still exercises the whole policy module.
+
+Per-file notes:
+
+- **The WARN and FREEZE pair.** The two logs differ because chain state differed, not because a threshold moved.
+  To reproduce: run `sim:bond`, then withdraw collateral from the vault, then run it again.
+
+  ```sh
+  # 2000000000 = 20 HBAR in tinybar: the vault stores collateral in the units the Hedera EVM sees,
+  # and a function argument is not converted by the relay the way `value` is.
+  cast send 0x82db4a2ba9859816D60E3d3CE2F6F1E29818FaF7 'withdraw(uint256,uint256)' 1 2000000000 \
+    --private-key "$HEDERA_PRIVATE_KEY" --gas-limit 400000 --rpc-url hedera
+  ```
+
+  The explicit `--gas-limit` is required: the relay's `eth_estimateGas` under-estimates a call that forwards
+  native HBAR out of a contract, and the first attempt without it reverted. 762 bps at 100 HBAR times 0.8 is
+  610 bps at 80 HBAR, which is what the second log observed.
+- **The reverted defend and the INACTIVE probe.** These two are a before/after pair on the same code path.
+  `1426` is the naive version that trusts the challenge contract to accept a repay; `1433` adds the `eth_call`
+  probe and declines. Both run against the live position created by `join()`, so re-running `1426` today would
+  revert the same way until Chainlink opens a scenario.
+- **A fresh bond-monitor run reads live state.** The coverage bucket depends on what `CollateralVault` holds at
+  that moment, and the nonce depends on how many verdicts have already been applied. The verdict in a new log
+  will not match the ones above.
+
+Relaying a verdict out of a log:
+
+```sh
+relayer/scripts/extract-verdict.sh < docs/cre-evidence/bond-monitor-20260910-1533-freeze.log \
+  > relayer/inbox/freeze.json
+cd relayer
+RISKGATE_ADDRESS=0x1dFF1d5458D6a6f6af46014de76474DC3170C31B npm run relayer -- \
+  submit --file inbox/freeze.json
+```
+
+An already-applied verdict prints `{"skipped":"already-applied"}` instead of re-sending, because the relayer
+re-reads `RiskGate.snapshot(bondId)` and compares the nonce first.
+
+## Secret-leak check, run before committing any log
+
+```sh
+cd workflow
+for v in $(grep -v '^#' .env | grep -v '^$' | cut -d= -f2- | tr -d '"'); do
+  [ -n "$v" ] && grep -l -- "$v" ../docs/cre-evidence/*.log 2>/dev/null \
+    | sed "s/^/LEAK in /" | sed "s/$/ (matches an .env value)/"
+done
+echo "leak check done"
+```
+
+Any output other than `leak check done` means a private key or a threshold reached a log file: delete the log,
+fix the offending log statement, re-run the simulation. Do not redact by hand. A redacted log is not evidence,
+and the underlying `console.log` will leak again on the next run.
+
+The check covers every value in `.env`: the three bond thresholds, the five liquidation policy values, and all
+three private keys. It was run against the five logs in this directory before they were added, and printed
+`leak check done`. Run it again after any change to a log statement in `workflow/`, and once more immediately
+before the submission.
+
+## What these logs do not prove
+
+- **They are not enclave attestations.** The simulator says so itself, in the banner at the top of every file. A
+  production run in a real enclave produces no output we can capture. Nothing here proves the signing key was
+  inside a TEE, only that the workflow is written to run there and behaves as specified. The missing primitive
+  is discussed in `docs/FEEDBACK/chainlink.md`.
+- **`don-report=ok` attests to a DON round**, not to the enclave that produced the payload.
+- **They do not prove on-chain effect on their own.** That is the relay transaction table above, and the full
+  storyline in the root `README.md`.
+- **The workflows are not deployed.** CRE deploy access was requested on 2026-09-10 and is not enabled yet, so
+  `cre workflow deploy` has not run and the deployment record in `challenge.md` is still open.
