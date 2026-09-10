@@ -1,0 +1,42 @@
+Initializing...
+Loading settings...
+Checking RPC connectivity...
+Compiling workflow...
+✓ Workflow compiled
+✓ Simulation limits enabled
+  HTTP: req=120kb resp=250kb timeout=10s | ConfHTTP: req=125kb resp=500kb timeout=1m30s | Consensus obs=25kb | ChainWrite evm_report=50kb evm_gas=10000000 solana_report=265b solana_cu=300000 | WASM binary=100mb compressed=20mb
+  Binary hash: beb0ba7b961a9a7f3735bb3b20a80c4cbfabbb594b903815e865aaac7d1dd3f1
+  Config hash: 515b79e71ac22fffffc70893f2759c9605b8a92ceeae8c4f3e81d424764b736b
+2026-09-10T14:26:55Z [SIMULATION] Simulator Initialized
+
+2026-09-10T14:26:55Z [SIMULATION] Running trigger trigger=cron-trigger@1.0.0
+╭────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Handler requested TEE Execution                                                                    │
+│ The simulator is not a real TEE, and is meant to debug.                                            │
+│ Do not use it for sensitive information.                                                           │
+│ During real execution, user logs for this trigger will not be visible, and will not leave the TEE. │
+│ They are presented in the simulator for debugging only.                                            │
+│                                                                                                    │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+2026-09-10T14:26:56Z [USER LOG] liq hf=111 hfChain=111 plan=defend txs=1/1
+
+✓ Workflow Simulation Result:
+{
+  "deposit": "0",
+  "hf": "111",
+  "repay": "100000",
+  "status": "DEFENDED",
+  "txHashes": [
+    "0xf3e806bce55bc2ed87bd7bc3d9b7b3bbd604a4b1b4dc6f7514ace408dc7effe8"
+  ]
+}
+
+2026-09-10T14:26:56Z [SIMULATION] Execution finished signal received
+2026-09-10T14:26:56Z [SIMULATION] Skipping WorkflowEngineV2
+
+╭──────────────────────────────────────────────────────╮
+│ Simulation complete! Ready to deploy your workflow?  │
+│                                                      │
+│ Run cre account access to request deployment access. │
+╰──────────────────────────────────────────────────────╯

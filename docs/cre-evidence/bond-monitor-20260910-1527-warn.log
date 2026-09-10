@@ -1,0 +1,47 @@
+Initializing...
+Loading settings...
+Checking RPC connectivity...
+Compiling workflow...
+✓ Workflow compiled
+✓ Simulation limits enabled
+  HTTP: req=120kb resp=250kb timeout=10s | ConfHTTP: req=125kb resp=500kb timeout=1m30s | Consensus obs=25kb | ChainWrite evm_report=50kb evm_gas=10000000 solana_report=265b solana_cu=300000 | WASM binary=100mb compressed=20mb
+  Binary hash: 9d83766748564351815743f5b8e4a8c80887b1a7eccdc1c16d46fb7021c81ed4
+  Config hash: 91df4789cadad81fabbc759ea6240b1b0f4d6a7ab0e37f9670910bc18d448bed
+2026-09-10T15:25:20Z [SIMULATION] Simulator Initialized
+
+2026-09-10T15:25:20Z [SIMULATION] Running trigger trigger=cron-trigger@1.0.0
+╭────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Handler requested TEE Execution                                                                    │
+│ The simulator is not a real TEE, and is meant to debug.                                            │
+│ Do not use it for sensitive information.                                                           │
+│ During real execution, user logs for this trigger will not be visible, and will not leave the TEE. │
+│ They are presented in the simulator for debugging only.                                            │
+│                                                                                                    │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+2026-09-10T15:25:21Z [USER LOG] bond-monitor bond=1 status=Active coverage=<100% action=WARN reason=below-warn nonce=1
+2026-09-10T15:25:21Z [USER LOG] VERDICT_JSON {"verdict":{"bondId":"1","action":1,"coverageObserved":"762","issuedAt":"1789034121","nonce":"1"},"signature":"0xb04d18e6a3771bfd83a5dbebee3206e55bfb95bd1e92ac8d7b51e00efc429a632f746105776cb5e42a1924ccc2cc0b94558c2efec10a79df6fd1ff0b638e55f61b","chainId":296,"riskGate":"0x1dFF1d5458D6a6f6af46014de76474DC3170C31B","txHash":null}
+2026-09-10T15:25:21Z [USER LOG] bond-monitor bond=1 don-report=ok
+
+✓ Workflow Simulation Result:
+{
+  "chainId": 296,
+  "riskGate": "0x1dFF1d5458D6a6f6af46014de76474DC3170C31B",
+  "signature": "0xb04d18e6a3771bfd83a5dbebee3206e55bfb95bd1e92ac8d7b51e00efc429a632f746105776cb5e42a1924ccc2cc0b94558c2efec10a79df6fd1ff0b638e55f61b",
+  "verdict": {
+    "action": 1,
+    "bondId": "1",
+    "coverageObserved": "762",
+    "issuedAt": "1789034121",
+    "nonce": "1"
+  }
+}
+
+2026-09-10T15:25:21Z [SIMULATION] Execution finished signal received
+2026-09-10T15:25:21Z [SIMULATION] Skipping WorkflowEngineV2
+
+╭──────────────────────────────────────────────────────╮
+│ Simulation complete! Ready to deploy your workflow?  │
+│                                                      │
+│ Run cre account access to request deployment access. │
+╰──────────────────────────────────────────────────────╯
