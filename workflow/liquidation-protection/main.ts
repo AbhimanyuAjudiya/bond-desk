@@ -89,12 +89,15 @@ const run = async (runtime: TeeRuntime<Config>) => {
     gasPrice(),
     ethCallFrom(me, c.lending, encodeFunctionData({ abi: LENDING, functionName: "repay", args: [1n] })),
   ])
+  // Any probe failure means a real repay would fail the same way (gate closed, allowance, paused...):
+  // skip this run instead of paying gas for a revert. The reason is the node's text, never a policy value.
   const probe = settled[8]
-  if (probe.error !== undefined && /not started|not active|paused|closed/i.test(probe.error)) {
-    runtime.log("liq plan=scenario-inactive")
+  if (probe.error !== undefined) {
+    runtime.log(`liq plan=scenario-inactive (${/not started/i.test(probe.error) ? "gate closed" : "probe failed"})`)
     return { status: "INACTIVE" }
   }
-  const failed = settled.slice(0, 8).find((s) => s.error !== undefined)
+  // calcHF is informational (hfChain= in the log); every other read is required.
+  const failed = settled.slice(0, 8).find((s, i) => i !== 1 && s.error !== undefined)
   if (failed) throw new Error(`rpc read failed: ${failed.error}`)
   const [posRaw, hfRaw, priceRaw, vusdRaw, vethRaw, nLatest, nPending, gp] = settled.slice(0, 8).map((s) => s.result)
   if (hex(nPending) > hex(nLatest)) {
@@ -116,7 +119,7 @@ const run = async (runtime: TeeRuntime<Config>) => {
   )
   const hf = plan.hf.toString()
   if (plan.repay === 0n && plan.deposit === 0n) {
-    runtime.log(`liq hf=${hf} hfChain=${hex(hfRaw)} plan=${plan.reason}`)
+    runtime.log(`liq hf=${hf} hfChain=${hfRaw === undefined ? "n/a" : hex(hfRaw)} plan=${plan.reason}`)
     return { status: STATUS[plan.reason], hf }
   }
 
@@ -132,7 +135,7 @@ const run = async (runtime: TeeRuntime<Config>) => {
   const sends = batchSettled(r, signed.map(sendRaw))
   const txHashes = sends.flatMap((s) => (s.error === undefined ? [s.result as Hex] : []))
   sends.forEach((s, i) => s.error !== undefined && runtime.log(`liq send #${i} (${i === 0 && plan.repay > 0n ? "repay" : "deposit"}) rejected: ${s.error}`))
-  runtime.log(`liq hf=${hf} hfChain=${hex(hfRaw)} plan=defend txs=${txHashes.length}/${sends.length}`)
+  runtime.log(`liq hf=${hf} hfChain=${hfRaw === undefined ? "n/a" : hex(hfRaw)} plan=defend txs=${txHashes.length}/${sends.length}`)
   return { status: "DEFENDED", hf, repay: plan.repay.toString(), deposit: plan.deposit.toString(), txHashes }
 }
 

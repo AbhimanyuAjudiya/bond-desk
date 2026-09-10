@@ -29,6 +29,7 @@ export const batchSettled = (r: Rpc, calls: RpcCall[]): Settled[] => {
     .result()
   if (res.statusCode >= 400) throw new Error(`rpc http ${res.statusCode}`)
   const parsed = JSON.parse(new TextDecoder().decode(res.body))
+  if (!Array.isArray(parsed) && parsed?.error) throw new Error(`rpc batch rejected: ${parsed.error.message}`)
   const arr: any[] = Array.isArray(parsed) ? parsed : [parsed] // ponytail: non-array => endpoint without batch support
   if (arr.length !== calls.length) throw new Error(`rpc batch size mismatch ${arr.length}/${calls.length}`)
   arr.sort((a, b) => a.id - b.id)
