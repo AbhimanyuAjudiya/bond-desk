@@ -2,7 +2,7 @@
   "schedule": "0 */2 * * * *",
   "hederaRpcUrl": "https://testnet.hashio.io/api",
   "chainId": 296,
-  "riskGate": "0x0000000000000000000000000000000000000000",
+  "riskGate": "0x1dFF1d5458D6a6f6af46014de76474DC3170C31B",
   "bondId": 1,
   "deliver": "direct",
   "gasLimit": "500000",
