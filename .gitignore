@@ -5,14 +5,11 @@ node_modules/
 out/
 cache/
 broadcast/**/dry-run/
-dist/
 *.wasm
 binary.wasm.br.b64
 .cre_build_tmp.js
 .workflow-temp-*
-bun.lockb
 relayer/inbox/*.json
 .DS_Store
 broadcast/**/run-1*.json
 broadcast/**/run[A-Z]*-1*.json
-broadcast/**/dry-run/
