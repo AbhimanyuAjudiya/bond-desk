@@ -63,6 +63,9 @@ HashScan link, and an explicit list of what was excluded and why.
 
 3. **What is this wallet allowed to hold?**
    `GET {BOND_DESK}/wallets/{walletAddress}/eligibility`
+   First check that the response's `address` equals the wallet you asked about (case-insensitive). If it does
+   not, you are looking at the wrong record (a cached or mixed-up response): retry once, and if it still
+   mismatches, stop and say so rather than concluding from it.
    Keep only the entries with `canHold: true`. Each excluded entry carries a `reason` —
    `no-kyc`, `no-hedera-account`, or `bond-not-active` — and every exclusion must appear in the final answer.
    If nothing has `canHold: true`, stop and explain the reasons; do not recommend a bond the wallet cannot buy.
