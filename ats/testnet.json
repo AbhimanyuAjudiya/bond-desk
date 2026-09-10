@@ -6,5 +6,17 @@
   "blr": "0xBA2D5FC2083A0b8f164c50e65d782087fBA18E0a",
   "bondConfigId": "0x0000000000000000000000000000000000000000000000000000000000000002",
   "bondConfigVersion": 1,
-  "bond": {}
+  "bond": {
+    "complianceOfficer": "0x5Dd0d6c14204971dA12da62081c51597186909ef",
+    "investors": [
+      "0x897f8b6F2876d61E661889b578F4435E406baFdf",
+      "0x8524F940EddC9EA98198Ee08071944a07C417D7b"
+    ],
+    "isin": "US0378331005",
+    "issuer": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+    "maturityDate": 1820569075,
+    "nonKyc": "0x3b44299d9F246dc775DC2e4A0B54e31DB5b31cb3",
+    "supply": 100,
+    "token": "0x0100526434C821d0df24f6CC60352F830F8b4504"
+  }
 }
