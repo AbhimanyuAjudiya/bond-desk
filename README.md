@@ -204,8 +204,8 @@ snapshot the decision used, so a resubmitted verdict is rejected.
 |---|---|
 | Hedera, tokenization | [`ats/script/CreateBond.s.sol`](ats/script/CreateBond.s.sol) (the live ATS factory, not a fork), [`ats/README.md`](ats/README.md) (ABI provenance per facet), [`contracts/src/BondMarket.sol`](contracts/src/BondMarket.sol) (`fill` calls `canTransferFrom`), [`contracts/src/BondLifecycle.sol`](contracts/src/BondLifecycle.sol) (HIP-1215 `scheduleCall`, snapshot-based pull claims) |
 | Hedera, improve the harness | [`harness/README.md`](harness/README.md) (tiers, API table, before/after line counts), [`harness/src/HederaHarness.sol`](harness/src/HederaHarness.sol), [`harness/src/HederaTest.sol`](harness/src/HederaTest.sol), [`harness/src/mocks/MockHSS.sol`](harness/src/mocks/MockHSS.sol), [`harness/scripts/`](harness/scripts) (`doctor.sh`, `verify.sh`, `validate-schedule.sh`, `loc.sh`) |
-| Chainlink, confidential workflow | [`workflow/bond-monitor/handler.ts`](workflow/bond-monitor/handler.ts), [`workflow/shared/decide.ts`](workflow/shared/decide.ts), [`workflow/shared/rpc.ts`](workflow/shared/rpc.ts), evidence in [`docs/cre-evidence/`](docs/cre-evidence) |
-| Chainlink, liquidation challenge | [`workflow/liquidation-protection/main.ts`](workflow/liquidation-protection/main.ts), [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md) |
+| Chainlink, confidential workflow | [`workflow/bond-monitor/handler.ts`](workflow/bond-monitor/handler.ts), [`workflow/shared/decide.ts`](workflow/shared/decide.ts), [`workflow/shared/rpc.ts`](workflow/shared/rpc.ts), evidence in [`docs/cre-evidence/`](docs/cre-evidence): the final re-run on the submitted code is `bond-monitor-20260912-0057-warn.log` (banner `AWS Nitro in us-west-2`), and the direct-delivery run signed a WARN verdict in the enclave and landed it on Hedera itself, no relayer, in [`0x681cb6a2…f2bb95b`](https://hashscan.io/testnet/transaction/0x681cb6a29fd3b39144d3e799090fa2c25efcb1376760943f2cf7edb66f2bb95b) (nonce 3, `coverageObserved 595`) |
+| Chainlink, liquidation challenge | [`workflow/liquidation-protection/main.ts`](workflow/liquidation-protection/main.ts), [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md) (how the position is defended during the 24 h scoring window, both branches), fallback runner [`workflow/scripts/defend-loop.sh`](workflow/scripts/defend-loop.sh) |
 | Bazantic | Three live gateways ([`api/bazantic/gateway.md`](api/bazantic/gateway.md)): Bond Desk API `axuvor5zujgk5hdcydzjdi742m`, Hedera Mirror Node (testnet) `txrkgk2mezhbln4aeo2tdji6s4`, and Bank of Canada Valet `4q4fqndwcnhxrfk6thlgjnodca`, the service that was on neither Bazantic nor a sponsor's list, entered for *Agentify a new API*. The published Recipe [Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation) chains all three ([`api/bazantic/recipe.md`](api/bazantic/recipe.md)) and is our entry for *Best Recipe that uses EthGlobal Hackathon Sponsor APIs*; the A/B evidence (Recipe 4/4 vs raw spec 2/4) is in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md); the OpenAPI source is [`api/src/openapi.ts`](api/src/openapi.ts) |
 
 Demo script and shot list: [`docs/DEMO.md`](docs/DEMO.md). Sponsor feedback:
@@ -229,7 +229,7 @@ FORK=1 forge test --match-path 'contracts/test/fork/*' --fork-url https://testne
 Off-chain, no credentials needed. Each line is run from the repo root and returns you there:
 
 ```sh
-(cd workflow && bun install && bun test && bun run typecheck)   # 16 tests: decide ladder, rpc, fake-runtime handler
+(cd workflow && bun install && bun test && bun run typecheck)   # 17 tests: decide ladder, policy parsing, rpc, fake-runtime handler
 (cd relayer  && npm install && npm run check)                   # offline: prints verified=true on test/fixture.json
 (cd relayer  && npm test && npm run typecheck)
 (cd api      && npm install && npm run check)                   # placeholder deployment: asserts routes + openapi.json
@@ -321,9 +321,9 @@ one, and losing its key delays verdicts rather than forging them.
 The private policy values live in `workflow/.env` and are shipped to CRE as secrets (`workflow/secrets.yaml`
 maps secret ids to env var names, never values). They are not in this repository, and the committed simulation
 logs were checked with a word-boundary match of every `.env` value of 4 or more characters: nothing the
-workflows write matches — no `[USER LOG]` line, no `VERDICT_JSON` field, and none of the private keys. The one
-word-boundary hit is a constant inside the CRE simulator's own fixed capability-limits banner, identical in every
-log and independent of `.env`. The check, and that caveat, are in
+workflows write matches — no `[USER LOG]` line, no `VERDICT_JSON` field, and none of the private keys. Both
+policies were rotated on 2026-09-12 after the 09-10 runs, so nothing in the committed 09-10 logs describes the
+live policy, and the check now reports no hit across all logs. The check is in
 [`docs/cre-evidence/README.md`](docs/cre-evidence/README.md).
 
 ## Known limits
@@ -364,9 +364,18 @@ log and independent of `.env`. The check, and that caveat, are in
   relative-value sanity check rather than a hedgeable spread. The A/B run in
   [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) calls the public API directly in both arms, so its
   x402 spend is `0` by design rather than by omission.
-- **CRE deploy access is requested, not granted.** The deploy-access form was submitted on 2026-09-10, so both
-  workflows are exercised through `cre workflow simulate` only. The Sepolia `join()` and the position it created
-  are live regardless.
+- **CRE deploy access came late.** Two gates apply, the Confidential Workflows early-access form and the separate
+  `cre account access` request; access was enabled on 2026-09-12. Until then both workflows were exercised through
+  `cre workflow simulate` only (final re-run on the submitted code: `docs/cre-evidence/*20260912*`). During the
+  24 h scoring window the position is defended by the deployed workflow, with
+  [`workflow/scripts/defend-loop.sh`](workflow/scripts/defend-loop.sh) as the fallback: it re-runs the same handler
+  through the simulator every 30 s from our machine, unattested, with secrets read from `workflow/.env` rather
+  than the Vault DON (`workflow/README.md`, "Scoring window fallback"). The Sepolia `join()` and the position it
+  created are live regardless.
+- **Relay mode is simulator-only.** A production enclave emits no logs, so the `VERDICT_JSON` line that `relayer/`
+  reads exists only in `cre workflow simulate`; a deployed bond-monitor delivers its own verdict (`deliver:
+  "direct"` in `workflow/bond-monitor/config.production.json`, hourly). The relayer remains the courier for
+  simulator-produced verdicts and for re-submitting a signed verdict from a log.
 - **One process, one cache.** The API caches reads for 10 s in memory. It is a demo service, not an HA
   deployment.
 - **The relayer inbox is gitignored.** `relayer/inbox/*.json` and every `.env` are excluded, so the extracted
