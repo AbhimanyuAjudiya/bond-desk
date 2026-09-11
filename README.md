@@ -206,7 +206,7 @@ snapshot the decision used, so a resubmitted verdict is rejected.
 | Hedera, improve the harness | [`harness/README.md`](harness/README.md) (tiers, API table, before/after line counts), [`harness/src/HederaHarness.sol`](harness/src/HederaHarness.sol), [`harness/src/HederaTest.sol`](harness/src/HederaTest.sol), [`harness/src/mocks/MockHSS.sol`](harness/src/mocks/MockHSS.sol), [`harness/scripts/`](harness/scripts) (`doctor.sh`, `verify.sh`, `validate-schedule.sh`, `loc.sh`) |
 | Chainlink, confidential workflow | [`workflow/bond-monitor/handler.ts`](workflow/bond-monitor/handler.ts), [`workflow/shared/decide.ts`](workflow/shared/decide.ts), [`workflow/shared/rpc.ts`](workflow/shared/rpc.ts), evidence in [`docs/cre-evidence/`](docs/cre-evidence) |
 | Chainlink, liquidation challenge | [`workflow/liquidation-protection/main.ts`](workflow/liquidation-protection/main.ts), [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md) |
-| Bazantic | Live API [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com), live gateway `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` (402 + MCP) and published Recipe [Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation); [`api/src/openapi.ts`](api/src/openapi.ts), registration, prices and activation record in [`api/bazantic/gateway.md`](api/bazantic/gateway.md), Recipe source and its dashboard test run in [`api/bazantic/recipe.md`](api/bazantic/recipe.md), [`api/bazantic/ab-test.md`](api/bazantic/ab-test.md), A/B results — (run 2026-09-10: Recipe 4/4 correct vs 2/4 raw) — in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) |
+| Bazantic | Three live gateways ([`api/bazantic/gateway.md`](api/bazantic/gateway.md)): Bond Desk API `axuvor5zujgk5hdcydzjdi742m`, Hedera Mirror Node (testnet) `txrkgk2mezhbln4aeo2tdji6s4`, and Bank of Canada Valet `4q4fqndwcnhxrfk6thlgjnodca`, the service that was on neither Bazantic nor a sponsor's list, entered for *Agentify a new API*. The published Recipe [Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation) chains all three ([`api/bazantic/recipe.md`](api/bazantic/recipe.md)) and is our entry for *Best Recipe that uses EthGlobal Hackathon Sponsor APIs*; the A/B evidence (Recipe 4/4 vs raw spec 2/4) is in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md); the OpenAPI source is [`api/src/openapi.ts`](api/src/openapi.ts) |
 
 Demo script and shot list: [`docs/DEMO.md`](docs/DEMO.md). Sponsor feedback:
 [`docs/FEEDBACK/`](docs/FEEDBACK).
@@ -356,13 +356,12 @@ log and independent of `.env`. The check, and that caveat, are in
 - **Demo thresholds are scaled to faucet-sized collateral.** 100 HBAR against a 100-bond issue gives coverage in
   the hundreds of bps, so the demo policy sits far below anything a real bond would use. The ladder is the same;
   only the numbers are small.
-- **The Bazantic gateway is live; only the marketplace listing is pending.** The API is hosted on AWS App
-  Runner at [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com);
-  the gateway `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` is active, priced per operation, serving 402
-  challenges and MCP, and the Recipe is published. What is outstanding is Bazantic's verification of the
-  marketplace listing, which is on their side. Pricing, activation and Recipe authoring are dashboard-only — the
-  CLI has no command for any of them ([`api/bazantic/gateway.md`](api/bazantic/gateway.md),
-  [`docs/FEEDBACK/bazantic.md`](docs/FEEDBACK/bazantic.md)). The A/B run in
+- **Bazantic is dashboard-first.** Pricing, activation and Recipe editing are dashboard-only in CLI 0.8.0, so the
+  gateway prices and the Recipe's bindings are documented in [`api/bazantic/`](api/bazantic) rather than applied
+  from the repo; the Bank of Canada Valet operations sit at the platform default $0.01 because the spec's price
+  extension is not read at registration; the marketplace listing of the Bond Desk gateway awaits Bazantic's
+  verification, which is on their side; and the benchmark curve is CAD against a USD-settled testnet bond, a
+  relative-value sanity check rather than a hedgeable spread. The A/B run in
   [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) calls the public API directly in both arms, so its
   x402 spend is `0` by design rather than by omission.
 - **CRE deploy access is requested, not granted.** The deploy-access form was submitted on 2026-09-10, so both
