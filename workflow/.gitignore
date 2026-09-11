@@ -5,3 +5,4 @@ node_modules/
 *.wasm
 binary.wasm.br.b64
 dist/
+.defend-logs/
