@@ -21,7 +21,7 @@ Built for ETHOnline 2026. Everything below ran on Hedera testnet (chain 296) on 
 | NavOracle | [`0x56260E6CF630043421C1469Ee511E66c3eE95505`](https://hashscan.io/testnet/contract/0x56260E6CF630043421C1469Ee511E66c3eE95505) | verified |
 | CollateralVault | [`0x82db4a2ba9859816D60E3d3CE2F6F1E29818FaF7`](https://hashscan.io/testnet/contract/0x82db4a2ba9859816D60E3d3CE2F6F1E29818FaF7) | verified |
 | BondMarket | [`0x9e393461E165E9975A0A74f7FC378E6C342104B1`](https://hashscan.io/testnet/contract/0x9e393461E165E9975A0A74f7FC378E6C342104B1) | verified |
-| BondLifecycle | [`0x044eB54FcA9488356A06121e767cba552a1E5C1B`](https://hashscan.io/testnet/contract/0x044eB54FcA9488356A06121e767cba552a1E5C1B) | verified |
+| BondLifecycle | [`0xeB363F5aEd5D2a94b41EBF0876bd36864255C956`](https://hashscan.io/testnet/contract/0xeB363F5aEd5D2a94b41EBF0876bd36864255C956) | verified |
 | RiskGate | [`0x1dFF1d5458D6a6f6af46014de76474DC3170C31B`](https://hashscan.io/testnet/contract/0x1dFF1d5458D6a6f6af46014de76474DC3170C31B) | verified |
 | MockUSDC (settlement) | [`0xF712daABfF190B34fd6C870761Ac4efa54E821B1`](https://hashscan.io/testnet/contract/0xF712daABfF190B34fd6C870761Ac4efa54E821B1) | verified |
 | ATS bond token (bondId 1) | [`0x0100526434C821d0df24f6CC60352F830F8b4504`](https://hashscan.io/testnet/contract/0x0100526434C821d0df24f6CC60352F830F8b4504) | ATS factory proxy |
@@ -30,10 +30,11 @@ The seven contracts marked verified are source-verified on Sourcify (exact match
 HashScan; `contracts/script/verify.sh` reproduces it. The bond token is a resolver proxy deployed by the ATS
 factory, so its source lives in the ATS repo, not here.
 
-`BondLifecycle` was redeployed once, to raise `SCHEDULE_GAS` after the first scheduled coupon ran out of gas on
-testnet (step 7 of the storyline). The superseded instance is
-`0x10E79b89Fd088935b8Ca86c697ff5c38050AcB1d`; its HBAR float was recovered and every consumer reads the address
-above from `deployments/testnet.json`.
+`BondLifecycle` was redeployed twice: once to raise `SCHEDULE_GAS` after the first scheduled coupon ran out of
+gas on testnet (step 7 of the storyline), and once to add `SCHEDULE_LAG` after the second scheduled coupon fired
+two seconds before its due second (step 13). The superseded instances are
+`0x10E79b89Fd088935b8Ca86c697ff5c38050AcB1d` and `0x044eB54FcA9488356A06121e767cba552a1E5C1B`; both HBAR floats
+were recovered and every consumer reads the address above from `deployments/testnet.json`.
 
 | Item | Value |
 |---|---|
@@ -42,7 +43,9 @@ above from `deployments/testnet.json`.
 | Chainlink HBAR/USD feed (8 dec) | [`0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a`](https://hashscan.io/testnet/contract/0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a) |
 | Verdict signer (enclave key, never funded) | `0xaDC8997EfbE1925d07a002A2f31Bd3cE0e6F1dcE` |
 | Coupon 1, HSS schedule that paid it | [`0.0.10457460`](https://hashscan.io/testnet/schedule/0.0.10457460) (EVM `0x…009F9174`, executed at `1789035662.019`) |
-| Coupon 2, self-scheduled from inside coupon 1 | [`0.0.10457462`](https://hashscan.io/testnet/schedule/0.0.10457462) (EVM `0x…009F9176`, `wait_for_expiry: true`, due `1789121682`) |
+| Coupon 2, self-scheduled from inside coupon 1 | [`0.0.10457462`](https://hashscan.io/testnet/schedule/0.0.10457462) (EVM `0x…009F9176`, executed at `1789121682.025` and reverted `CouponNotDue`: block-timestamp lag, step 13) |
+| Coupon 2, paid by hand on the lagged contract | [`0x5dc17671…4c22397f`](https://hashscan.io/testnet/transaction/0x5dc17671ed5ed779ff78c952ce312a053a1624f64aea39a7798c53544c22397f) (coupon id 1 on the new instance, `paidAt 1789154826`) |
+| Coupon 3, self-scheduled with the lag | [`0.0.10482928`](https://hashscan.io/testnet/schedule/0.0.10482928) (EVM `0x…9fF4F0`, `expiration_time 1789208092` = target `1789208082` + 10, fires 2026-09-12 10:14:52 UTC) |
 | Chainlink liquidation challenge, `join()` on Sepolia | [`0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9`](https://sepolia.etherscan.io/tx/0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9) |
 | Bond Desk API (AWS App Runner, `ap-south-1`) | [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com) — `/healthz`, `/openapi.json`, six operations |
 | Bazantic gateway (LIVE) | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`, MCP at `/mcp` — unpaid `GET /bonds` returns 402 with an x402 challenge |
@@ -191,6 +194,10 @@ are `cast call` reads, so they print a revert reason without spending gas.
 Nonce 1 to nonce 2 across steps 8 and 10 is the replay guard doing its job: the nonce comes from the same
 snapshot the decision used, so a resubmitted verdict is rejected.
 
+13. **Coupon 2 and the block-timestamp lag.** The schedule coupon 1 armed from inside itself, [`0.0.10457462`](https://hashscan.io/testnet/schedule/0.0.10457462), executed exactly when asked (`executed_timestamp 1789121682.025`) and the `payCoupon` inside it reverted `CouponNotDue`. It landed in block `40378969`, whose window starts at `1789121680.007`: `block.timestamp` is the block's start, two seconds before the expiry second, and `nextCoupon` was `1789121682`. Coupon 1 had only passed because it was re-armed at `now + 5` with its target already in the past. The fix is `SCHEDULE_LAG = 10`: a coupon due at `T` is armed at `T + 10`, and `harness/src/HederaTest.sol::executeLagged` reproduces the gap in the unit tests. `BondLifecycle` was redeployed to `0xeB363F5a…4255C956` ([`0x6e8c94ae…9fb3ff52`](https://hashscan.io/testnet/transaction/0x6e8c94aea4b8616ea86cf497d7ead9ecbecf875c320b5fe445566c199fb3ff52)), re-granted `GATE_ROLE` ([`0x04ea2ac5…2b822717`](https://hashscan.io/testnet/transaction/0x04ea2ac54e14d224ff6fa86383eddbd12b58d3034c01391e384d96b02b822717)), `ROLE_SNAPSHOT` ([`0xe7e6bcfb…17d179f1`](https://hashscan.io/testnet/transaction/0xe7e6bcfb1e88a77500c7f0c18080d2b6abf6ff6fc859e2a6e2a547ff17d179f1)) and `ROLE_MATURITY_REDEEMER` ([`0xa9064f8e…f378a0b8`](https://hashscan.io/testnet/transaction/0xa9064f8e374735ac74a46731e2ee5600cd3927ee9e1cee6ec94690dff378a0b8)), the old float of 18.02 HBAR recovered ([`0x583bd526…df1fd585`](https://hashscan.io/testnet/transaction/0x583bd52687c8eb84d81330424b809217b91a5f811f382a52ebd65636df1fd585)), 20 HBAR put into the new payer ([`0x125df0b9…4c328b5`](https://hashscan.io/testnet/transaction/0x125df0b9c556243a7a108590a5d9504291f43257bc1cf1fc2f57768fb4c328b5)) and the pool funded with 110 USDC, coupons through maturity plus principal ([`0x68d43f18…5e98f7`](https://hashscan.io/testnet/transaction/0x68d43f1844391b0d05cd37af641ee8ae5cb56209e7dcc5d1aaff83550f5e98f7), [`0x7352736c…84e2eb4`](https://hashscan.io/testnet/transaction/0x7352736c3291b1a2b2276fcdd4e734c5ef59ca4e252b04182d2cea77e84e2eb4)). Investor 2 first took 5 of the issuer's open ask ([`0xe0979416…7b1b9d3`](https://hashscan.io/testnet/transaction/0xe0979416a9cf0e9846400908ada8c88815bbe53bd05a01ce7bf6772ff7b1b9d3)), then coupon 2 was paid by hand, `payCoupon(1)` at a 4M gas limit ([`0x5dc17671…4c22397f`](https://hashscan.io/testnet/transaction/0x5dc17671ed5ed779ff78c952ce312a053a1624f64aea39a7798c53544c22397f), 1,678,160 gas): 13,698 units over snapshot 2, and it armed coupon 3 as [`0.0.10482928`](https://hashscan.io/testnet/schedule/0.0.10482928) with `expiration_time 1789208092`, the target plus the lag. Investor 2 claimed 684 units for its 5 of 100 bonds ([`0x2baa19e5…6900c6d`](https://hashscan.io/testnet/transaction/0x2baa19e599259dad04ffb600e89254e654e10b11066c73c0ea83c13066900c6d)). `harness/scripts/validate-schedule.sh "$(jq -r .schedule deployments/testnet.json)"` reports `pending` until 2026-09-12 10:14:52 UTC.
+14. **Compliance is the token's, not ours.** The compliance officer froze investor 2 on the ATS token, `setAddressFrozen(inv2, true)` ([`0x9e5b7921…d329fad9`](https://hashscan.io/testnet/transaction/0x9e5b7921fb15e1891a63926e6104a64582ed0b66a792a71656b32626d329fad9)); `canTransferFrom(issuer, inv2, 1, "")` then returned `(false, 0x10, AccountIsBlocked)` (reason selector `0x796c1f0d`), the same read `BondMarket.fill` makes, and after the unfreeze ([`0x4ce0414d…378b868`](https://hashscan.io/testnet/transaction/0x4ce0414d87015704883c0da692e26b94fa189055e94ab65aea03804be378b868)) it returns `(true, 0x01, 0x0)`. The first unfreeze attempt reverted out of gas at the relay's estimate, taken against a state that did not yet include the freeze; the retry passes `--gas-limit 300000`.
+15. **The harness, run on itself.** `DeployTemplate.s.sol` broadcast: `PingWithHarness` [`0x0F14C057…B054FBE`](https://hashscan.io/testnet/contract/0x0F14C057F7912651254f9A4c61778033CB054FBE) (Sourcify exact match), schedule [`0.0.10482965`](https://hashscan.io/testnet/schedule/0.0.10482965) executed at `1789155023.095` and `validate-schedule.sh` exited 0. Its `Pinged` log reads `1789155022`, one second before the expiry second: the lag, live, a third time. Full output in [`harness/README.md`](harness/README.md#receipts).
+
 ## Where to look, per track
 
 | Track | Start here |
@@ -214,8 +221,8 @@ Contracts and harness, no credentials needed:
 
 ```sh
 forge build
-forge test                                   # 149 passed, 7 skipped (fork tests)
-FOUNDRY_PROFILE=harness forge test           # 41 passed: HSS/HTS mocks, probe loop, response codes
+forge test                                   # 150 passed, 7 skipped (fork tests)
+FOUNDRY_PROFILE=harness forge test           # 42 passed: HSS/HTS mocks, probe loop, response codes, the lag
 FORK=1 forge test --match-path 'contracts/test/fork/*' --fork-url https://testnet.hashio.io/api
 ```
 
@@ -368,7 +375,8 @@ log and independent of `.env`. The check, and that caveat, are in
   [`docs/cre-evidence/`](docs/cre-evidence) with `relayer/scripts/extract-verdict.sh`.
 
 The rest are contract behaviours as deployed. They are documented rather than changed, so the Sourcify
-exact-match verification above stays valid:
+exact-match verification above stays valid (the lifecycle instance at `0xeB363F5a…4255C956` differs from the
+previous one only by `SCHEDULE_LAG`):
 
 - **`BondLifecycle.schedule()` reverts `AlreadyScheduled` on a stale pointer.** A scheduled run that executed and
   then reverted leaves `scheduleOf` set and `scheduledFor == nextCoupon`, so the permissionless re-schedule

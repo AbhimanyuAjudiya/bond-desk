@@ -20,7 +20,7 @@ flowchart TB
     VAULT["CollateralVault<br/>HBAR collateral (tinybar)<br/>coverageBps"]
     NAV["NavOracle<br/>mark · hbarUsd"]
     FEED["Chainlink HBAR/USD feed<br/>0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a<br/>8 dec · 24h heartbeat"]
-    LIFE["BondLifecycle<br/>0x044eB54FcA9488356A06121e767cba552a1E5C1B<br/>coupons · pull claims · redeem<br/>holds HBAR: it is the HSS payer"]
+    LIFE["BondLifecycle<br/>0xeB363F5aEd5D2a94b41EBF0876bd36864255C956<br/>coupons · pull claims · redeem<br/>holds HBAR: it is the HSS payer"]
     HSS["HSS 0x16b — HIP-1215<br/>scheduleCall, SCHEDULE_GAS 4M"]
     GATE["RiskGate<br/>0x1dFF1d5458D6a6f6af46014de76474DC3170C31B<br/>snapshot() · submit(v,sig) · unfreeze()<br/>EIP-712 verify + nonce"]
 
