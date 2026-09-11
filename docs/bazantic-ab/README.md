@@ -6,21 +6,28 @@ bond the wallet cannot buy or refuses a bond it can.**
 
 ## Setup
 
-Identical prompt, identical model and settings, identical tool access in both arms. The only difference is the
-Recipe text from `api/bazantic/recipe.md` ("Best Eligible Hedera Bond Recommendation"), given to arm B and withheld
-from arm A. Both arms call the public API `https://wd6nrvmajt.ap-south-1.awsapprunner.com` and the public Hedera
+Identical prompt, identical agent and settings, identical tool access in both arms. The only difference is the
+Recipe text from `api/bazantic/recipe.md` ("Best Eligible Hedera Bond Recommendation"), given to arm B as context and
+withheld from arm A. Both arms call the public API `https://wd6nrvmajt.ap-south-1.awsapprunner.com` and the public Hedera
 Mirror Node directly rather than the Bazantic gateway (now live at
 `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`), so x402 spend is 0 in both arms and the comparison is
 about agent behaviour. The Recipe itself is published as
 <https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation>; its dashboard test run on the kyc
 wallet recommended the same bond in 4 calls (`api/bazantic/recipe.md`).
 
+What this is evidence for: the **Best Recipe that uses EthGlobal Hackathon Sponsor APIs** track — the Recipe's
+mirror-node step (a sponsor API) and its eligibility step each change the answer, which is what "show why each
+service matters" asks for. The A/B ran against the two-service Recipe; the published Recipe has since gained a third
+service, **Bank of Canada Valet** (the benchmark-yield step, `api/bazantic/recipe.md` step 5, the service entered
+for **Agentify a new API**) and a mirror-only transaction-history step. Those two steps are covered by the dashboard
+test runs recorded in `api/bazantic/recipe.md`, not by these transcripts.
+
 | Item | Value |
 |---|---|
 | Prompt | "Wallet `<addr>` wants to buy a corporate bond on Hedera testnet. Using only the APIs you were given, recommend the single best bond it can actually hold, with yield and price, or say clearly if it cannot hold any. State every API call you made ... Do not guess values you did not fetch." |
 | Arm A inputs | OpenAPI URL of the Bond Desk API + Mirror Node base URL |
-| Arm B inputs | the same, plus the Recipe text |
-| Model | one model for every run (the same coding agent, temperature default), two runs per wallet per arm |
+| Arm B inputs | the same, plus the Recipe text — the prose of `api/bazantic/recipe.md` as it stood on 2026-09-10 (mirror node + Bond Desk), pasted as context; arm B did not call the published Recipe tool |
+| Agent | the same LLM agent with tool use for every run (identical system prompt, tools and default temperature); the model identifier is recorded in the submission form. Two runs per wallet per arm |
 | Wallet "nokyc" | `0x3b44299d9F246dc775DC2e4A0B54e31DB5b31cb3`: Hedera account exists, no KYC. Truth: no bond it can hold; needs KYC. |
 | Wallet "kyc" | `0x8524F940EddC9EA98198Ee08071944a07C417D7b`: KYC granted, holds 0 bonds. Truth: bond 1 (BDB27), Active, best ask 990000, yield 505 bps, coverage ~610 bps, a lifted FREEZE (nonce 2) in history. |
 | Judge | an independent reviewer scored every transcript 0-5 on correctness, compliance-awareness, call efficiency and explanation, and checked for hallucinated values |
@@ -67,11 +74,12 @@ concluding.
 
 ## Reproduce
 
-Give the same prompt to the same model twice with the inputs above, from a fresh session each time, and save the
+Give the same prompt to the same agent twice with the inputs above, from a fresh session each time, and save the
 transcript with the Calls list and the Answer paragraph. Score with the rubric in `api/bazantic/ab-test.md`.
 To run through the gateway instead of the API, set `BOND_DESK` to
-`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` and pay with `baz curl`; the Recipe's five calls cost 2500
-millicents ($0.025) per run at the live prices, plus the mirror-node gateway's calls.
+`https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` and pay with `baz curl`. At the live prices a full run of the
+current three-service Recipe costs $0.055: $0.025 on the Bond Desk gateway (eligibility, bonds, risk), 2 × $0.01 on
+the mirror-node gateway (`getAccount`, `getTransactions`) and $0.01 on the Bank of Canada Valet gateway.
 
 ## Artifacts
 

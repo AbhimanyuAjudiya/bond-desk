@@ -5,12 +5,13 @@ Most of this project's Bazantic work is registration and authoring rather than c
 provenance: **[observed]** = hit while building; **[to confirm]** = designed around, not yet exercised.
 
 State at the time of writing: signed in as **Abhimanyu** with scopes `gateway:read, gateway:write, recipe:read,
-recipe:write`. Two gateways are registered and **active**: the Bond Desk API
+recipe:write`, CLI `@bazantic/cli` 0.8.0. Three gateways are registered and **active**: the Bond Desk API
 (`axuvor5zujgk5hdcydzjdi742m`, `baz gateway add` on 2026-09-10 11:40 UTC, id
-`05e95747-b9a2-4cae-9c62-c0f291a3fcd3`) and Hedera Mirror Node (testnet) (`txrkgk2mezhbln4aeo2tdji6s4`). Both
-are priced; the first is published to the marketplace and awaiting Bazantic's listing verification, and the
-Recipe *Best Eligible Hedera Bond Recommendation* is published and has been run. The full record is in
-`api/bazantic/gateway.md`. Everything after `gateway add` was dashboard work.
+`05e95747-b9a2-4cae-9c62-c0f291a3fcd3`), Hedera Mirror Node (testnet) (`txrkgk2mezhbln4aeo2tdji6s4`) and, since
+2026-09-11, Bank of Canada Valet (`4q4fqndwcnhxrfk6thlgjnodca`, registered straight to `active` with
+`--auth-type none`). All are priced; the first is published to the marketplace and awaiting Bazantic's listing
+verification, and the Recipe *Best Eligible Hedera Bond Recommendation* is published and has been run. The full
+record is in `api/bazantic/gateway.md`. Everything after `gateway add` was dashboard work.
 
 ## Registration is genuinely one command **[observed]**
 
@@ -27,7 +28,11 @@ While `status` was `draft`, `GET <endpointUrl>/bonds` and `POST <endpointUrl>/mc
 gateway that was never created, and it sent us checking all three before concluding the status was the cause.
 A draft gateway is a known, named state on the platform's own side, so it should say so: `409` or `403` with
 `{"error":"gateway is in draft; activate it in the dashboard"}` costs nothing and removes the whole debugging
-detour. The same applies to an active-but-unpriced operation.
+detour. The same applies to an active-but-unpriced operation, and to a gateway that is still provisioning: our
+third gateway, registered straight to `active`, answered `404 page not found` on three of four paths 40 s after
+`gateway add` returned and `402` on all four 30 s later, with `/mcp`, the agent card and `/openapi.yaml` following
+later still. A `503` with a `retry-after` during provisioning would tell the operator to wait rather than to
+debug.
 
 ## The gateway URL shape is a subdomain, not a path **[observed]**
 
@@ -56,24 +61,32 @@ stating it in the terminal rather than only in a browser consent screen is bette
 manage. The session's granted scopes and expiry are then echoed on success, which is the right amount of
 feedback.
 
-## The docs are login-gated, including the Recipe format **[observed]**
+## The docs are public now — and they describe a CLI that is not on npm yet **[observed]**
 
-You cannot read what a Recipe is, or what its schema looks like, without an account. That inverts the normal
-order of work: a developer wants to design the agent flow first and register the API second, but here the
-authoring format is invisible until after sign-up. We wrote our Recipe as prose against inferred structure
-(`api/bazantic/recipe.md`) and expect to reshape it once we can see the real editor — which is wasted effort on
-both sides.
+When we started, the Recipe format was behind the login: we wrote our Recipe as prose against inferred structure
+(`api/bazantic/recipe.md`) and reshaped it in the editor. By 2026-09-11 `https://bazantic.com/docs/recipes` is public
+and answers the question properly: one paragraph on what a Recipe is, the field list (`name`, `description`,
+`input_schema`, `input_example`, `output_example`, `prompt_template`, `model`, `tool_bindings`), the rule that a
+binding is exactly `{gateway_slug, tool_name}`, the single `{{inputs}}` placeholder, the 24 KiB limit, and the
+lifecycle (create → draft, publish locks, unpublish to edit). That is the page we asked for, and it is good.
 
-The high-value fix is small: one public page containing (a) a one-paragraph definition of a Recipe, (b) an
-annotated example, and (c) the field list. Everything else can stay behind the login. This also matters for
-discoverability: a public example page is what gets linked, quoted and indexed.
+The gap has moved. The same page documents `baz recipe list | get | create <file> | update <handle> <file> | publish |
+unpublish | delete` and `baz recipe install --client <client>`, and `/docs/cli` lists them in its
+command summary — but the published CLI, `npm i -g @bazantic/cli` → **0.8.0**, answers
+`baz: unknown command: recipe`, and its `--help` still stops at `login`, `logout`, `whoami`, `gateway add|list`,
+`curl`, `wallet`, `grant`. The device session it mints already carries `recipe:read` and `recipe:write`, so the
+permission model, the docs and the API are ready for a repo-managed Recipe and only the npm release is behind. Two
+small fixes: print the CLI version the docs describe at the top of `/docs/cli`, and mark commands that are not in the
+released package. The same drift shows in `--auth-type`: the docs say `none` is the default and `x402-mpp`/`jwt` are
+retired, while 0.8.0's help still lists `api-key | jwt | x402-mpp | basic` with `x402-mpp` as the default (the server
+accepted `none` from 0.8.0 without complaint, which is the right behaviour).
 
-There is a second half to this. Authoring a Recipe is **dashboard-only** even once you are signed in, and yet
-the device token the CLI receives carries `recipe:read` and `recipe:write` scopes. So the permission model
-already treats Recipes as a first-class CLI resource while the CLI has no `baz recipe` command to use it with.
-A Recipe is text; it is the part of this integration most worth version-controlling, diffing and reviewing, and
-right now it cannot be. `baz recipe create --file recipe.md` and `baz recipe get <id>` would make the whole
-integration reproducible from a repository, and the scopes suggest that was the intention.
+What *is* reachable today with the 0.8.0 session is the control MCP server the docs describe,
+`https://api.bazantic.com/control-mcp` (bearer = the CLI session token): `bazantic_recipe_get` returned our
+published Recipe's full definition, which is how we recovered the exact `prompt_template` and bindings for
+`api/bazantic/dashboard-steps.md` without a browser. One limit worth naming: `bazantic_gateway_list_tools` answers
+`state: "oversized_inventory"` for our 48-operation mirror-node gateway, so an agent cannot enumerate a large gateway's
+tools through the control server at all; paging, or a `name` filter, would fix it.
 
 ## There is no Activate button; activation is a field inside the listing PATCH **[observed]**
 
@@ -93,6 +106,14 @@ Over either limit the API answers `400 invalid_request` with **no detail field**
 *"We couldn't save your changes"*. Nothing names the offending field or the limit, so the only way to find them
 is to bisect the form. Two fixes, both small: return the field and the limit in the error body, and show a
 character counter and a tag counter in the form. Either one turns a ten-minute bisect into a non-event.
+
+The listing copy is also out of reach of the CLI session: `GET /api/gateways/{slug}` with the CLI bearer token
+answers `401`, and `/api/cli/gateways/{slug}` does not exist (`404`), so a one-word fix to a description — ours
+named the Recipe by a working title that changed at publication — is a dashboard visit. A
+`PATCH /api/cli/gateways/{slug}` accepting the listing fields, or `baz gateway update`, would close it. Also
+worth a look: a CLI-registered gateway gets an auto-generated description ("Bankofcanada Ca exposed as a
+per-request HTTP surface…") even when the spec's `info.description` says what the service is; using
+`info.description` as the default would make the catalog entry right on the first pass.
 
 ## Pricing and activation are dashboard-only, so a gateway cannot be reproduced **[observed]**
 
@@ -114,6 +135,17 @@ Two options, either of which solves it:
 2. Read prices from the OpenAPI document itself — an `x-bazantic-price` extension per operation. This is the
    better one: the price then lives next to the operation it prices, versioned with the API, and a redeploy of
    the spec updates the gateway. It also makes the whole registration a one-liner in CI.
+
+Option 2 is closer than it looks: the spec Bazantic serves for its own Recipe gateway
+(`https://jtc64fcl6jbgzbohqrkfeu4may.bazgateway.com/openapi.yaml`) already annotates the operation with
+`x-bazantic-price-millicents: 1000`. We put the same extension on the four operations of our third gateway
+(`api/bazantic/boc-valet-openapi.json`: 500/500/200/200) and registered it; every operation came out at the
+default `10000` base units — while the gateway's served `/openapi.yaml` still shows our 500/200. So the vocabulary
+exists in the platform's own output but is not read on input, and the served spec can disagree with the 402;
+honouring the extension at registration would make a gateway reproducible from its spec alone.
+
+Smaller: `baz gateway list --json` returns `{"ok":true,"listings":[…]}`, not the bare array the `--help`
+text ("full rows") suggests; every `jq '.[]'` in our first runbook broke on it.
 
 A related gap: prices are entered in **millicents** (`1000` = $0.01) while x402 settles in USDC base units
 (6 decimals), and the price field carries no unit label. Two different units for the same number, one of them
