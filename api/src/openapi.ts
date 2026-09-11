@@ -12,6 +12,7 @@ const err = (code: string, description: string) => res(description, { ...ref("Er
 const STATUS = ["Active", "Frozen", "Matured", "Defaulted", "None"]
 const ACTION = ["OK", "WARN", "FREEZE", "DEFAULT"]
 
+const addrParam = { name: "address", in: "path", required: true, description: "EVM address (0x + 40 hex)", schema: { type: "string", pattern: "^0x[0-9a-fA-F]{40}$" } }
 const idParam = { name: "id", in: "path", required: true, description: "Bond id (1..bondCount). Use the `id` field from listBonds.", schema: { type: "string", pattern: "^[0-9]+$" } }
 
 export const openapi = (publicUrl: string) => ({
@@ -20,7 +21,7 @@ export const openapi = (publicUrl: string) => ({
     title: "Bond Desk API",
     version: "1.0.0",
     description:
-      "Read-only API over Bond Desk on Hedera testnet: ATS-issued corporate bonds, an on-chain order book with ATS compliance at every fill, HBAR collateral valued by Chainlink feeds, and TEE-signed risk verdicts. " +
+      "API over Bond Desk on Hedera testnet (the same host serves the Bond Desk web app to browsers): ATS-issued corporate bonds, an on-chain order book with ATS compliance at every fill, HBAR collateral valued by Chainlink feeds, and TEE-signed risk verdicts. " +
       "Typical agent flow: listBonds (pick Active bonds, highest currentYieldBps) -> getWalletEligibility (can this wallet hold it?) -> getBondRisk (skip FREEZE/DEFAULT, mention WARN) -> answer with the HashScan link. " +
       "All big numbers are decimal strings; timestamps are unix seconds; prices are settlement-token base units per whole bond token; bps = basis points (10000 = 100%).",
   },
@@ -93,6 +94,68 @@ export const openapi = (publicUrl: string) => ({
         },
       },
     },
+    "/bonds/{id}/verdicts": {
+      get: {
+        operationId: "listBondVerdicts",
+        summary: "Every risk verdict applied to a bond, newest first",
+        description:
+          "VerdictApplied events from RiskGate (mirror node, newest 100 logs of the contract). Each row is one EIP-712 verdict the enclave signed and a relayer landed: the action, the coverage the enclave observed, the per-bond nonce and who relayed it.",
+        parameters: [idParam],
+        responses: { "200": res("Verdicts", obj({ bondId: big("Bond id"), verdicts: arr(ref("VerdictRow")) })), "404": err("bond-not-found", "Unknown bond id"), "502": err("upstream", "Mirror node unavailable") },
+      },
+    },
+    "/events": {
+      get: {
+        operationId: "listEvents",
+        summary: "Recent desk activity across every contract, newest first",
+        description:
+          "Decoded events from BondMarket (OrderPlaced, OrderCancelled, Filled), BondLifecycle (Funded, CouponPaid, CouponClaimed, CouponScheduled, Redeemed), RiskGate (VerdictApplied, Unfrozen), CollateralVault (Deposited, Withdrawn, Seized), BondRegistry (StatusChanged, ...) and the ATS token (KycGranted, KycRevoked). " +
+          "Read from the mirror node's newest 100 logs per contract; `args` keys follow the Solidity event parameter names, enums stay numeric (status: 0 None 1 Active 2 Frozen 3 Matured 4 Defaulted; action: 0 OK 1 WARN 2 FREEZE 3 DEFAULT).",
+        parameters: [{ name: "limit", in: "query", required: false, description: "Rows to return (1..200, default 50)", schema: { type: "integer", minimum: 1, maximum: 200 } }],
+        responses: { "200": res("Events", obj({ events: arr(ref("Event")) })), "502": err("upstream", "Mirror node unavailable") },
+      },
+    },
+    "/wallets/{address}/kyc": {
+      post: {
+        operationId: "requestTestnetKyc",
+        summary: "Testnet only: ask the compliance-officer bot to grant this wallet KYC on every bond token",
+        "x-testnet-only": true,
+        description:
+          "Self-service KYC for Hedera testnet. The wallet signs the EIP-191 message `Bond Desk testnet KYC request for <checksummed address> at <unix minute>` and posts the signature; the API verifies it (five-minute window), then the compliance officer key held by the API performs what ats/script/CreateBond.s.sol does: addIssuer if the bond issuer is not yet an SSI issuer, then grantKyc(account, vc id, now-1, now+10y, issuer). " +
+          "On testnet the officer is a bot that approves anyone who asks; in production it is a human or a KYC provider. The token, not this API, enforces the result at every transfer. " +
+          "Rate limited to three requests per hour per address and per IP, one in-flight transaction per address. Returns 503 when the deployment has no officer key.",
+        parameters: [addrParam],
+        requestBody: { required: true, content: { "application/json": { schema: ref("KycRequest") } } },
+        responses: {
+          "200": res("Result per bond token", ref("KycResult")),
+          "400": err("stale-signature", "Malformed body, bad address, or a signature older than five minutes"),
+          "401": err("bad-signature", "Signature does not recover to the address in the path"),
+          "409": err("pending", "A transaction for this address is still in flight"),
+          "429": err("rate-limited", "More than three requests in an hour"),
+          "502": err("tx-failed", "The officer's transaction reverted (message carries the decoded reason)"),
+          "503": err("kyc-desk-offline", "COMPLIANCE_OFFICER_KEY is not configured on this deployment"),
+        },
+      },
+      delete: {
+        operationId: "revokeTestnetKyc",
+        summary: "Testnet only: revoke this wallet's own KYC on every bond token",
+        "x-testnet-only": true,
+        description:
+          "Same signature scheme with the message `Bond Desk testnet KYC revocation for <checksummed address> at <unix minute>`; the officer key calls revokeKyc(account). The bond issuer's own KYC cannot be revoked here (403). After this, fills to or from the wallet revert with ComplianceRejected(0x10, InvalidKycStatus).",
+        parameters: [addrParam],
+        requestBody: { required: true, content: { "application/json": { schema: ref("KycRequest") } } },
+        responses: {
+          "200": res("Result per bond token", ref("KycResult")),
+          "400": err("stale-signature", "Malformed body, bad address, or a signature older than five minutes"),
+          "401": err("bad-signature", "Signature does not recover to the address in the path"),
+          "403": err("issuer-kyc", "The issuer's KYC is not self-service"),
+          "409": err("pending", "A transaction for this address is still in flight"),
+          "429": err("rate-limited", "More than three requests in an hour"),
+          "502": err("tx-failed", "The officer's transaction reverted"),
+          "503": err("kyc-desk-offline", "COMPLIANCE_OFFICER_KEY is not configured on this deployment"),
+        },
+      },
+    },
     "/healthz": {
       get: {
         operationId: "healthz",
@@ -104,7 +167,7 @@ export const openapi = (publicUrl: string) => ({
   },
   components: {
     schemas: {
-      Error: obj({ error: str("Machine-readable code", { enum: ["bond-not-found", "bad-address", "upstream", "not-found", "internal"] }) }),
+      Error: obj({ error: str("Machine-readable code", { enum: ["bond-not-found", "bad-address", "upstream", "not-found", "internal", "bad-request", "stale-signature", "bad-signature", "pending", "rate-limited", "tx-failed", "kyc-desk-offline", "issuer-kyc"] }) }),
       BondSummary: obj({
         id: big("Bond id"),
         symbol: str("Bond token symbol"),
@@ -156,7 +219,28 @@ export const openapi = (publicUrl: string) => ({
         tokens: arr(obj({ tokenId: str("HTS token id"), balance: big("Balance") })),
         bonds: arr(ref("WalletBond")),
       }),
-      Health: obj({ ok: { type: "boolean" }, chainId: { type: "integer", const: 296 }, block: { type: ["string", "null"], description: "Latest block number (decimal string), null when RPC is down" } }),
+      VerdictRow: obj({ action: str("Applied action", { enum: ACTION }), coverageObserved: big("Coverage bps the enclave observed"), nonce: big("Verdict nonce"), relayer: addr("Wallet that relayed the verdict"), txHash: str("Transaction that applied it"), timestamp: big("Unix time") }),
+      Event: obj({
+        contract: str("Emitting contract", { enum: ["BondMarket", "BondLifecycle", "RiskGate", "CollateralVault", "BondRegistry", "BondToken"] }),
+        address: addr("Contract address"), name: str("Event name as declared in Solidity"),
+        args: { type: "object", additionalProperties: true, description: "Decoded parameters keyed by name; big numbers as decimal strings" },
+        txHash: str("Hedera EVM transaction hash"), timestamp: big("Unix time"),
+        blockNumber: { type: ["integer", "null"], description: "Block number when the mirror node reports one" },
+      }),
+      KycRequest: obj({
+        minute: { type: "integer", description: "floor(unix seconds / 60) used in the signed message; must be within five minutes of now" },
+        signature: str("EIP-191 personal_sign of the message by the wallet in the path", { pattern: "^0x[0-9a-fA-F]+$" }),
+      }),
+      KycResult: obj({
+        address: addr("Wallet acted on"), officer: addr("Compliance officer wallet that signed the transactions"),
+        action: str("What was requested", { enum: ["grant", "revoke"] }),
+        results: arr(obj({
+          bondId: big("Bond id"), token: addr("ATS bond token"),
+          result: str("Outcome on this token", { enum: ["granted", "already-granted", "revoked", "not-granted"] }),
+          txHashes: arr(str("Transaction hashes (addIssuer then grantKyc, or revokeKyc); empty when nothing changed")),
+        })),
+      }),
+      Health: obj({ ok: { type: "boolean" }, chainId: { type: "integer", const: 296 }, block: { type: ["string", "null"], description: "Latest block number (decimal string), null when RPC is down" }, kycDesk: { type: "boolean", description: "true when the testnet KYC desk (POST/DELETE /wallets/{address}/kyc) is configured" } }),
     },
   },
 })

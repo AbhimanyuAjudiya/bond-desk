@@ -17,8 +17,24 @@ export const account = (evm: Address) => get<Account>("mirror accounts", `/accou
 export const tokens = async (evm: Address) =>
   (await get<{ tokens: { token_id: string; balance: number }[] }>("mirror tokens", `/accounts/${evm}/tokens?limit=100`))?.tokens ?? []
 
-type Log = { data: Hex; topics: Hex[]; timestamp: string; transaction_hash: Hex }
+type Log = { data: Hex; topics: Hex[]; timestamp: string; transaction_hash: Hex; block_number?: number }
 export type Event = { args: Record<string, any>; txHash: Hex; timestamp: string }
+export type Decoded = Event & { name: string; blockNumber: number | null }
+
+/** Newest `limit` (≤100) logs of a contract, unfiltered: the mirror node's topic-filtered query is capped to a 7-day window, this one is not. */
+export const logs = async (contract: Address, limit = 100): Promise<Log[]> =>
+  (await get<{ logs: Log[] }>("mirror logs", `/contracts/${contract}/results/logs?order=desc&limit=${limit}`))?.logs ?? []
+
+/** Every log the ABI knows how to decode, in the order given; unknown topics (other facets, ERC-20 noise) are skipped. */
+export const decodeAll = (abi: unknown, rows: Log[]): Decoded[] =>
+  rows.flatMap((l) => {
+    try {
+      const { eventName, args } = decodeEventLog({ abi: abi as Abi, data: l.data, topics: l.topics as [Hex, ...Hex[]] })
+      return [{ name: String(eventName), args: (args ?? {}) as Record<string, any>, txHash: l.transaction_hash, timestamp: l.timestamp.split(".")[0]!, blockNumber: l.block_number ?? null }]
+    } catch {
+      return []
+    }
+  })
 
 /**
  * Latest `limit` events of `eventName` for `bondId` (topic1), newest first.
@@ -28,8 +44,7 @@ export type Event = { args: Record<string, any>; txHash: Hex; timestamp: string 
  */
 export const events = async (contract: Address, abi: unknown, eventName: string, bondId: bigint, limit: number): Promise<Event[]> => {
   const [topic0, topic1] = encodeEventTopics({ abi: abi as Abi, eventName, args: { bondId } as any })
-  const res = await get<{ logs: Log[] }>("mirror logs", `/contracts/${contract}/results/logs?order=desc&limit=100`)
-  return (res?.logs ?? [])
+  return (await logs(contract))
     .filter((l) => l.topics[0] === topic0 && l.topics[1] === topic1)
     .slice(0, limit)
     .map((l) => ({
