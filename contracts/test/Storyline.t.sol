@@ -145,10 +145,10 @@ contract StorylineTest is BondDeskFullTest {
         lifecycle.schedule(bondId);
         address sched = lifecycle.scheduleOf(bondId);
         assertTrue(sched != address(0));
-        assertEq(hss.get(sched).when, firstCoupon);
+        assertEq(hss.get(sched).when, firstCoupon + lifecycle.SCHEDULE_LAG());
         assertEq(lifecycle.couponCount(bondId), 0);
 
-        warpAndExecute(firstCoupon);
+        warpAndExecute(hss.get(sched).when);
         assertTrue(hss.get(sched).executed);
         assertEq(lifecycle.couponCount(bondId), 1);
         (, uint256 amount,,) = lifecycle.coupons(bondId, 1);

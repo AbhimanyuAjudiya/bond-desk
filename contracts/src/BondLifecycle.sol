@@ -26,6 +26,11 @@ contract BondLifecycle is RegistryAuth, ReentrancyGuard {
     uint256 public constant YEAR = 365 days;
     uint256 public constant SCHEDULE_GAS = 4_000_000; // testnet: payCoupon + nested re-schedule needs ~1.9M, HSS charges a markup
     uint256 public constant PROBE_MAX = 8;
+    /// @notice Seconds added to a coupon's target when it is scheduled. HSS fires a schedule at its expiry second,
+    ///         but `block.timestamp` inside that run is the start of the block it lands in, up to ~2 s earlier
+    ///         (testnet coupon 2: expiry 1789121682, block 40378969 started at 1789121680, `payCoupon` reverted
+    ///         CouponNotDue). Irrelevant for daily coupons, fatal without it.
+    uint256 public constant SCHEDULE_LAG = 10;
 
     // ponytail: one pool per bond serves coupons and principal; split into two if issuers need earmarking
     mapping(uint256 => uint256) public funded;
@@ -34,7 +39,7 @@ contract BondLifecycle is RegistryAuth, ReentrancyGuard {
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public claimed;
     /// @notice pending HSS schedule for the next coupon (zero when none / after it fired)
     mapping(uint256 => address) public scheduleOf;
-    /// @notice the coupon time `scheduleOf` was created for (the actual second may slide later under load)
+    /// @notice the coupon time `scheduleOf` was created for (armed SCHEDULE_LAG later; may slide further under load)
     mapping(uint256 => uint64) public scheduledFor;
 
     event Funded(uint256 indexed bondId, address indexed from, uint256 amount);
@@ -164,8 +169,10 @@ contract BondLifecycle is RegistryAuth, ReentrancyGuard {
     }
 
     /// @dev Best effort, never reverts: HSS answers with response codes, and a failed schedule is retried via `schedule`.
+    ///      Armed at `target + SCHEDULE_LAG` so the run's `block.timestamp` is past `nextCoupon`; `scheduledFor`
+    ///      keeps the coupon second it serves.
     function _schedule(uint256 bondId, uint64 target) internal {
-        uint256 when = target;
+        uint256 when = target + SCHEDULE_LAG;
         if (when < block.timestamp + 5) when = block.timestamp + 5;
         if (when > block.timestamp + HederaHarness.MAX_SCHEDULE_AHEAD) {
             emit ScheduleSkipped(bondId, when);

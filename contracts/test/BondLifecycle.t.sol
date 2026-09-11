@@ -16,9 +16,11 @@ contract BondLifecycleTest is BondDeskTest {
     BondLifecycle internal lifecycle;
     uint64 internal firstCoupon;
     uint64 internal maturity;
+    uint256 internal lag; // SCHEDULE_LAG: a coupon due at T is armed on HSS at T + lag
 
     function _deployExtensions() internal override {
         lifecycle = new BondLifecycle(registry);
+        lag = lifecycle.SCHEDULE_LAG();
         _grantGate(address(lifecycle));
         vm.deal(address(lifecycle), hbar(20)); // HSS payer float
         BondRegistry.BondTerms memory t = registry.terms(bondId);
@@ -117,15 +119,15 @@ contract BondLifecycleTest is BondDeskTest {
         uint64 next = firstCoupon + INTERVAL;
         address sched = hss.addressOf(0);
         vm.expectEmit(address(lifecycle));
-        emit BondLifecycle.CouponScheduled(bondId, sched, next);
+        emit BondLifecycle.CouponScheduled(bondId, sched, next + lag);
         lifecycle.payCoupon(bondId);
 
         assertEq(registry.terms(bondId).nextCoupon, next);
         assertEq(lifecycle.scheduleOf(bondId), sched);
-        assertEq(lifecycle.scheduledFor(bondId), next);
+        assertEq(lifecycle.scheduledFor(bondId), next); // keyed to the coupon second, not the armed one
         MockHSS.Scheduled memory s = hss.get(sched);
         assertEq(s.to, address(lifecycle));
-        assertEq(s.when, next);
+        assertEq(s.when, next + lag);
         assertEq(s.gas, lifecycle.SCHEDULE_GAS());
         assertEq(s.data, abi.encodeCall(BondLifecycle.payCoupon, (bondId)));
     }
@@ -152,7 +154,7 @@ contract BondLifecycleTest is BondDeskTest {
         _fund(1e8);
         lifecycle.schedule(bondId);
         hss.setBlockNested(true);
-        vm.warp(firstCoupon);
+        vm.warp(firstCoupon + lag);
         vm.expectEmit(address(lifecycle));
         emit BondLifecycle.ScheduleFailed(bondId, 373);
         executeDueSchedules(); // payCoupon runs inside the scheduled execution; its re-schedule hits 373
@@ -271,12 +273,12 @@ contract BondLifecycleTest is BondDeskTest {
     // -------------------------------------------------------------- schedule
 
     function test_schedule_slidesWhenBusy() public {
-        hss.setBusy(firstCoupon, true);
+        hss.setBusy(firstCoupon + lag, true);
         lifecycle.schedule(bondId);
         address sched = lifecycle.scheduleOf(bondId);
         assertTrue(sched != address(0));
         uint256 when = hss.get(sched).when;
-        assertGt(when, firstCoupon);
+        assertGt(when, firstCoupon + lag);
         assertEq(lifecycle.scheduledFor(bondId), firstCoupon); // still keyed to the coupon it serves
     }
 
@@ -284,13 +286,13 @@ contract BondLifecycleTest is BondDeskTest {
         uint64 far = uint64(block.timestamp + 63 days);
         _setNextCoupon(far);
         vm.expectEmit(address(lifecycle));
-        emit BondLifecycle.ScheduleSkipped(bondId, far);
+        emit BondLifecycle.ScheduleSkipped(bondId, far + lag);
         lifecycle.schedule(bondId);
         assertEq(lifecycle.scheduleOf(bondId), address(0));
         assertEq(hss.count(), 0);
 
-        // exactly 62 days ahead is inside the HSS window
-        _setNextCoupon(uint64(block.timestamp + 62 days));
+        // an armed second (nextCoupon + SCHEDULE_LAG) exactly 62 days ahead is inside the HSS window
+        _setNextCoupon(uint64(block.timestamp + 62 days - lag));
         lifecycle.schedule(bondId);
         assertEq(hss.count(), 1);
     }
@@ -305,13 +307,39 @@ contract BondLifecycleTest is BondDeskTest {
         _fund(1e8);
         lifecycle.schedule(bondId);
         assertEq(lifecycle.couponCount(bondId), 0);
-        warpAndExecute(firstCoupon);
+        warpAndExecute(firstCoupon); // armed SCHEDULE_LAG later: nothing fires at the coupon second itself
+        assertEq(lifecycle.couponCount(bondId), 0);
+        warpAndExecute(firstCoupon + lag);
         assertEq(lifecycle.couponCount(bondId), 1);
         assertEq(registry.terms(bondId).nextCoupon, firstCoupon + INTERVAL);
         assertTrue(hss.get(hss.addressOf(0)).executed);
         assertEq(hss.count(), 2); // next coupon scheduled from inside the execution
         assertEq(lifecycle.scheduleOf(bondId), hss.addressOf(1));
         assertFalse(hss.get(hss.addressOf(0)).deleted); // self-delete answers 213 and is ignored
+    }
+
+    /// @dev Testnet, coupon 2: HSS fired schedule 0.0.10457462 at its expiry second 1789121682 inside block 40378969,
+    ///      whose timestamp is 1789121680, so `block.timestamp < nextCoupon` and the run reverted CouponNotDue.
+    ///      The mock fires at the expiry second; `executeLagged` starts the block 2 s earlier, as testnet did.
+    function test_scheduledCall_survivesBlockTimestampLag() public {
+        _fund(1e8);
+        bytes memory call = abi.encodeCall(BondLifecycle.payCoupon, (bondId));
+
+        // Without the lag (the superseded contract): armed at exactly the coupon second, the run reverts.
+        (, address exact) = hss.scheduleCall(address(lifecycle), firstCoupon, lifecycle.SCHEDULE_GAS(), 0, call);
+        vm.expectEmit(address(hss));
+        emit MockHSS.Executed(exact, false, abi.encodeWithSelector(BondLifecycle.CouponNotDue.selector, firstCoupon));
+        executeLagged(exact, 2);
+        assertEq(lifecycle.couponCount(bondId), 0);
+
+        // With SCHEDULE_LAG: armed 10 s after the coupon second, the same 2 s block lag is harmless.
+        lifecycle.schedule(bondId);
+        address sched = lifecycle.scheduleOf(bondId);
+        assertEq(hss.get(sched).when, firstCoupon + lag);
+        executeLagged(sched, 2);
+        assertEq(lifecycle.couponCount(bondId), 1);
+        assertEq(lifecycle.scheduledFor(bondId), firstCoupon + INTERVAL);
+        assertEq(hss.get(lifecycle.scheduleOf(bondId)).when, firstCoupon + INTERVAL + lag);
     }
 
     function test_payCoupon_byHandDeletesPendingSchedule() public {
