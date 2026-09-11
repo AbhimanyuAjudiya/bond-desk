@@ -32,10 +32,12 @@ CRE_BOND_FREEZE_BPS=99999 bun run sim:bond 2>&1 | tee ../docs/cre-evidence/bond-
 # Liquidation challenge, once, from the CRE_ETH_PRIVATE_KEY wallet: approve vUSD/vETH, then join().
 bun run setup:challenge                        # record the join tx hash in docs/cre-evidence/challenge.md
 
-# Secrets to the private registry, then deploy (needs Chainlink deploy access).
-cre secrets create secrets.yaml --target staging-settings --secrets-auth=browser
-cre secrets list --target staging-settings --secrets-auth=browser
-cre workflow deploy liquidation-protection --target staging-settings
+# Secrets to the private registry (one file per workflow: the registry caps a payload at 10 ids), then deploy.
+cre secrets create bond-monitor/secrets.yaml           --target production-settings --secrets-auth=browser
+cre secrets create liquidation-protection/secrets.yaml --target production-settings --secrets-auth=browser
+cre secrets list --target production-settings --secrets-auth=browser
+cre workflow deploy liquidation-protection --target production-settings
+cre workflow deploy bond-monitor           --target production-settings
 cre workflow list --registry private
 ```
 

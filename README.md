@@ -355,7 +355,7 @@ one, and losing its key delays verdicts rather than forging them.
 | the liquidation policy: trigger and target health factors, repay and deposit caps, cooldown | the repay and deposit transactions themselves |
 | the exact coverage in the workflow's own log line, which is bucketed to `>=150%` / `120-150%` / `100-120%` / `<100%` | `coverageObserved` in the verdict, because the contract needs it to be auditable |
 
-The private policy values live in `workflow/.env` and are shipped to CRE as secrets (`workflow/secrets.yaml`
+The private policy values live in `workflow/.env` and are shipped to CRE as secrets (`workflow/*/secrets.yaml`
 maps secret ids to env var names, never values). They are not in this repository, and the committed simulation
 logs were checked with a word-boundary match of every `.env` value of 4 or more characters: nothing the
 workflows write matches — no `[USER LOG]` line, no `VERDICT_JSON` field, and none of the private keys. Both

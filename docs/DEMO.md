@@ -252,7 +252,7 @@ track requirements and the submission.
   After a transaction, talk for a beat before pointing at a table.
 - The Risk tab refuses a verdict whose nonce is not `lastNonce + 1`, so a verdict from a rehearsal cannot be
   replayed on the take. Re-run `sim:bond` for a fresh one.
-- Never show `.env`, `workflow/.env`, `workflow/secrets.yaml`, `cre secrets` output, or a terminal with a
+- Never show `.env`, `workflow/.env`, `workflow/*/secrets.yaml`, `cre secrets` output, or a terminal with a
   private key in scrollback.
 - Every transaction shown should be linkable afterwards. The **Activity** page lists them newest first with
   HashScan links; collect the ones from the take and put them in the submission alongside this file.
