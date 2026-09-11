@@ -3,7 +3,7 @@
 import { CronCapability, Runner, type TeeRuntime, handlerInTee } from "@chainlink/cre-sdk"
 import { type Address, type Hex, decodeFunctionResult, encodeFunctionData } from "viem"
 import { z } from "zod"
-import { decideLiq } from "../shared/decide"
+import { decideLiq, policyInt } from "../shared/decide"
 import { batchSettled, ethCall, ethCallFrom, gasPrice, hex, nonceOf, rpc, sendRaw } from "../shared/rpc"
 import { addressOf, asKey, signLegacy } from "../shared/tx"
 
@@ -67,11 +67,11 @@ const run = async (runtime: TeeRuntime<Config>) => {
   const key = asKey(secret(ids.walletKey))
   const me = addressOf(key)
   const policy = {
-    triggerHf: BigInt(secret(ids.triggerHf)),
-    targetHf: BigInt(secret(ids.targetHf)),
-    maxRepay: BigInt(secret(ids.maxRepay)),
-    maxDeposit: BigInt(secret(ids.maxDeposit)),
-    cooldownSecs: BigInt(secret(ids.cooldownSecs)),
+    triggerHf: policyInt(ids.triggerHf, secret(ids.triggerHf)),
+    targetHf: policyInt(ids.targetHf, secret(ids.targetHf)),
+    maxRepay: policyInt(ids.maxRepay, secret(ids.maxRepay)),
+    maxDeposit: policyInt(ids.maxDeposit, secret(ids.maxDeposit)),
+    cooldownSecs: policyInt(ids.cooldownSecs, secret(ids.cooldownSecs)),
   }
 
   // HTTP #1: all eight reads in one JSON-RPC batch.
@@ -139,7 +139,7 @@ const run = async (runtime: TeeRuntime<Config>) => {
   return { status: "DEFENDED", hf, repay: plan.repay.toString(), deposit: plan.deposit.toString(), txHashes }
 }
 
-const initWorkflow = (config: Config) => [handlerInTee(new CronCapability().trigger({ schedule: config.schedule }), run, {})]
+const initWorkflow = (config: Config) => [handlerInTee(new CronCapability().trigger({ schedule: config.schedule }), run, [{ tee: "nitro", regions: ["us-west-2"] }])]
 
 export async function main() {
   const runner = await Runner.newRunner<Config>({ configSchema })

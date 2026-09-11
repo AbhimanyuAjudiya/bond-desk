@@ -4,7 +4,7 @@
 import { HTTPClient, hexToBase64, type TeeRuntime } from "@chainlink/cre-sdk"
 import type { Address, Hex } from "viem"
 import { z } from "zod"
-import { ACTION, STATUS, decideBond, shouldDeliver } from "../shared/decide"
+import { ACTION, STATUS, decideBond, policyInt, shouldDeliver } from "../shared/decide"
 import { batch, call, ethCall, gasPrice, hex, nonceOf, rpc } from "../shared/rpc"
 import { addressOf, asKey, signLegacy } from "../shared/tx"
 import { type Verdict, decodeSnapshot, encodeSnapshot, encodeSubmit, signVerdict, toJson, verdictDigest } from "../shared/verdict"
@@ -47,9 +47,9 @@ export const run = async (runtime: TeeRuntime<Config>, client = new HTTPClient()
   }
   const signerKey = asKey(secret(ids.signerKey))
   const policy = {
-    warnBelowBps: BigInt(secret(ids.warnBps)),
-    freezeBelowBps: BigInt(secret(ids.freezeBps)),
-    defaultBelowBps: BigInt(secret(ids.defaultBps)),
+    warnBelowBps: policyInt(ids.warnBps, secret(ids.warnBps)),
+    freezeBelowBps: policyInt(ids.freezeBps, secret(ids.freezeBps)),
+    defaultBelowBps: policyInt(ids.defaultBps, secret(ids.defaultBps)),
   }
   const submitKey = direct ? asKey(secret(ids.submitKey)) : undefined
 

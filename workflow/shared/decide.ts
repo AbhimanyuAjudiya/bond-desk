@@ -5,6 +5,13 @@ export const ACTION = ["OK", "WARN", "FREEZE", "DEFAULT"] as const
 export const STATUS = ["None", "Active", "Frozen", "Matured", "Defaulted"] as const
 export type Decision<T> = T & { reason: string }
 
+// Policy secrets arrive as strings. Reject anything that is not an unsigned integer WITHOUT echoing it:
+// BigInt("<bad>") would put the raw secret into the error message, and errors can leave the enclave.
+export const policyInt = (id: string, raw: string): bigint => {
+  if (!/^\d+$/.test(raw)) throw new Error(`secret ${id}: expected an unsigned integer`)
+  return BigInt(raw)
+}
+
 export type BondPolicy = { warnBelowBps: bigint; freezeBelowBps: bigint; defaultBelowBps: bigint }
 export type BondState = { coverageBps: bigint; status: number }
 
