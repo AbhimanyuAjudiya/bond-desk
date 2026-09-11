@@ -1,0 +1,174 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Bank of Canada Valet",
+    "version": "2026-09-11",
+    "description": "Bank of Canada Valet: the Bank's public, keyless JSON API for Canadian financial and economic time series. Used by the Bond Desk Recipe as the sovereign benchmark curve: the group `bond_yields_all` returns, in one call, the Government of Canada benchmark bond yields (2, 3, 5, 7, 10 year, long-term) and the marketable-bond average yields by maturity bucket (1-3y, 3-5y, 5-10y, over 10y), all in percent per annum. Observations are daily business-day values; `recent=1` returns the latest one. No API key. Every response carries a `terms` link: credit the Bank of Canada as the source when you republish a value.",
+    "termsOfService": "https://www.bankofcanada.ca/terms/",
+    "contact": { "name": "Bank of Canada Valet documentation", "url": "https://www.bankofcanada.ca/valet/docs" }
+  },
+  "externalDocs": { "description": "Valet API reference (Swagger UI)", "url": "https://www.bankofcanada.ca/valet/docs" },
+  "servers": [{ "url": "https://www.bankofcanada.ca" }],
+  "paths": {
+    "/valet/observations/group/{groupName}/json": {
+      "get": {
+        "operationId": "getGroupObservations",
+        "summary": "Latest observations for every series in a group (e.g. the whole benchmark yield curve)",
+        "description": "Returns observations for all series in a Valet group. For the Bond Desk Recipe call it with groupName=bond_yields_all and recent=1: the single observation row then holds, keyed by series name, `BD.CDN.2YR.DQ.YLD`, `BD.CDN.3YR.DQ.YLD`, `BD.CDN.5YR.DQ.YLD`, `BD.CDN.7YR.DQ.YLD`, `BD.CDN.10YR.DQ.YLD`, `BD.CDN.LONG.DQ.YLD` (Government of Canada benchmark bond yields), `BD.CDN.RRB.DQ.YLD` (real return bonds) and `CDN.AVG.1YTO3Y.AVG`, `CDN.AVG.3YTO5Y.AVG`, `CDN.AVG.5YTO10Y.AVG`, `CDN.AVG.OVER.10.AVG` (marketable-bond average yields by remaining-maturity bucket). Each value `v` is a yield in percent per annum as a string; `d` is the observation date (YYYY-MM-DD). Other groups: `tbill_all` (treasury bill yields), `FX_RATES_DAILY` (daily exchange rates).",
+        "x-bazantic-price-millicents": 500,
+        "parameters": [
+          { "name": "groupName", "in": "path", "required": true, "description": "Valet group name, e.g. bond_yields_all, tbill_all, FX_RATES_DAILY.", "schema": { "type": "string" }, "example": "bond_yields_all" },
+          { "$ref": "#/components/parameters/recent" },
+          { "$ref": "#/components/parameters/start_date" },
+          { "$ref": "#/components/parameters/end_date" },
+          { "$ref": "#/components/parameters/order_dir" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group metadata, per-series metadata and the observation rows.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupObservations" }, "example": {
+              "terms": { "url": "https://www.bankofcanada.ca/terms/" },
+              "groupDetail": { "label": "Selected bond yields", "description": "Average yields for selected Government of Canada marketable bonds.", "link": "https://www.bankofcanada.ca/?p=39890" },
+              "seriesDetail": {
+                "CDN.AVG.1YTO3Y.AVG": { "label": "Marketable bonds average yield: 1 to 3 year", "description": "The average yield of Government of Canada marketable bonds with maturities between 1 and 3 years.", "dimension": { "key": "d", "name": "Date" } },
+                "BD.CDN.10YR.DQ.YLD": { "label": "Benchmark bond yield: 10 year", "description": "The yield on the Government of Canada 10-year benchmark bond.", "dimension": { "key": "d", "name": "Date" } }
+              },
+              "observations": [
+                { "d": "2026-09-10", "BD.CDN.RRB.DQ.YLD": { "v": "1.94" }, "CDN.AVG.1YTO3Y.AVG": { "v": "3.30" }, "CDN.AVG.3YTO5Y.AVG": { "v": "3.57" }, "CDN.AVG.5YTO10Y.AVG": { "v": "3.81" }, "CDN.AVG.OVER.10.AVG": { "v": "4.22" }, "BD.CDN.2YR.DQ.YLD": { "v": "3.31" }, "BD.CDN.3YR.DQ.YLD": { "v": "3.40" }, "BD.CDN.5YR.DQ.YLD": { "v": "3.63" }, "BD.CDN.7YR.DQ.YLD": { "v": "3.72" }, "BD.CDN.10YR.DQ.YLD": { "v": "3.94" }, "BD.CDN.LONG.DQ.YLD": { "v": "4.28" } }
+              ]
+            } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/valet/observations/{seriesNames}/json": {
+      "get": {
+        "operationId": "getSeriesObservations",
+        "summary": "Observations for one or more named series",
+        "description": "Returns observations for the comma-separated series names in the path, e.g. `BD.CDN.2YR.DQ.YLD,BD.CDN.10YR.DQ.YLD`. Use `recent=1` for the latest value, or `start_date`/`end_date` for a window. Values are strings in the series' own unit (percent per annum for yields). An unknown series answers 404 with a `message`.",
+        "x-bazantic-price-millicents": 500,
+        "parameters": [
+          { "name": "seriesNames", "in": "path", "required": true, "description": "One series name, or several separated by commas.", "schema": { "type": "string" }, "example": "BD.CDN.2YR.DQ.YLD,BD.CDN.5YR.DQ.YLD,BD.CDN.10YR.DQ.YLD" },
+          { "$ref": "#/components/parameters/recent" },
+          { "$ref": "#/components/parameters/start_date" },
+          { "$ref": "#/components/parameters/end_date" },
+          { "$ref": "#/components/parameters/order_dir" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-series metadata and the observation rows.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SeriesObservations" }, "example": {
+              "terms": { "url": "https://www.bankofcanada.ca/terms/" },
+              "seriesDetail": {
+                "BD.CDN.2YR.DQ.YLD": { "label": "Benchmark bond yield: 2 year", "description": "The yield on the Government of Canada 2-year benchmark bond.", "dimension": { "key": "d", "name": "Date" } },
+                "BD.CDN.5YR.DQ.YLD": { "label": "Benchmark bond yield: 5 year", "description": "The yield on the Government of Canada 5-year benchmark bond.", "dimension": { "key": "d", "name": "Date" } },
+                "BD.CDN.10YR.DQ.YLD": { "label": "Benchmark bond yield: 10 year", "description": "The yield on the Government of Canada 10-year benchmark bond.", "dimension": { "key": "d", "name": "Date" } }
+              },
+              "observations": [ { "d": "2026-09-10", "BD.CDN.5YR.DQ.YLD": { "v": "3.63" }, "BD.CDN.10YR.DQ.YLD": { "v": "3.94" }, "BD.CDN.2YR.DQ.YLD": { "v": "3.31" } } ]
+            } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/valet/series/{seriesName}/json": {
+      "get": {
+        "operationId": "getSeriesDetail",
+        "summary": "Metadata for one series (label and description)",
+        "description": "Returns the label and description of a single Valet series, without observations. Use it to confirm what a series measures before quoting it.",
+        "x-bazantic-price-millicents": 200,
+        "parameters": [
+          { "name": "seriesName", "in": "path", "required": true, "description": "Exactly one series name.", "schema": { "type": "string" }, "example": "BD.CDN.2YR.DQ.YLD" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Series metadata.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SeriesDetail" }, "example": {
+              "terms": { "url": "https://www.bankofcanada.ca/terms/" },
+              "seriesDetails": { "name": "BD.CDN.2YR.DQ.YLD", "label": "Benchmark bond yield: 2 year", "description": "The yield on the Government of Canada 2-year benchmark bond. This series reflects the prevailing interest rate for the 2-year term and is used to monitor short-term government borrowing costs." }
+            } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/valet/groups/{groupName}/json": {
+      "get": {
+        "operationId": "getGroupDetail",
+        "summary": "Metadata for one group and the names of the series it contains",
+        "description": "Returns the group's label and description and the list of series names in it. Use it to discover series names before calling getGroupObservations or getSeriesObservations.",
+        "x-bazantic-price-millicents": 200,
+        "parameters": [
+          { "name": "groupName", "in": "path", "required": true, "description": "Valet group name.", "schema": { "type": "string" }, "example": "bond_yields_all" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group metadata and its series.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupDetail" }, "example": {
+              "terms": { "url": "https://www.bankofcanada.ca/terms/" },
+              "groupDetails": { "label": "Selected bond yields", "description": "Average yields for selected Government of Canada marketable bonds.", "groupSeries": { "BD.CDN.10YR.DQ.YLD": { "label": "Benchmark bond yield: 10 year", "link": "https://www.bankofcanada.ca/valet/series/BD.CDN.10YR.DQ.YLD/json" }, "BD.CDN.2YR.DQ.YLD": { "label": "Benchmark bond yield: 2 year", "link": "https://www.bankofcanada.ca/valet/series/BD.CDN.2YR.DQ.YLD/json" } } }
+            } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "recent": { "name": "recent", "in": "query", "required": false, "description": "Return only the most recent N observations (N >= 1). Use 1 for the latest value. Non-numeric values answer 400.", "schema": { "type": "integer", "minimum": 1 }, "example": 1 },
+      "start_date": { "name": "start_date", "in": "query", "required": false, "description": "First observation date, YYYY-MM-DD.", "schema": { "type": "string", "format": "date" }, "example": "2026-09-01" },
+      "end_date": { "name": "end_date", "in": "query", "required": false, "description": "Last observation date, YYYY-MM-DD.", "schema": { "type": "string", "format": "date" }, "example": "2026-09-10" },
+      "order_dir": { "name": "order_dir", "in": "query", "required": false, "description": "Sort order of the observation rows by date.", "schema": { "type": "string", "enum": ["asc", "desc"] }, "example": "desc" }
+    },
+    "schemas": {
+      "Terms": { "type": "object", "properties": { "url": { "type": "string", "description": "Bank of Canada terms of use; credit the Bank as the source." } } },
+      "SeriesMeta": { "type": "object", "properties": { "label": { "type": "string" }, "description": { "type": "string" }, "dimension": { "type": "object", "properties": { "key": { "type": "string" }, "name": { "type": "string" } } } } },
+      "Observation": {
+        "type": "object",
+        "description": "One observation row: `d` is the date, every other key is a series name whose value object carries `v`, the value as a string in the series' unit.",
+        "properties": { "d": { "type": "string", "format": "date" } },
+        "additionalProperties": { "type": "object", "properties": { "v": { "type": "string" } } }
+      },
+      "GroupObservations": {
+        "type": "object",
+        "properties": {
+          "terms": { "$ref": "#/components/schemas/Terms" },
+          "groupDetail": { "type": "object", "properties": { "label": { "type": "string" }, "description": { "type": "string" }, "link": { "type": "string" } } },
+          "seriesDetail": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/SeriesMeta" } },
+          "observations": { "type": "array", "items": { "$ref": "#/components/schemas/Observation" } }
+        }
+      },
+      "SeriesObservations": {
+        "type": "object",
+        "properties": {
+          "terms": { "$ref": "#/components/schemas/Terms" },
+          "seriesDetail": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/SeriesMeta" } },
+          "observations": { "type": "array", "items": { "$ref": "#/components/schemas/Observation" } }
+        }
+      },
+      "SeriesDetail": {
+        "type": "object",
+        "properties": {
+          "terms": { "$ref": "#/components/schemas/Terms" },
+          "seriesDetails": { "type": "object", "properties": { "name": { "type": "string" }, "label": { "type": "string" }, "description": { "type": "string" } } }
+        }
+      },
+      "GroupDetail": {
+        "type": "object",
+        "properties": {
+          "terms": { "$ref": "#/components/schemas/Terms" },
+          "groupDetails": { "type": "object", "properties": { "label": { "type": "string" }, "description": { "type": "string" }, "groupSeries": { "type": "object", "additionalProperties": { "type": "object", "properties": { "label": { "type": "string" }, "link": { "type": "string" } } } } } }
+        }
+      },
+      "Error": { "type": "object", "properties": { "message": { "type": "string" }, "docs": { "type": "string" } } }
+    },
+    "responses": {
+      "NotFound": { "description": "Unknown series or group.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "message": "Series NOPE.SERIES not found.", "docs": "https://www.bankofcanada.ca/valet/docs#/Series/get_observations__seriesNames___format_" } } } },
+      "BadRequest": { "description": "Malformed query parameter.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "message": "Bad recent observations request parameters, must be numeric", "docs": "https://www.bankofcanada.ca/valet/docs#/Series/get_observations__seriesNames___format_" } } } }
+    }
+  }
+}
