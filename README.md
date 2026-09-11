@@ -47,7 +47,7 @@ were recovered and every consumer reads the address above from `deployments/test
 | Coupon 2, paid by hand on the lagged contract | [`0x5dc17671…4c22397f`](https://hashscan.io/testnet/transaction/0x5dc17671ed5ed779ff78c952ce312a053a1624f64aea39a7798c53544c22397f) (coupon id 1 on the new instance, `paidAt 1789154826`) |
 | Coupon 3, self-scheduled with the lag | [`0.0.10482928`](https://hashscan.io/testnet/schedule/0.0.10482928) (EVM `0x…9fF4F0`, `expiration_time 1789208092` = target `1789208082` + 10, fires 2026-09-12 10:14:52 UTC) |
 | Chainlink liquidation challenge, `join()` on Sepolia | [`0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9`](https://sepolia.etherscan.io/tx/0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9) |
-| Bond Desk API (AWS App Runner, `ap-south-1`) | [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com) — `/healthz`, `/openapi.json`, six operations |
+| Bond Desk app + API (AWS App Runner, `ap-south-1`) | [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com) — the app in a browser; `/healthz`, `/openapi.json` and the JSON routes for everything else |
 | Bazantic gateway (LIVE) | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`, MCP at `/mcp` — unpaid `GET /bonds` returns 402 with an x402 challenge |
 | Bazantic Recipe (published) | [Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation) — chains the mirror-node gateway `https://txrkgk2mezhbln4aeo2tdji6s4.bazgateway.com` with the Bond Desk gateway |
 
@@ -198,6 +198,37 @@ snapshot the decision used, so a resubmitted verdict is rejected.
 14. **Compliance is the token's, not ours.** The compliance officer froze investor 2 on the ATS token, `setAddressFrozen(inv2, true)` ([`0x9e5b7921…d329fad9`](https://hashscan.io/testnet/transaction/0x9e5b7921fb15e1891a63926e6104a64582ed0b66a792a71656b32626d329fad9)); `canTransferFrom(issuer, inv2, 1, "")` then returned `(false, 0x10, AccountIsBlocked)` (reason selector `0x796c1f0d`), the same read `BondMarket.fill` makes, and after the unfreeze ([`0x4ce0414d…378b868`](https://hashscan.io/testnet/transaction/0x4ce0414d87015704883c0da692e26b94fa189055e94ab65aea03804be378b868)) it returns `(true, 0x01, 0x0)`. The first unfreeze attempt reverted out of gas at the relay's estimate, taken against a state that did not yet include the freeze; the retry passes `--gas-limit 300000`.
 15. **The harness, run on itself.** `DeployTemplate.s.sol` broadcast: `PingWithHarness` [`0x0F14C057…B054FBE`](https://hashscan.io/testnet/contract/0x0F14C057F7912651254f9A4c61778033CB054FBE) (Sourcify exact match), schedule [`0.0.10482965`](https://hashscan.io/testnet/schedule/0.0.10482965) executed at `1789155023.095` and `validate-schedule.sh` exited 0. Its `Pinged` log reads `1789155022`, one second before the expiry second: the lag, live, a third time. Full output in [`harness/README.md`](harness/README.md#receipts).
 
+## The app
+
+The same origin that serves the API serves a browser app for every role in the storyline. A browser navigation
+to any path gets the app; a `fetch`, `curl` or agent asking for JSON gets the JSON it always did, so `/bonds/1`
+is a page for a person and a document for a program.
+
+| Page | What a wallet can do there |
+|---|---|
+| Desk | every bond with status, bid/ask/mark, coverage and next coupon; connect a wallet; get 10,000 test USDC from `MockUSDC`'s open mint |
+| Bond → Order book | place a bid or ask, fill an order (USDC or bond approval first), cancel your own; trades from the mirror node with HashScan links |
+| Bond → Eligibility | whether *this* wallet may hold the bond and why not (no Hedera account, no KYC, bond not active); **testnet self-service KYC**: sign a one-line message, the API's compliance-officer bot grants or revokes KYC on the ATS token |
+| Bond → Coupons | every coupon with its snapshot and schedule, claim your share, and for the issuer: fund the pool, pay a coupon by hand, schedule the next one, redeem at maturity |
+| Bond → Collateral | vault balance, the live Chainlink HBAR/USD price, coverage; the issuer deposits and withdraws |
+| Bond → Risk | verdict history with nonces, the trusted signer, and *Relay a signed verdict*: paste the enclave's `VERDICT_JSON`, the app verifies the signature against `RiskGate.signer()` and any wallet submits it; admin unfreeze |
+| Compliance | the officer's desk on the ATS token: KYC status and freeze state per address, grant, revoke, freeze, unfreeze, and what `canTransferFrom` would answer right now |
+| Activity | every decoded event across the six contracts and the token, newest first |
+
+Every write goes through one pipeline ([`web/src/hooks/useTx.ts`](web/src/hooks/useTx.ts)): simulate first, so a
+revert is decoded into a sentence (`ComplianceRejected(0x10, InvalidKycStatus)`, `BondNotActive(1, Frozen)`)
+before anything is signed; then send, wait and refresh. The two calls the Hedera relay under-estimates carry
+explicit gas limits. ABIs and addresses are read from `api/src/abi` and `deployments/testnet.json` at build
+time, so the app cannot drift from the API or the deployment.
+
+The self-service KYC desk is a testnet convenience, not a compliance model: `POST /wallets/{address}/kyc` takes
+a fresh EIP-191 signature, rate-limits per address and per IP, and runs the same `addIssuer → grantKyc` sequence
+as `ats/script/CreateBond.s.sol` from the officer key held in the API's environment. The check it satisfies is
+still the token's; the order book never learns who the officer was.
+
+Run it locally with `cd web && npm install && npm run build` (writes `api/public`, which the API serves) or
+`npm run dev` against a running API; the [`api/Dockerfile`](api/Dockerfile) builds both stages into one image.
+
 ## Where to look, per track
 
 | Track | Start here |
@@ -234,6 +265,8 @@ Off-chain, no credentials needed. Each line is run from the repo root and return
 (cd relayer  && npm test && npm run typecheck)
 (cd api      && npm install && npm run check)                   # placeholder deployment: asserts routes + openapi.json
 (cd api      && npm start)                                      # http://localhost:8787/healthz
+(cd web      && npm install && npm run typecheck && npm test)   # 27 tests: error decoding, coverage, formatting, verdict verification
+(cd web      && npm run build)                                  # -> api/public, served by the API at /
 ```
 
 CRE simulations need `cre login` (browser) and a `CRE_ETH_PRIVATE_KEY` in `workflow/.env`, even though the bond
@@ -416,7 +449,8 @@ ats/         ABI-exact ATS interfaces (pinned commit), testnet addresses, Create
 harness/     Foundry harness for Hedera: HSS/HTS wrappers, mocks at 0x16b and 0x167, doctor/verify/validate
 workflow/    Chainlink CRE confidential workflows (bond-monitor, liquidation-protection) + shared policy
 relayer/     verdict courier, CRE log line to RiskGate.submit
-api/         Bond API (Hono) + OpenAPI + Bazantic gateway runbook, Recipe and A/B protocol
+api/         Bond API (Hono) + OpenAPI + testnet KYC desk + Bazantic gateway runbook, Recipe and A/B protocol
+web/         the app (Vite, React, wagmi): desk, order book, coupons, collateral, risk, compliance, activity
 deployments/ testnet.json, the artifact every other component reads
 docs/        blueprint, technical reference, architecture, demo script, CRE evidence, sponsor feedback
 ```
