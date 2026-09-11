@@ -1,10 +1,11 @@
 # Feedback — Chainlink CRE
 
 Written while building two confidential workflows on `@chainlink/cre-sdk@1.20.0` / `cre` CLI 1.33.0, Sept 2026,
-and revised after simulating both against live chains on 2026-09-10: `bond-monitor` (reads Hedera, signs an
-EIP-712 risk verdict inside the TEE) and `liquidation-protection` (the Sepolia challenge). Findings were hit for
-real unless marked **[to confirm]**. Deploy access was requested on 2026-09-10 and is not enabled yet, so
-nothing here is observed from a deployed workflow.
+revised after simulating both against live chains on 2026-09-10, and again after the final re-run on the
+submitted code on 2026-09-12 (IST): `bond-monitor` (reads Hedera, signs an EIP-712 risk verdict inside the TEE)
+and `liquidation-protection` (the Sepolia challenge). Findings were hit for real unless marked **[to confirm]**.
+Deploy access was requested on 2026-09-10 and was still not enabled on 2026-09-11, so nothing here is observed
+from a deployed workflow.
 
 ## There is no enclave signing primitive, and that is the gap
 
@@ -166,31 +167,71 @@ side by side, would turn a warning into a non-event.
   matrix — crypto, timers, fetch, Buffer, TextDecoder — would save every team the same afternoon of trial and
   error.
 
-## Deploy access is a hard gate on a 9-day hackathon
+- `handlerInTee(trigger, fn, {})` — the constraint the liquidation template ships, with the Nitro form commented
+  out — makes the simulator banner say only `Handler requested TEE Execution`. With the explicit
+  `[{ tee: "nitro", regions: ["us-west-2"] }]` from the hello-confidential template the banner names the enclave
+  it resolved (`AWS Nitro in us-west-2`), which is what a reviewer wants to see; the SDK's `TeeConstraint` type
+  accepts both and the simulation behaves the same. The two templates should agree, and the reference should
+  say which form to use.
+- The simulator stamps every line with the machine's local time and a `Z` suffix: our run at 00:57 IST prints
+  `2026-09-12T00:57:53Z` while it was 19:27 UTC. Harmless until someone lines a log up against a block timestamp.
 
-`cre workflow simulate` runs without deploy access; `cre workflow deploy` does not, and the liquidation
-challenge is scored on a **deployed** workflow. So the whole submission depends on an access request with a
-documented ~24 h turnaround, and the simulator's closing banner (`Run cre account access to request deployment
-access.`) is the first place many teams will learn that. We submitted the form on 2026-09-10 and the workflows
-in this repo are therefore simulated only.
+## Two access gates, and only one of them comes with a promised turnaround
 
-The fix is scheduling, not engineering: put "request deploy access now, it takes about a day" in the first
-paragraph of the challenge brief, not in the docs. A hackathon team that reads the brief on day 7 has already
-lost. An auto-approved staging tier with tight quotas would be better still, since staging is where every
-hackathon workflow lives anyway.
+Deploying a confidential workflow needs two separate approvals, documented in two different places:
+
+1. **Deploy access** for the organization: `cre account access`, also advertised by the simulator's closing
+   banner. The docs page (`docs.chain.link/cre/account/deploy-access`) says "You'll receive a confirmation
+   email, and the Chainlink team will follow up once your request has been reviewed", and that "Deploy access
+   is only required for `cre workflow deploy`". No turnaround is stated.
+2. **Confidential Workflows access**: "currently in private beta and is invite-only, separate from the deploy
+   access required for regular CRE workflows" (`docs.chain.link/cre/account/confidential-workflows-access`),
+   requested through a Google form. The challenge README links that same form with "Fill this form and wait 24h
+   during the hackathon period"; the docs page the form belongs to promises no turnaround at all.
+
+The liquidation challenge is scored on a *deployed* workflow, so a team needs both, and the simulator's
+closing banner (`Run cre account access to request deployment access.`) is the first place many teams learn
+about even the first one. We asked on 2026-09-10. On 2026-09-11 (19:18 UTC) deploy access was still not enabled
+and `cre whoami` failed with an HTTP 500 from the auth backend ("unable to retrieve organization info … token
+refresh failed: auth response: 500 Internal Server Error") while `cre workflow simulate` kept working on the
+cached session. The workflows in this repository are therefore simulated only, and the scoring window is
+covered by a local loop (`workflow/scripts/defend-loop.sh`, documented in `workflow/README.md`) instead of an
+enclave. Three concrete asks:
+
+- Put both gates, and the fact that they are two, in the first paragraph of the challenge brief, and either
+  honour the 24 h figure or remove it. A hackathon team that reads the brief on day 7 has already lost.
+- An auto-approved staging tier with tight quotas would remove the gate for hackathons entirely; staging is
+  where every hackathon workflow lives anyway.
+- `CRE_API_KEY` is the documented unattended-auth path ("no `cre login` required"), but the same page says it
+  "requires your account to have deploy access approval", and the secrets reference says "API keys are not
+  supported for secrets operations". Before approval there is no unattended path at all; our fallback loop
+  rides on the cached browser session and retries when the backend answers 500.
+
+## A production enclave has no log channel, so a log-line relay is simulator-only
+
+The simulator banner says it in every run ("During real execution, user logs for this trigger will not be
+visible, and will not leave the TEE") and the hello-confidential template's README repeats it ("Every
+`runtime.log()` inside the enclave MUST be removed before deploying to production"). That closes a question we
+had left open: there is no production observability for a confidential handler, by design.
+
+For our design it means the relayer's input, the `VERDICT_JSON {…}` log line, exists only in the simulator. A
+deployed `bond-monitor` has to deliver the verdict itself, which is what `config.production.json` does with
+`deliver: "direct"` (the enclave signs `RiskGate.submit` with the Hedera submit key and sends it over JSON-RPC),
+and the only trace of an execution is its on-chain effect plus `cre execution` history. Two things would help:
+one sentence in the concept page saying that logs are simulator-only and the return value / chain effect is the
+production interface; and some attested execution receipt for confidential handlers (even a hash of the return
+value) that a relayer or auditor could fetch. "Confidential execution evidence or an execution receipt" is a
+scored item of the challenge, and today the only artifact a team can produce for it is a simulator transcript.
 
 ## **[to confirm]**
 
 - `cre secrets create secrets.yaml --target staging-settings --secrets-auth=browser`, and whether secret
-  rotation requires a redeploy. Written up in `workflow/README.md` from the reference, not yet run.
+  rotation requires a redeploy. Written up in `workflow/README.md` from the reference, not yet run; the secrets
+  reference does say the step is browser-login only (no API key), and says nothing about rotation.
 - Whether a batched JSON-RPC request counts as one call against the 5-per-execution quota. Our workflows are
   designed to it, and a 9-sub-call batch executed fine in the simulator with no quota complaint, but the
   simulator prints per-call limits rather than a running count, so we cannot prove the accounting. If a batch is
   counted per sub-call, a lot of workflows are silently near the limit.
-- Whether production TEE logs are retrievable at all. We assume they are invisible by design and are treating
-  simulator output as the only evidence artifact (`docs/cre-evidence/README.md`). If there is *any* production
-  observability, say where; if there is none, say that too, because teams are currently guessing.
-
 ## What worked well
 
 The simulator's TEE banner and `[USER LOG]` lines are exactly the right evidence artifact: readable,
