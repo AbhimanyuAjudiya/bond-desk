@@ -13,3 +13,9 @@ relayer/inbox/*.json
 .DS_Store
 broadcast/**/run-1*.json
 broadcast/**/run[A-Z]*-1*.json
+
+# web/ build output served by the API
+api/public/
+
+# Claude Code launch config
+.claude/
