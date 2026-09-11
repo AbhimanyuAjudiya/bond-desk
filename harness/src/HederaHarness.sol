@@ -43,6 +43,9 @@ library HederaHarness {
     }
 
     /// @notice Schedule `data` against `to` at second `when` with no value attached.
+    /// @dev The network fires the call at `when`, but `block.timestamp` inside it is the start of the block it lands
+    ///      in, up to ~2 s earlier. A call gated on `block.timestamp >= due` must be scheduled at `due + lag`
+    ///      (10 s is plenty); `HederaTest.executeLagged` reproduces the gap.
     function schedule(address to, uint256 when, uint256 gas, bytes memory data)
         internal
         returns (address sched, int64 rc)

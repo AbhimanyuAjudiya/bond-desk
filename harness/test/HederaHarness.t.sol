@@ -12,12 +12,20 @@ contract Counter {
     address public lastSchedule;
     int64 public lastRc;
 
+    error TooEarly(uint256 due);
+
     function hit() external {
         hits++;
         if (reschedule) {
             (lastSchedule, lastRc) =
                 HederaHarness.schedule(address(this), block.timestamp + 10, 500_000, abi.encodeCall(this.hit, ()));
         }
+    }
+
+    /// @dev A time-gated call, the shape of a coupon: due at a second, rejects any block that starts earlier.
+    function hitAfter(uint256 due) external {
+        if (block.timestamp < due) revert TooEarly(due);
+        hits++;
     }
 
     function setReschedule(bool v) external {
@@ -279,6 +287,22 @@ contract HederaHarnessTest is HederaTest {
         warpAndExecute(when);
         assertTrue(hss.get(sched).executed);
         assertEq(counter.hits(), 0);
+    }
+
+    /// @dev Testnet finding: HSS fires at the expiry second, but `block.timestamp` in the run is the start of the
+    ///      block it lands in, ~2 s earlier. A call gated on `block.timestamp >= due` needs `due + lag`.
+    function test_executeLagged_timeGatedCallNeedsLag() public {
+        bytes memory gated = abi.encodeCall(counter.hitAfter, (when));
+        (address exact,) = HederaHarness.schedule(address(counter), when, GAS, gated);
+        vm.expectEmit(true, true, true, true, address(hss));
+        emit MockHSS.Executed(exact, false, abi.encodeWithSelector(Counter.TooEarly.selector, when));
+        executeLagged(exact, 2);
+        assertEq(counter.hits(), 0);
+        assertEq(block.timestamp, when - 2);
+
+        (address lagged,) = HederaHarness.schedule(address(counter), when + 10, GAS, gated);
+        executeLagged(lagged, 2);
+        assertEq(counter.hits(), 1);
     }
 
     function test_deleteSchedule_codes() public {

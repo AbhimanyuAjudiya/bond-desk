@@ -37,6 +37,14 @@ abstract contract HederaTest is Test {
         hss.executeDue();
     }
 
+    /// @notice Fire `sched` as the network does: at its expiry second, inside a block that started `lag` seconds
+    ///         earlier. `block.timestamp` is the block's start (~2 s behind on testnet), so a call gated on
+    ///         `block.timestamp >= due` must be scheduled at `due + lag` to survive this.
+    function executeLagged(address sched, uint256 lag) internal {
+        vm.warp(hss.get(sched).when - lag);
+        hss.execute(sched);
+    }
+
     /// @notice Whole HBAR in tinybar, the unit the Hedera EVM uses for `msg.value`.
     function hbar(uint256 whole) internal pure returns (uint256) {
         return whole * HederaHarness.TINYBAR;
