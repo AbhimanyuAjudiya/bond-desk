@@ -215,6 +215,10 @@ is a page for a person and a document for a program.
 | Compliance | the officer's desk on the ATS token: KYC status and freeze state per address, grant, revoke, freeze, unfreeze, and what `canTransferFrom` would answer right now |
 | Activity | every decoded event across the six contracts and the token, newest first |
 
+![Bond #1, order book](docs/img/app-order-book.jpg)
+
+![Bond #1, risk gate with the verdict history and the relay box](docs/img/app-risk.jpg)
+
 Every write goes through one pipeline ([`web/src/hooks/useTx.ts`](web/src/hooks/useTx.ts)): simulate first, so a
 revert is decoded into a sentence (`ComplianceRejected(0x10, InvalidKycStatus)`, `BondNotActive(1, Frozen)`)
 before anything is signed; then send, wait and refresh. The two calls the Hedera relay under-estimates carry
