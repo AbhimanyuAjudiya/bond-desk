@@ -122,14 +122,15 @@ The recorded version of this beat, if a take fails: rejected read at
 Collateral shows the vault balance in HBAR, the live Chainlink HBAR/USD price it is valued at, and the
 coverage in basis points the vault computes on-chain. No typing.
 
-Coupons shows coupon 3 with `paidAt`, its snapshot id, and the schedule that paid it, then the next one, armed
-from inside the executed call. Beside it, the terminal:
+Coupons shows the latest paid coupon with its snapshot id (coupon ids restart at 1 on the redeployed lifecycle
+contract; the storyline's coupon 3 is id 2 there), and the pending schedule for the next one, armed from inside
+the executed call. Beside it, the terminal:
 
 ```sh
 harness/scripts/validate-schedule.sh "$SCHEDULE"         # exit 0: executed_timestamp is set and the child tx SUCCEEDED
 ```
 
-Connect **Investor 1**, click *Claim* on coupon 3, confirm. The claimed amount and the HashScan link appear.
+Connect **Investor 1**, click *Claim* on the latest coupon, confirm. The claimed amount and the HashScan link appear.
 
 **Say:** collateral is native HBAR valued against the Chainlink feed on Hedera testnet at `0x59bC155E…c92B4a`,
 and coverage is computed by the contract, not by us. The coupon was fired by Hedera's Schedule Service through
