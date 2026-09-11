@@ -67,6 +67,68 @@ Two separate asks, and the second one is the expensive part:
    piece of observability, because a silent revert inside a scheduled call is exactly the failure mode the
    feature invites.
 
+## `block.timestamp` inside a scheduled execution is the block's start, not the expiry second
+
+The second coupon found this one, and it is the kind of bug that passes every local test. `payCoupon` scheduled
+its successor at exactly `nextCoupon` (`1789121682`) from inside the first coupon's execution, and HSS did what it
+promised: schedule `0.0.10457462` has `expiration_time: 1789121682.000000000` and
+`executed_timestamp: 1789121682.025689368`. The execution reverted anyway, `CONTRACT_REVERT_EXECUTED`, fee
+5,405,196 tinybar, far too cheap to have reached the snapshot. The reason is in the block record: the execution is
+the last of 43 transactions in block `40378969`, whose `timestamp.from` is `1789121680.007748104` and
+`timestamp.to` is `1789121682.025689368`. Hedera blocks are ~2 s windows of consensus time, and `block.timestamp`
+as the EVM sees it is the *start* of the window, so the call saw `1789121680`, two seconds before the second it was
+scheduled for, and the guard `block.timestamp < nextCoupon` fired. Coupon 1 only survived because its target was
+already in the past when it was re-armed by hand at `now + 5`: it executed at `1789035662.019503208` in block
+`40338609` (`timestamp.from 1789035661.647882104`), which is comfortably after its `nextCoupon` of `1789035282`.
+Same code path, one accidental pass, one deterministic failure.
+
+The fix is one constant: schedule at `target + 10` (`BondLifecycle.SCHEDULE_LAG`), keep `scheduledFor` at the
+target, and reproduce the gap in the harness (`HederaTest.executeLagged(sched, 2)` fires a mock schedule at its
+second inside a block that started 2 s earlier). Two asks:
+
+1. **State it in the `scheduleCall` / HIP-1215 reference**: the call runs at the expiry second, but the
+   `block.timestamp` it observes is the enclosing block's first consensus timestamp and can be up to a block
+   (~2 s) earlier. Anything gated on `block.timestamp >= expirySecond` needs a margin. Every coupon, vesting or
+   auction contract will have exactly this guard.
+2. **Show the block on the schedule.** Neither `GET /api/v1/schedules/{id}` nor HashScan's schedule page says
+   which block the execution landed in; we had to ask `GET /api/v1/blocks?timestamp=lte:<executed_timestamp>`.
+
+### A scheduled execution is invisible to `/contracts/results`, in both forms
+
+This is the second time the observability of scheduled executions cost us a night, and this time we tried every
+endpoint. With the scheduled child's transaction id `0.0.7314364-1789035654-697746300`:
+
+- `GET /api/v1/contracts/results/{id}` returns the **original** `schedule()` call (`SUCCESS`, `gas_used 1505270`,
+  hash `0xe00bea9a…`), which is the wrong transaction and reports success.
+- `GET /api/v1/contracts/results/{id}?scheduled=true` returns a body in which **every field is `null`**: `result`,
+  `block_number`, `timestamp`, `gas_used`, `from`, `to`, `hash`. Not a 404, a null record.
+- `GET /api/v1/contracts/{lifecycle}/results?timestamp=gte:…&timestamp=lte:…` over the execution's second lists
+  nothing at all; the contract's own results feed does not contain its scheduled executions.
+- Only `GET /api/v1/transactions?timestamp=1789121682.025689368` shows the child:
+  `{name: CONTRACTCALL, result: CONTRACT_REVERT_EXECUTED, scheduled: true, charged_tx_fee: 5405196}`. No revert
+  data, no gas used, no block number.
+
+So a reverted scheduled call has no revert reason anywhere and no contract-result record; root-causing it means
+reading the block boundaries and the contract's guards by hand. The ask from the gas-budget section stands and is
+now stronger: give scheduled executions a contract-result record, with `error_message` and `gas_used`, and link it
+from the schedule.
+
+### Recovery, and what it cost
+
+The reverted run left `scheduleOf` pointing at an executed schedule, so the permissionless `schedule()` refused
+with `AlreadyScheduled`, and the old contract would have re-armed the same exact second anyway. Recovery was a
+redeploy with `SCHEDULE_LAG`, re-granting `GATE_ROLE`, `ROLE_SNAPSHOT` and `ROLE_MATURITY_REDEEMER`, recovering the
+18.02 HBAR float from the superseded payer with `withdrawHbar`, funding the new one, and paying coupon 2 by hand
+(`payCoupon(1)`, 1,678,160 gas at a 4M limit), which armed coupon 3 as schedule `0.0.10482928` with
+`expiration_time 1789208092`, the target `1789208082` plus the lag. Receipts are in the root `README.md`.
+
+One more relay observation from the same evening, hit for real: `eth_estimateGas` right after a state change can
+be computed against the *previous* state. Nine seconds after the compliance officer's `setAddressFrozen(inv2, true)`
+landed, the relay estimated the unfreeze at 80,554 gas (and `eth_call isFrozen` still answered `false`); on chain
+the unfreeze ran out of gas at 80,019 and reverted, and the retry with `--gas-limit 300000` succeeded. The rule we
+now follow is: after any state change you are about to depend on, pass an explicit gas limit or wait for the
+mirror node to catch up.
+
 ## `eth_estimateGas` on the relay under-estimates native-value sends and system-contract calls
 
 This one cost us a reverted transaction on camera-day. `CollateralVault.withdraw` transfers HBAR out of the
