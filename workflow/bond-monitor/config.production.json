@@ -1,5 +1,5 @@
 {
-  "schedule": "0 */2 * * * *",
+  "schedule": "0 0 * * * *",
   "hederaRpcUrl": "https://testnet.hashio.io/api",
   "chainId": 296,
   "riskGate": "0x1dFF1d5458D6a6f6af46014de76474DC3170C31B",
