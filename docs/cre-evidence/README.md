@@ -16,7 +16,20 @@ hand-written file and every hash in it is pasted from a script's output.
 | `liquidation-protection-20260910-1424-nodebt.log` | `bun run sim:liq`, before `join()` | TEE banner, an empty position read from Sepolia (`hfChain` is `uint256` max, mapped to the sentinel `hf=1000000000`), `plan=no-debt`, result `SAFE`. No transaction is signed when there is nothing to defend. |
 | `liquidation-protection-20260910-1426-defend-reverted.log` | `bun run sim:liq`, right after `join()` | `hf=111` sits at or below the private trigger, so the enclave signed and broadcast `repay(100000)` (vUSD has 2 decimals, so 1,000.00 vUSD): [`0xf3e806bc…dc7effe8`](https://sepolia.etherscan.io/tx/0xf3e806bce55bc2ed87bd7bc3d9b7b3bbd604a4b1b4dc6f7514ace408dc7effe8), which **reverted with `Scenario has not started`**. The challenge contract's `onlyActive` gate only opens while Chainlink is running a scoring scenario. |
 | `liquidation-protection-20260910-1433-inactive.log` | `bun run sim:liq`, after adding the gate probe | A ninth sub-call in the same JSON-RPC batch simulates `repay(1)` with `eth_call`. The workflow sees the closed gate, logs `plan=scenario-inactive`, returns `INACTIVE`, and spends no gas. During a live scenario the probe succeeds and the defend path runs unchanged. |
+| `bond-monitor-20260912-0057-warn.log` | `bun run sim:bond`, final code | Re-run on the submitted code after the policy rotation (below). The banner now names the enclave constraint the handler asks for (`AWS Nitro in us-west-2`); then one batched `getSecrets`, one HTTP call, `action=1` (WARN), `reason=below-warn`, `coverageObserved: 595`, `nonce: 3` (two verdicts already applied on-chain). Signed in the simulator, not relayed. |
+| `liquidation-protection-20260912-0057-inactive.log` | `bun run sim:liq`, final code | Same banner, the nine-sub-call batch, `plan=scenario-inactive (gate closed)`, result `INACTIVE`, no transaction: the gate is still closed before the scoring window, and the handler declines instead of paying for a revert. |
 | `challenge.md` | `bun run setup:challenge` | The two `approve` hashes and the `join()` hash on Sepolia, the participant wallet, and the position `join()` created. Required for the Chainlink Automated Liquidation Protection Challenge. |
+
+## Policy rotation, 2026-09-12
+
+Both private policies were replaced after the 2026-09-10 runs and before the 2026-09-12 re-run: the five
+liquidation values (trigger and target health factors, repay and deposit caps, cooldown) and the bond coverage
+ladder (WARN and FREEZE; the DEFAULT floor stays disabled). Reason: the committed `workflow/.env.example` used
+to carry the liquidation values verbatim, and the `1426` log's `repay: 100000` against `hf=111` lets a reader
+solve for the old target. So nothing in the committed 2026-09-10 logs describes the live policy any more, the
+old values are in neither the repository nor `workflow/.env`, `.env.example` now holds placeholders, and
+`workflow/README.md` ("Choosing a policy") explains units and constraints without giving numbers. The 09-10
+logs stay here unchanged as the record of what happened that day.
 
 ## The verdicts that reached Hedera
 
@@ -40,7 +53,9 @@ inside the enclave. `VERDICT_JSON` carries only fields that are about to be publ
 `action`, `coverageObserved`, `issuedAt`, `nonce`, the signature, the chain id and the `RiskGate` address.
 
 `liquidation-protection` prints `liq hf=<sentinel-or-value> hfChain=<raw> plan=<slug> txs=<sent>/<planned>`, or
-`liq plan=scenario-inactive`. The private trigger, target, caps and cooldown never appear.
+`liq plan=scenario-inactive (gate closed|probe failed)`. The private trigger, target, caps and cooldown never
+appear, and a malformed policy secret is rejected by `policyInt` with a message that names the secret id, not
+its value.
 
 ## Reproduce
 
@@ -80,6 +95,14 @@ Per-file notes:
   `1426` is the naive version that trusts the challenge contract to accept a repay; `1433` adds the `eth_call`
   probe and declines. Both run against the live position created by `join()`, so re-running `1426` today would
   revert the same way until Chainlink opens a scenario.
+- **The 2026-09-12 pair ties the logs to the submitted code.** Both were produced by the exact commands in the
+  index on the code in this commit, after the policy rotation and after the Nitro constraint was added: the
+  `Binary hash` lines differ from every 09-10 log for that reason, the `Config hash` lines are unchanged
+  (`91df4789…` for bond-monitor, `515b79e7…` for liquidation-protection) because no config moved. The first
+  line of each file is `bun run`'s echo of the command.
+- **Clock.** The simulator stamps lines with the machine's local time (IST, UTC+5:30) and a `Z` suffix, and the
+  file names use the same local clock: `20260912-0057` was 2026-09-11 19:27 UTC. The same holds for the 09-10
+  files.
 - **A fresh bond-monitor run reads live state.** The coverage bucket depends on what `CollateralVault` holds at
   that moment, and the nonce depends on how many verdicts have already been applied. The verdict in a new log
   will not match the ones above.
@@ -112,12 +135,12 @@ than 4 characters are skipped for the same reason — a 1 to 3 digit threshold c
 coincidence, so the check would only produce noise. What is left is every private key and the longer policy
 values.
 
-Run as written against the five logs in this directory, the check reports exactly one hit, and it is not a
-leak: the CRE simulator opens every run with a fixed capability-limits banner (the
-`HTTP: … | ChainWrite … | WASM binary=…` line), whose numbers are the simulator's own constants and are byte
-for byte identical in all five logs — one of them collides with a short policy value. Nothing the workflows
-themselves write matches: no `[USER LOG]` line, no `VERDICT_JSON` field, and none of the three private keys
-appears anywhere.
+Run as written against the seven logs in this directory on 2026-09-12, after the policy rotation, the check
+reports **no hit**. Before the rotation it reported exactly one, and it was not a leak: the CRE simulator opens
+every run with a fixed capability-limits banner (the `HTTP: … | ChainWrite … | WASM binary=…` line), whose
+numbers are the simulator's own constants, byte for byte identical in every log, and one of them happened to
+equal a policy value that no longer exists. Nothing the workflows themselves write matches: no `[USER LOG]`
+line, no `VERDICT_JSON` field, and none of the three private keys appears anywhere.
 
 A hit on any other line is real: delete the log, fix the offending log statement, re-run the simulation. Do not
 redact by hand. A redacted log is not evidence, and the underlying log statement will leak again on the next
@@ -133,5 +156,8 @@ submission.
 - **`don-report=ok` attests to a DON round**, not to the enclave that produced the payload.
 - **They do not prove on-chain effect on their own.** That is the relay transaction table above, and the full
   storyline in the root `README.md`.
-- **The workflows are not deployed.** CRE deploy access was requested on 2026-09-10 and is not enabled yet, so
-  `cre workflow deploy` has not run and the deployment record in `challenge.md` is still open.
+- **The workflows are not deployed.** CRE deploy access was requested on 2026-09-10 and was still not enabled on
+  2026-09-11, so `cre workflow deploy` has not run and the deployment record in `challenge.md` is still open.
+  During the scoring window the position is defended either by the deployed workflow, if access arrives in
+  time, or by `workflow/scripts/defend-loop.sh` re-running this same handler through the simulator every 30 s;
+  `challenge.md` ("How the position is defended during scoring") states both branches and their caveats.
