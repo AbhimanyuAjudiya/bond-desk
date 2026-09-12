@@ -18,5 +18,25 @@
     "nonKyc": "0x3b44299d9F246dc775DC2e4A0B54e31DB5b31cb3",
     "supply": 100,
     "token": "0x0100526434C821d0df24f6CC60352F830F8b4504"
-  }
+  },
+  "bonds": [
+    {
+      "isin": "XS2028091200",
+      "issuer": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+      "maturityDate": 1852329600,
+      "name": "Bond Desk 7.25% 2028",
+      "supply": 60,
+      "symbol": "BDB28",
+      "token": "0xf175d5B081d8A5187Bdb5b7fA6F621eFe9c6F40D"
+    },
+    {
+      "isin": "XS2030091206",
+      "issuer": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+      "maturityDate": 1915401600,
+      "name": "Bond Desk 3.75% 2030",
+      "supply": 40,
+      "symbol": "BDB30",
+      "token": "0xd6752FfC596C8F9D4F5D530246e5698ec65a983f"
+    }
+  ]
 }

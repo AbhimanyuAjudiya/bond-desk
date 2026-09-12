@@ -23,13 +23,21 @@ import {
 ///        forge script ats/script/CreateBond.s.sol:CreateBond --rpc-url hedera --broadcast --slow -vvvv
 ///      Env: HEDERA_PRIVATE_KEY, COMPLIANCE_OFFICER, INVESTOR1, INVESTOR2, INVESTOR3_NOKYC,
 ///           BOND_SUPPLY (default 100), MATURITY_DELAY (seconds, default 365 days).
+///      Any further bond, same wallets and roles, appended to the `bonds` array of `ats/testnet.json`
+///      (maturity is an absolute unix time; the ISIN must pass the Luhn check below, as the factory enforces it):
+///        forge script ats/script/CreateBond.s.sol:CreateBond \
+///          --sig "create(string,string,string,uint256,uint256)" "Bond Desk 7.25% 2028" BDB28 XS2028091200 60 1852329600 \
+///          --rpc-url hedera --broadcast --slow -vvvv
 ///      Encoding check without a chain or env:
 ///        forge script ats/script/CreateBond.s.sol:CreateBond --sig "dryRun()"
 ///      ISIN US0378331005 (Luhn over "3028 037833100 5", letters U=30 S=28): doubling every second digit from
 ///      the right (0,1,3,7,0,2,3 -> 0,2,6,14->5,0,4,6 = 23) plus the others (5+0+3+8+3+8+0 = 27) gives 50 -> valid.
 contract CreateBond is Script {
+    string internal constant NAME = "Bond Desk 5% 2027";
+    string internal constant SYMBOL = "BDB27";
     string internal constant ISIN = "US0378331005";
     uint256 internal constant TEN_YEARS = 3650 days;
+    string internal constant CFG = "ats/testnet.json";
 
     error NoCode(address at);
     error BadIsin(string isin);
@@ -43,36 +51,62 @@ contract CreateBond is Script {
         address inv3;
         uint256 supply;
         uint256 maturity;
+        string name;
+        string symbol;
+        string isin;
     }
 
+    /// @notice Bond 1 (`bond` in ats/testnet.json).
     function run() external {
-        uint256 pk = vm.envUint("HEDERA_PRIVATE_KEY");
-        Env memory e = Env({
-            issuer: vm.addr(pk),
+        Env memory e = _env(
+            NAME, SYMBOL, ISIN, vm.envOr("BOND_SUPPLY", uint256(100)), block.timestamp + vm.envOr("MATURITY_DELAY", uint256(365 days))
+        );
+        _write(_create(e), e);
+    }
+
+    /// @notice Any further bond, appended to `bonds` in ats/testnet.json.
+    function create(string memory name, string memory symbol, string memory isin, uint256 supply, uint256 maturity)
+        external
+    {
+        Env memory e = _env(name, symbol, isin, supply, maturity);
+        _append(_create(e), e);
+    }
+
+    function _env(string memory name, string memory symbol, string memory isin, uint256 supply, uint256 maturity)
+        internal
+        view
+        returns (Env memory)
+    {
+        return Env({
+            issuer: vm.addr(vm.envUint("HEDERA_PRIVATE_KEY")),
             officer: vm.envAddress("COMPLIANCE_OFFICER"),
             inv1: vm.envAddress("INVESTOR1"),
             inv2: vm.envAddress("INVESTOR2"),
             inv3: vm.envAddress("INVESTOR3_NOKYC"),
-            supply: vm.envOr("BOND_SUPPLY", uint256(100)),
-            maturity: block.timestamp + vm.envOr("MATURITY_DELAY", uint256(365 days))
+            supply: supply,
+            maturity: maturity,
+            name: name,
+            symbol: symbol,
+            isin: isin
         });
-        string memory cfg = vm.readFile("ats/testnet.json");
+    }
+
+    function _create(Env memory e) internal returns (address token) {
+        string memory cfg = vm.readFile(CFG);
         address factory = vm.parseJsonAddress(cfg, ".factory");
         address blr = vm.parseJsonAddress(cfg, ".blr");
         if (factory.code.length == 0) revert NoCode(factory);
         if (blr.code.length == 0) revert NoCode(blr);
-        if (!_luhn(ISIN)) revert BadIsin(ISIN);
+        if (!_luhn(e.isin)) revert BadIsin(e.isin);
 
-        (IATSFactory.BondData memory data, IATSFactory.FactoryRegulationData memory reg) =
-            _bond(blr, e.issuer, e.officer, block.timestamp, e.maturity);
+        (IATSFactory.BondData memory data, IATSFactory.FactoryRegulationData memory reg) = _bond(blr, e, block.timestamp);
 
-        vm.startBroadcast(pk);
-        address token = IATSFactory(factory).deployBond(data, reg);
+        vm.startBroadcast(vm.envUint("HEDERA_PRIVATE_KEY"));
+        token = IATSFactory(factory).deployBond(data, reg);
         _issue(IATSAdmin(token), e);
         vm.stopBroadcast();
 
         _check(IATSAdmin(token), e);
-        _write(token, e);
         console.log("bond token:", token);
         console.log("maturity:  ", e.maturity);
         console.log("https://hashscan.io/testnet/contract/%s", token);
@@ -104,21 +138,54 @@ contract CreateBond is Script {
         investors[1] = e.inv2;
         string memory b = "bond";
         vm.serializeAddress(b, "token", token);
-        vm.serializeString(b, "isin", ISIN);
+        vm.serializeString(b, "isin", e.isin);
         vm.serializeAddress(b, "issuer", e.issuer);
         vm.serializeAddress(b, "complianceOfficer", e.officer);
         vm.serializeAddress(b, "investors", investors);
         vm.serializeAddress(b, "nonKyc", e.inv3);
         vm.serializeUint(b, "supply", e.supply);
         string memory out = vm.serializeUint(b, "maturityDate", e.maturity);
-        vm.writeJson(out, "ats/testnet.json", ".bond");
+        vm.writeJson(out, CFG, ".bond");
+    }
+
+    /// @dev `vm.writeJson` cannot address `.bonds[i]`, so the array is rebuilt from the entries already there.
+    function _append(address token, Env memory e) internal {
+        string memory j = vm.readFile(CFG);
+        string memory arr = "[";
+        for (uint256 i; vm.keyExistsJson(j, string.concat(".bonds[", vm.toString(i), "]")); ++i) {
+            string memory k = string.concat(".bonds[", vm.toString(i), "]");
+            Env memory p;
+            p.name = vm.parseJsonString(j, string.concat(k, ".name"));
+            p.symbol = vm.parseJsonString(j, string.concat(k, ".symbol"));
+            p.isin = vm.parseJsonString(j, string.concat(k, ".isin"));
+            p.issuer = vm.parseJsonAddress(j, string.concat(k, ".issuer"));
+            p.supply = vm.parseJsonUint(j, string.concat(k, ".supply"));
+            p.maturity = vm.parseJsonUint(j, string.concat(k, ".maturityDate"));
+            arr = string.concat(arr, i == 0 ? "" : ",", _entry(vm.parseJsonAddress(j, string.concat(k, ".token")), p));
+        }
+        arr = string.concat(arr, bytes(arr).length == 1 ? "" : ",", _entry(token, e), "]");
+        vm.writeJson(arr, CFG, ".bonds");
+    }
+
+    function _entry(address token, Env memory e) internal returns (string memory) {
+        string memory b = string.concat("bonds.", e.symbol);
+        vm.serializeAddress(b, "token", token);
+        vm.serializeString(b, "name", e.name);
+        vm.serializeString(b, "symbol", e.symbol);
+        vm.serializeString(b, "isin", e.isin);
+        vm.serializeAddress(b, "issuer", e.issuer);
+        vm.serializeUint(b, "supply", e.supply);
+        return vm.serializeUint(b, "maturityDate", e.maturity);
     }
 
     /// @notice Encoding proof without a chain: builds the calldata and checks selector 0x29002951 + the ISIN.
     function dryRun() external view {
         if (!_luhn(ISIN)) revert BadIsin(ISIN);
+        Env memory e;
+        (e.issuer, e.officer, e.maturity, e.name, e.symbol, e.isin) =
+            (address(0x15), address(0x0F), block.timestamp + 365 days, NAME, SYMBOL, ISIN);
         (IATSFactory.BondData memory data, IATSFactory.FactoryRegulationData memory reg) =
-            _bond(address(0xB1), address(0x15), address(0x0F), block.timestamp, block.timestamp + 365 days);
+            _bond(address(0xB1), e, block.timestamp);
         bytes memory cd = abi.encodeCall(IATSFactory.deployBond, (data, reg));
         if (bytes4(cd) != IATSFactory.deployBond.selector || bytes4(cd) != 0x29002951) revert Unexpected("selector");
         console.log("deployBond selector: %s", vm.toString(abi.encodePacked(bytes4(cd))));
@@ -127,11 +194,12 @@ contract CreateBond is Script {
     }
 
     /// @dev Positional construction in `IATSFactory` (= ATS IFactory.sol @ be4f860e408e) field order.
-    function _bond(address blr, address issuer, address officer, uint256 start, uint256 maturity)
+    function _bond(address blr, Env memory e, uint256 start)
         internal
         pure
         returns (IATSFactory.BondData memory data, IATSFactory.FactoryRegulationData memory reg)
     {
+        (address issuer, address officer) = (e.issuer, e.officer);
         IATSFactory.Rbac[] memory rbacs = new IATSFactory.Rbac[](9);
         rbacs[0] = IATSFactory.Rbac(DEFAULT_ADMIN_ROLE, _one(issuer));
         rbacs[1] = IATSFactory.Rbac(ROLE_SSI_MANAGER, _one(issuer));
@@ -148,7 +216,7 @@ contract CreateBond is Script {
                 resolver: blr,
                 maxSupply: 1_000_000,
                 resolverProxyConfiguration: IATSFactory.ResolverProxyConfiguration(BOND_CONFIG_ID, 1),
-                erc20MetadataInfo: IATSFactory.ERC20MetadataInfo("Bond Desk 5% 2027", "BDB27", ISIN, 0),
+                erc20MetadataInfo: IATSFactory.ERC20MetadataInfo(e.name, e.symbol, e.isin, 0),
                 rbacs: rbacs,
                 externalPauses: new address[](0),
                 externalControlLists: new address[](0),
@@ -163,7 +231,7 @@ contract CreateBond is Script {
                 internalKycActivated: true,
                 erc20VotesActivated: false
             }),
-            bondDetails: IATSFactory.BondDetailsData("USD", 1, 0, start, maturity),
+            bondDetails: IATSFactory.BondDetailsData("USD", 1, 0, start, e.maturity),
             proceedRecipients: new address[](0),
             proceedRecipientsData: new bytes[](0)
         });
