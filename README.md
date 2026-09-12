@@ -348,9 +348,13 @@ is a page for a person and a document for a program.
 | Compliance | the officer's desk on whichever bond token it picks: KYC status and freeze state per address, grant, revoke, freeze, unfreeze, and what `canTransferFrom` would answer right now |
 | Activity | every decoded event across the six contracts and the token, newest first |
 
-![Bond #1, order book](docs/img/app-order-book.jpg)
+![The front page: the statement, the live strip and the first diagram](docs/img/app-landing.jpg)
 
-![Bond #1, risk gate with the verdict history and the relay box](docs/img/app-risk.jpg)
+![The desk: three bonds with bid, ask, depth, yield, coverage and the next coupon](docs/img/app-desk.jpg)
+
+![Bond #2, order book: four asks and two bids from three makers, the spread and the mid, the fill form](docs/img/app-order-book.jpg)
+
+![Bond #1, risk gate: the last verdict, the verdict history with nonces, and the relay box](docs/img/app-risk.jpg)
 
 Every write goes through one pipeline ([`web/src/hooks/useTx.ts`](web/src/hooks/useTx.ts)): simulate first, so a
 revert is decoded into a sentence (`ComplianceRejected(0x10, InvalidKycStatus)`, `BondNotActive(1, Frozen)`)

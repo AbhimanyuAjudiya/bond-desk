@@ -30,13 +30,20 @@ Wallets: either MetaMask on Hedera testnet (chain 296, RPC `https://testnet.hash
 `https://hashscan.io/testnet`) with the keys below imported and named so the connector chip reads well on camera,
 or, simpler for a recording, the dev server with `?burners=1` (`cd web && npm run dev`, then
 `http://localhost:5173/?burners=1` with the API on `localhost:8787`): every demo key in `web/.env.local` appears as
-*Burner: investor 1 … relayer*, signs without a popup, and no installed wallet extension (Phantom in particular)
-can take the session over. The hosted URL is for the judges; the burner mode is for the take.
+*Burner: investor 1, investor 2, investor 3, issuer, officer, relayer*, signs without a popup, and no installed
+wallet extension (Phantom in particular) can take the session over. The hosted URL is for the judges; the burner
+mode is for the take.
+
+Three bonds are live on the desk (BDB27 daily 5%, BDB28 weekly 7.25%, BDB30 30-day 3.75%), each with its own
+book quoted by the issuer and investors 1 and 2 (`README.md` step 20). The script below stays on bond #1, which
+is the one the deployed enclave monitor watches; bonds 2 and 3 are there to show the desk as a desk, and their
+risk status only changes by hand or through the simulator with `bondId` overridden.
 
 | Name in MetaMask | Key | Used in |
 |---|---|---|
 | Issuer / admin | `HEDERA_PRIVATE_KEY` | segments 4, 5 |
 | Investor 1 (KYC) | `deployments/testnet.json .wallets.investorKyc1` | segments 3, 4, 5 |
+| Investor 2 (KYC) | `.wallets.investorKyc2` | quotes on all three books, not needed on camera |
 | Investor 3 (no KYC) | `.wallets.investorNoKyc` | segment 3 |
 | Officer | `COMPLIANCE_OFFICER_KEY` | segment 2 |
 | Relayer | `relayer/.env` | segment 5 |
@@ -64,8 +71,9 @@ terminal between segments.
 
 ## 1 · 0:00–0:15 · What this is
 
-**On screen:** the app's front page at `$API/` (the live strip and the two diagrams), then *Open the desk*. The
-flowchart in `docs/architecture.md` is the fallback if the API is slow.
+**On screen:** the app's front page at `$API/` (the live strip and the two diagrams), then *Open the desk*: three
+bonds, each with a bid, an ask, depth and coverage. The flowchart in `docs/architecture.md` is the fallback if the
+API is slow.
 
 **Say:** a corporate bond issued through Hedera's Asset Tokenization Studio; an order book that asks the token's
 own compliance check before every fill; coupons fired by Hedera's Schedule Service; and a Chainlink CRE enclave
@@ -99,15 +107,17 @@ its own freeze list and its own transfer rules; everything else in this demo has
 
 ## 3 · 0:45–1:25 · Compliance is enforced by the contract, not the UI
 
-**On screen:** the app, bond #1, **Order book** tab. The issuer's ask is open (order 1, 0.99 USDC).
+**On screen:** the app, bond #1, **Order book** tab. The ladder has three asks and two bids from three makers;
+use the issuer's 1.00 ask (10 bonds) for the fills below. Order 1 at 0.99 has 2 bonds left, so a *Buy* of 5 on
+that row is refused as `BadAmount` before it is sent, which is fine to show but not the beat.
 
-1. Connect **Investor 3 (no KYC)**. Click *Fill* for 5 bonds, confirm in MetaMask. The app decodes the revert
+1. Connect **Investor 3 (no KYC)**. Click *Buy* on the 1.00 ask, 5 bonds, confirm in MetaMask. The app decodes the revert
    before sending: `ComplianceRejected(0x10, InvalidKycStatus)`, the token's own answer to `canTransferFrom`.
    Nothing was sent; nothing moved.
 2. Stay on Investor 3, go to **Eligibility**. Click *Request testnet KYC*: MetaMask signs a one-line message
    (no gas), the API's officer bot grants KYC on the token, the tab shows the `grantKyc` hash and `canHold:
    true`.
-3. Back to **Order book**, *Fill* 5 again. Two MetaMask prompts (USDC approval, then the fill), the trade
+3. Back to **Order book**, *Buy* 5 again. Two MetaMask prompts (USDC approval, then the fill), the trade
    appears in the history with its HashScan link, the ask shrinks.
 
 **Say:** the rejection is `canTransferFrom` on the ATS token, called inside `fill`, before any transfer. The
@@ -164,8 +174,8 @@ The centrepiece. The coverage drop is real.
 3. Copy the `VERDICT_JSON` line. App, **Risk** tab, **Relayer** wallet: paste into *Relay a signed verdict*,
    the app verifies the signature against `RiskGate.signer()` and shows the recovered address, click *Relay*,
    confirm. The status badge flips to **Frozen**; the verdict history gains a row with the nonce.
-4. **Order book**, **Investor 1**: *Fill* 5. The app decodes `BondNotActive(1, Frozen)`. A KYC'd buyer, a valid
-   order, and the fill still fails.
+4. **Order book**, **Investor 1**: *Buy* 5 on the same ask. The app decodes `BondNotActive(1, Frozen)`. A
+   KYC'd buyer, a valid order, and the fill still fails. Bonds 2 and 3 keep trading: the freeze is per bond.
 5. **Risk** tab, **Issuer / admin** wallet: *Unfreeze*, confirm. Badge back to **Active**.
 
 **Say:** the relayer verified the signature locally before spending gas, and `RiskGate` checks the signature and
@@ -257,7 +267,8 @@ track requirements and the submission.
   After a transaction, talk for a beat before pointing at a table.
 - The Risk tab refuses a verdict whose nonce is not `lastNonce + 1`, so a verdict from a rehearsal cannot be
   replayed on the take. Re-run `sim:bond` for a fresh one, and relay it within the same hour: the deployed
-  bond-monitor fires at the top of every hour and takes the next nonce itself.
+  bond-monitor fires at the top of every hour and takes the next nonce itself. It watches bond 1 only
+  (`workflow/bond-monitor/config.production.json`); nonces are per bond, so bonds 2 and 3 start at nonce 1.
 - Never show `.env`, `workflow/.env`, `workflow/*/secrets.yaml`, `cre secrets` output, or a terminal with a
   private key in scrollback.
 - Every transaction shown should be linkable afterwards. The **Activity** page lists them newest first with
