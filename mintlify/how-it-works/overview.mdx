@@ -11,30 +11,9 @@ Bond Desk lives on three planes.
 | Chainlink CRE | A confidential workflow in a trusted execution environment (TEE) | The risk policy has to stay private, and a signing key has to exist somewhere nobody can read |
 | Delivery | A relayer, the JSON API, the app, and the Bazantic gateway | Hedera is not a CRE-supported chain, so verdicts need a courier; people and agents need a way in |
 
-```mermaid
-flowchart LR
-  subgraph Hedera["Hedera testnet, chain 296"]
-    TOKEN["ATS bond token<br/>KYC list, control list, canTransferFrom"]
-    MARKET["BondMarket<br/>order book"]
-    VAULT["CollateralVault<br/>HBAR collateral, coverage"]
-    LIFE["BondLifecycle<br/>coupons, claims, redeem"]
-    HSS["Hedera Schedule Service<br/>fires payCoupon on time"]
-    GATE["RiskGate<br/>verifies verdicts, freezes"]
-    FEED["Chainlink HBAR/USD feed"]
-    MARKET -->|"canTransferFrom before every fill"| TOKEN
-    LIFE <--> HSS
-    VAULT --> FEED
-    GATE --> VAULT
-  end
-  subgraph CRE["Chainlink CRE, inside a TEE"]
-    MON["bond-monitor<br/>private thresholds<br/>signs an EIP-712 verdict"]
-  end
-  MON -->|"reads coverage over JSON-RPC"| GATE
-  MON -->|"delivers the signed verdict"| GATE
-  API["JSON API + app"] --> Hedera
-  BAZ["Bazantic gateway<br/>x402, MCP"] --> API
-  AGENT["AI agent"] --> BAZ
-```
+<Frame caption="The three planes: the contracts on Hedera, the enclave that signs verdicts, and the ways in.">
+  <img src="https://cdn.jsdelivr.net/gh/AbhimanyuAjudiya/bond-desk@main/mintlify/images/chart-architecture.png" alt="Architecture: Hedera testnet, the Chainlink CRE enclave, and delivery" />
+</Frame>
 
 ## What happens, in order
 

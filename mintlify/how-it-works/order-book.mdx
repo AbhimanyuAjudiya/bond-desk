@@ -10,6 +10,10 @@ engine. The app and the API rebuild the ladder from the contract and show trades
   <img src="/images/app-order-book.jpg" alt="Order book for BDB28" />
 </Frame>
 
+<Frame caption="How one trade is judged: four checks, the token's own answer, then settlement in one transaction.">
+  <img src="https://cdn.jsdelivr.net/gh/AbhimanyuAjudiya/bond-desk@main/mintlify/images/chart-fill.png" alt="Flow of a fill through the market's checks" />
+</Frame>
+
 ## Placing an order
 
 `place(bondId, isSell, amount, price, expiry)` writes an order and emits `OrderPlaced`.
