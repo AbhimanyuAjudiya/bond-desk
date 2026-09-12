@@ -35,13 +35,13 @@ export function Risk({ bond }: { bond: Bond }) {
   const tx = useTx()
   const [busy, setBusy] = useState(false)
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px] items-start">
-      <div className="flex flex-col gap-5 min-w-0">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_400px] items-start">
+      <div className="flex flex-col gap-3 min-w-0">
         <Panel title="Risk gate" aside={<StatusBadge status={status} />}>
           {q.isLoading && <Loading />}
           {q.isError && <ErrorNote error={q.error} />}
           {snap && (
-            <div className="p-4 grid gap-4 md:grid-cols-2">
+            <div className="p-3 grid gap-3 md:grid-cols-2">
               <KV rows={[
                 ["Registry status", <StatusBadge status={status} />],
                 ["Coverage", snap.feedFresh ? <>{fmtBps(snap.coverageBps)} <Badge tone={coverageBand(snap.coverageBps, 300n).tone}>{coverageBand(snap.coverageBps, 300n).label}</Badge></> : "feed stale"],
@@ -56,7 +56,7 @@ export function Risk({ bond }: { bond: Bond }) {
                 ["Trusted signer", signer ? <AddressChip address={signer} /> : "…"],
                 ["Freshness window", freshness !== undefined ? `${Number(freshness)} s` : "…"],
               ]} />
-              <p className="md:col-span-2 text-[13px] leading-relaxed">
+              <p className="md:col-span-2 text-[12px] leading-snug">
                 {status === "Frozen" && <>Trading is halted: a FREEZE verdict moved the bond to Frozen. The desk admin lifts it after the issuer restores coverage; verdicts never unfreeze on their own.</>}
                 {status === "Active" && last && last[1] === 2 && <>The last verdict was a FREEZE and the admin has since unfrozen the bond; it trades normally until the next verdict says otherwise.</>}
                 {status === "Active" && (!last || last[1] !== 2) && <>The bond trades normally. The enclave watches coverage against its private thresholds and signs OK, WARN, FREEZE or DEFAULT; only the last two change state on chain.</>}
@@ -91,10 +91,10 @@ export function Risk({ bond }: { bond: Bond }) {
           )}
         </Panel>
       </div>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
         <Panel title="Admin" aside={roles.isAdmin ? <span>you are the desk admin</span> : <span>desk admin only</span>}>
           {roles.isAdmin ? (
-            <div className="p-4 flex flex-col gap-2">
+            <div className="p-3 flex flex-col gap-2">
               <Note>{status === "Frozen" ? "Unfreeze returns the bond to Active. Do it once the issuer has restored coverage; the next verdict can freeze it again." : `The bond is ${status}; unfreeze only applies to Frozen bonds (NotFrozen otherwise).`}</Note>
               <div><ConfirmButton variant="primary" disabled={status !== "Frozen"} busy={busy} confirm={`Set bond #${bond.id} back to Active?`} onConfirm={async () => { setBusy(true); try { await tx({ title: "Unfreeze bond", summary: `Move bond #${bond.id} from Frozen to Active.`, abi: riskGateAbi, address: DEP.riskGate, functionName: "unfreeze", args: [id] }) } finally { setBusy(false) } }}>Unfreeze</ConfirmButton></div>
             </div>
@@ -143,7 +143,7 @@ function Relayer({ bond, signer, lastNonce }: { bond: Bond; signer?: `0x${string
   }
   return (
     <Panel title="Relayer" aside={<span>anyone can relay</span>}>
-      <div className="p-4 flex flex-col gap-3">
+      <div className="p-3 flex flex-col gap-3">
         <Note>Hedera is not a CRE-supported chain, so the enclave's signed verdict is carried here by hand. Paste the <code className="font-mono">VERDICT_JSON</code> line from the workflow log; the signature is checked locally against RiskGate's trusted signer before anything is sent. A relayer only pays gas: it can neither forge nor replay a verdict.</Note>
         <label className="label" htmlFor="verdict">VERDICT_JSON</label>
         <textarea id="verdict" className="input h-28 py-1.5 font-mono text-[12px] leading-snug" placeholder='VERDICT_JSON {"verdict":{"bondId":"1","action":2,...},"signature":"0x…","chainId":296,"riskGate":"0x…","txHash":null}' value={text} onChange={(e) => { setText(e.target.value); setParsed(null); setVerified(null) }} spellCheck={false} />
@@ -163,7 +163,7 @@ function Relayer({ bond, signer, lastNonce }: { bond: Bond; signer?: `0x${string
               ["Nonce", `${parsed.verdict.nonce}${lastNonce !== undefined ? ` (last applied ${lastNonce})` : ""}`],
               ["RiskGate", <AddressChip address={parsed.riskGate} kind="contract" />],
             ]} />
-            {problems.length > 0 && <ul className="text-[13px] text-warn list-disc pl-5">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
+            {problems.length > 0 && <ul className="text-[12px] text-warn list-disc pl-5">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
             <div>
               <ConfirmButton variant="primary" disabled={!address || verified !== true || problems.length > 0} busy={busy} confirm={`Send RiskGate.submit with nonce ${parsed.verdict.nonce}? ${actionName(parsed.verdict.action) === "FREEZE" ? "This halts trading." : actionName(parsed.verdict.action) === "DEFAULT" ? "This seizes the collateral." : "OK/WARN are recorded only."}`} onConfirm={submit}>
                 Submit verdict

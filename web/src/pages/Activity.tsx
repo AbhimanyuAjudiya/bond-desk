@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react"
 import { useAccount } from "wagmi"
-import { ActionBadge, AddressChip, Badge, Empty, ErrorNote, Loading, Panel, Refreshed, StatusBadge, Time, TxLink, cx } from "../components/ui"
+import { ActionBadge, AddressChip, Badge, Empty, ErrorNote, Input, Loading, Panel, Refreshed, StatusBadge, Time, TxLink, cx } from "../components/ui"
 import { useEvents } from "../hooks/data"
 import type { DeskEvent } from "../lib/api"
 import { actionName, fmtHbar, fmtInt, fmtPrice, fmtTime, fmtUsdc, sameAddress, statusName } from "../lib/format"
@@ -8,51 +8,55 @@ import { actionName, fmtHbar, fmtInt, fmtPrice, fmtTime, fmtUsdc, sameAddress, s
 const CONTRACTS = ["All", "BondMarket", "BondLifecycle", "RiskGate", "CollateralVault", "BondRegistry", "BondToken"]
 
 export function Activity() {
-  const ev = useEvents(100)
+  const ev = useEvents(200)
   const [filter, setFilter] = useState("All")
+  const [q, setQ] = useState("")
+  const [onlyMine, setOnlyMine] = useState(false)
   const { address } = useAccount()
-  const rows = ev.data?.events.filter((e) => filter === "All" || e.contract === filter) ?? []
+  const needle = q.trim().toLowerCase()
+  const rows = (ev.data?.events ?? []).filter((e) =>
+    (filter === "All" || e.contract === filter)
+    && (!onlyMine || involves(e, address))
+    && (!needle || e.name.toLowerCase().includes(needle) || e.txHash.toLowerCase().includes(needle) || Object.values(e.args).some((v) => String(v).toLowerCase().includes(needle))))
   return (
-    <>
-      <div>
-        <h1 className="text-[30px] leading-none">Activity</h1>
-        <p className="note mt-1.5 max-w-[70ch]">Decoded events from every desk contract and the bond tokens, read from the Hedera mirror node. Newest first; rows that involve your wallet are tinted.</p>
-      </div>
-      <Panel
-        title="Recent events"
-        aside={
-          <>
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by contract">
-              {CONTRACTS.map((c) => (
-                <button key={c} type="button" aria-pressed={filter === c} className={cx("px-2 py-0.5 rounded text-[12px]", filter === c ? "bg-surface-2 text-fg font-medium" : "text-muted hover:text-fg")} onClick={() => setFilter(c)}>{c}</button>
-              ))}
-            </div>
-            <Refreshed at={ev.dataUpdatedAt} />
-          </>
-        }
-      >
-        {ev.isLoading && <Loading />}
-        {ev.isError && <ErrorNote error={ev.error} />}
-        {ev.data && rows.length === 0 && <Empty>{filter === "All" ? "No events yet." : `No ${filter} events in the last ${ev.data.events.length}.`}</Empty>}
-        {rows.length > 0 && (
-          <div className="scroll-x">
-            <table className="table">
-              <thead><tr><th>When</th><th>Contract</th><th>Event</th><th>Tx</th></tr></thead>
-              <tbody>
-                {rows.map((e, i) => (
-                  <tr key={`${e.txHash}-${i}`} className={cx(involves(e, address) && "bg-accent-soft/40")}>
-                    <td className="whitespace-nowrap align-top"><Time unix={e.timestamp} /></td>
-                    <td className="whitespace-nowrap text-muted align-top">{e.contract}</td>
-                    <td className="min-w-[320px] align-top"><Sentence e={e} me={address} /></td>
-                    <td className="whitespace-nowrap align-top"><TxLink hash={e.txHash} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    <Panel
+      title="Activity"
+      aside={
+        <>
+          <div className="flex flex-wrap gap-0.5" role="group" aria-label="Filter by contract">
+            {CONTRACTS.map((c) => (
+              <button key={c} type="button" aria-pressed={filter === c} className={cx("px-1.5 py-0.5 rounded-sm text-[11px]", filter === c ? "bg-surface-3 text-fg font-medium" : "text-muted hover:text-fg")} onClick={() => setFilter(c)}>{c}</button>
+            ))}
           </div>
-        )}
-      </Panel>
-    </>
+          {address && <label className="flex items-center gap-1 text-[11px] text-muted"><input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} /> mine</label>}
+          <Input className="w-[180px] h-6 text-[11px]" placeholder="filter: name, address, hash" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Filter events" />
+          <Refreshed at={ev.dataUpdatedAt} />
+        </>
+      }
+    >
+      {ev.isLoading && <Loading />}
+      {ev.isError && <ErrorNote error={ev.error} />}
+      {ev.data && rows.length === 0 && <Empty>{filter === "All" && !needle && !onlyMine ? "No events yet." : `Nothing matches in the last ${ev.data.events.length} events.`}</Empty>}
+      {rows.length > 0 && (
+        <div className="scroll-x">
+          <table className="table">
+            <thead><tr><th>When</th><th>Contract</th><th>Event</th><th>What happened</th><th>Tx</th></tr></thead>
+            <tbody>
+              {rows.map((e, i) => (
+                <tr key={`${e.txHash}-${i}`} className={cx(involves(e, address) && "bg-accent-soft/40")}>
+                  <td className="whitespace-nowrap align-top"><Time unix={e.timestamp} /></td>
+                  <td className="whitespace-nowrap text-muted align-top">{e.contract}</td>
+                  <td className="whitespace-nowrap align-top num text-[11px]">{e.name}</td>
+                  <td className="min-w-[320px] align-top"><Sentence e={e} me={address} /></td>
+                  <td className="whitespace-nowrap align-top"><TxLink hash={e.txHash} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="note px-3 py-1.5 border-t border-border">Decoded from the Hedera mirror node, newest first; rows that involve your wallet are tinted.</p>
+    </Panel>
   )
 }
 

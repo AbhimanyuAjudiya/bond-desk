@@ -11,8 +11,8 @@ export function Panel({ title, aside, children, className, id }: { title?: React
     <section id={id} className={cx("panel", className)}>
       {title !== undefined && (
         <header className="panel-head">
-          <h3 className="text-[13px] font-semibold tracking-tight whitespace-nowrap">{title}</h3>
-          {aside && <div className="text-[12px] text-muted flex items-center gap-2 min-w-0">{aside}</div>}
+          <h3 className="text-[12px] font-semibold tracking-tight whitespace-nowrap">{title}</h3>
+          {aside && <div className="text-[11px] text-muted flex items-center gap-2 min-w-0">{aside}</div>}
         </header>
       )}
       {children}
@@ -53,7 +53,7 @@ export function AddressChip({ address, kind, me, className }: { address: string;
   const name = CONTRACT_NAMES[address.toLowerCase()]
   const href = (kind ?? (name ? "contract" : "account")) === "contract" ? hashscanContract(address) : hashscanAccount(address)
   return (
-    <span className={cx("inline-flex items-center gap-1 font-mono text-[12px]", className)}>
+    <span className={cx("inline-flex items-center gap-1 font-mono text-[11px]", className)}>
       <a href={href} target="_blank" rel="noreferrer" title={address} className="link">
         {name ?? shortAddress(address)}
       </a>
@@ -64,7 +64,7 @@ export function AddressChip({ address, kind, me, className }: { address: string;
 }
 /** HashScan transaction link: plain underlined text, the hash shortened. */
 export const TxLink = ({ hash, children }: { hash: string; children?: ReactNode }) => (
-  <a href={hashscanTx(hash)} target="_blank" rel="noreferrer" title={hash} className="link font-mono text-[12px] whitespace-nowrap">
+  <a href={hashscanTx(hash)} target="_blank" rel="noreferrer" title={hash} className="link font-mono text-[11px] whitespace-nowrap">
     {children ?? shortHash(hash)} ↗
   </a>
 )
@@ -93,7 +93,7 @@ export function Field({ label, hint, children, htmlFor }: { label: string; hint?
     <div className="flex flex-col gap-1">
       <label htmlFor={htmlFor} className="label">{label}</label>
       {children}
-      {hint && <span className="text-[11px] text-muted">{hint}</span>}
+      {hint && <span className="text-[11px] text-muted leading-snug">{hint}</span>}
     </div>
   )
 }
@@ -163,12 +163,25 @@ export function ConfirmButton({ confirm, onConfirm, children, variant, size, dis
 }
 
 /* Empty, loading and error states: one quiet sentence each, the same everywhere. */
-export const Empty = ({ children }: { children: ReactNode }) => <p className="px-4 py-4 text-[13px] text-muted">{children}</p>
-export const Loading = ({ children = "Loading…" }: { children?: ReactNode }) => <p className="px-4 py-4 text-[13px] text-muted" aria-busy="true">{children}</p>
+export const Empty = ({ children }: { children: ReactNode }) => <p className="px-3 py-3 text-[12px] text-muted">{children}</p>
+export const Loading = ({ children = "Loading…" }: { children?: ReactNode }) => <p className="px-3 py-3 text-[12px] text-muted" aria-busy="true">{children}</p>
 export const ErrorNote = ({ error, children }: { error?: unknown; children?: ReactNode }) => (
-  <p className="px-4 py-4 text-[13px] text-bad">{children ?? `Could not load this: ${error instanceof Error ? error.message : String(error)}.`}</p>
+  <p className="px-3 py-3 text-[12px] text-bad">{children ?? `Could not load this: ${error instanceof Error ? error.message : String(error)}.`}</p>
 )
 export const Note = ({ children, className }: { children: ReactNode; className?: string }) => <p className={cx("note", className)}>{children}</p>
+/** A strip of stat cells: label over number, hairlines between. `cols` is the grid template for the strip. */
+export const Stats = ({ cells, className }: { cells: { label: ReactNode; value: ReactNode; tone?: string; title?: string }[]; className?: string }) => (
+  <div className={cx("scroll-x border-b border-border", className)}>
+    <dl className="grid" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(112px, 1fr))` }}>
+      {cells.map((c, i) => (
+        <div key={i} className="stat" title={c.title}>
+          <dt>{c.label}</dt>
+          <dd className={c.tone}>{c.value}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+)
 export const KV = ({ rows }: { rows: [ReactNode, ReactNode][] }) => (
   <dl className="kv">
     {rows.map(([k, v], i) => (

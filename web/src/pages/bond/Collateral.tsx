@@ -38,13 +38,13 @@ export function Collateral({ bond }: { bond: Bond }) {
   const frac = gaugeFraction(coverage, min)
   const tone = { ok: "var(--ok)", warn: "var(--warn)", bad: "var(--bad)", neutral: "var(--neutral)" }[band.tone]
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
-      <div className="flex flex-col gap-5 min-w-0">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
+      <div className="flex flex-col gap-3 min-w-0">
         <Panel title="Coverage" aside={<Badge tone={band.tone}>{band.label}</Badge>}>
-          <div className="p-4 flex flex-col gap-4">
+          <div className="p-3 flex flex-col gap-4">
             <div className="flex items-baseline gap-3">
               <span className="num text-[34px] leading-none" style={{ color: tone }}>{coverage === null ? "—" : fmtBps(coverage)}</span>
-              <span className="text-[13px] text-muted">collateral value ÷ outstanding principal</span>
+              <span className="text-[12px] text-muted">collateral value ÷ outstanding principal</span>
             </div>
             <svg viewBox="0 0 600 34" className="w-full h-9" role="img" aria-label={`Coverage gauge: ${band.label}`}>
               <rect x="0" y="12" width="200" height="10" rx="2" fill="var(--bad-soft)" />
@@ -55,7 +55,7 @@ export function Collateral({ bond }: { bond: Bond }) {
               <text x="400" y="32" fontSize="10" textAnchor="middle" fill="var(--muted)" className="num">2× floor {fmtBps(min * 2n, 0)}</text>
               <text x="598" y="32" fontSize="10" textAnchor="end" fill="var(--muted)" className="num">100%</text>
             </svg>
-            <p className="text-[13px] leading-relaxed">{band.sentence} Bands follow the vault's public withdrawal floor; the enclave's own WARN, FREEZE and DEFAULT thresholds are private and only visible through the verdicts it signs.</p>
+            <p className="text-[12px] leading-snug">{band.sentence} Bands follow the vault's public withdrawal floor; the enclave's own WARN, FREEZE and DEFAULT thresholds are private and only visible through the verdicts it signs.</p>
             <KV rows={[
               ["Collateral", `${fmtHbar(collateral)} HBAR${collateralUsd !== null ? ` ≈ ${fmtUsdc(collateralUsd)} USD` : ""}`],
               ["HBAR/USD mark", price === null ? "feed stale" : fmtUsd8(price)],
@@ -87,7 +87,7 @@ function IssuerCollateral({ bond, collateral, coverage, min }: { bond: Bond; col
   const afterBps = coverage !== null && collateral > 0n && wdTiny <= collateral ? (coverage * (collateral - wdTiny)) / collateral : null
   return (
     <Panel title="Issuer" aside={<span>you are the issuer</span>}>
-      <div className="p-4 flex flex-col gap-4">
+      <div className="p-3 flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Field label="Deposit collateral (HBAR)" htmlFor="dep" hint="Allowed while Active or Frozen; topping up is how a freeze gets lifted.">
             <Input id="dep" className="num" inputMode="decimal" value={dep} onChange={(e) => setDep(e.target.value)} />

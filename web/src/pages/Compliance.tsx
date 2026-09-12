@@ -36,8 +36,8 @@ export function Compliance() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[30px] leading-none">Compliance</h1>
-          <p className="note mt-1.5 max-w-[72ch]">
+          <h1 className="text-[22px] leading-none">Compliance</h1>
+          <p className="note mt-1 max-w-[80ch]">
             KYC and freezes live on the ATS bond token, not in this app. The token answers every transfer with an EIP-1066 code, and the market refuses a fill before any money moves when that answer is not "allowed".
           </p>
         </div>
@@ -52,7 +52,7 @@ export function Compliance() {
       </div>
 
       <Panel title="Check a wallet" aside={<span>against {symbol}'s token</span>}>
-        <form className="p-4 flex flex-col sm:flex-row gap-2 sm:items-end" onSubmit={lookup}>
+        <form className="p-3 flex flex-col sm:flex-row gap-2 sm:items-end" onSubmit={lookup}>
           <div className="flex-1">
             <Field label="EVM address" htmlFor="lookup" hint={bad ? <span className="text-bad">That is not a 0x address.</span> : "Any address; try one of the demo wallets from deployments/testnet.json."}>
               <Input id="lookup" className="font-mono" placeholder="0x…" value={input} onChange={(e) => setInput(e.target.value)} spellCheck={false} autoComplete="off" />
@@ -70,12 +70,12 @@ export function Compliance() {
         {!me && <Empty>Connect the compliance officer wallet to grant or revoke KYC and to freeze or unfreeze addresses.</Empty>}
         {me && roles.loading && <Loading />}
         {me && !roles.loading && !roles.isKycOfficer && !roles.isFreezeManager && (
-          <Note className="p-4">
+          <Note className="p-3">
             <AddressChip address={me} /> holds neither the KYC role nor the freeze-manager role on this token, so these actions are hidden. On the demo bonds the compliance officer holds KYC, freeze and pause; the issuer also holds KYC. Wallets can request their own testnet KYC from the Desk page.
           </Note>
         )}
         {me && (roles.isKycOfficer || roles.isFreezeManager) && (
-          <div className="p-4 flex flex-col gap-4">
+          <div className="p-3 flex flex-col gap-4">
             <div className="flex flex-wrap gap-1.5">
               {roles.isKycOfficer && <Badge tone="ok">KYC role</Badge>}
               {roles.isFreezeManager && <Badge tone="ok">Freeze manager</Badge>}
@@ -112,7 +112,7 @@ function WalletReport({ address, me, token, symbol, issuer }: { address: Address
   const probe = q.data?.[4]?.result as readonly [boolean, `0x${string}`, `0x${string}`] | undefined
   const paused = q.data?.[5]?.result === true
   return (
-    <div className="px-4 pb-4 grid gap-4 md:grid-cols-2">
+    <div className="px-3 pb-3 grid gap-3 md:grid-cols-2">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2"><AddressChip address={address} me={sameAddress(address, me)} /></div>
         <div className="flex flex-wrap gap-1.5">
@@ -127,7 +127,7 @@ function WalletReport({ address, me, token, symbol, issuer }: { address: Address
           ["HBAR", elig.data ? (Number(elig.data.hbarTinybar) / 1e8).toFixed(4) : "…"],
         ]} />
       </div>
-      <div className="flex flex-col gap-2 text-[13px]">
+      <div className="flex flex-col gap-2 text-[12px]">
         <span className="label">Compliance decision</span>
         <p className="leading-relaxed">
           {/* The probe is the token's own answer and wins; the flags only explain it. */}

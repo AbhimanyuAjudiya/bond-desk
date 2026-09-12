@@ -14,8 +14,8 @@ import { Button, ConfirmButton, Ext, Note, Panel, TxLink } from "./ui"
 
 const TEN_K = parseUsdc("10000")
 
-/** Everything a judge needs to try the desk with their own wallet: test USDC, HBAR for gas, and KYC on the bond token. */
-export function SelfService({ compact }: { compact?: boolean }) {
+/** Everything a new wallet needs, in one row: HBAR for gas, test USDC, and KYC on the bond tokens. */
+export function SelfService() {
   const { address } = useAccount()
   const tx = useTx()
   const health = useHealth()
@@ -35,29 +35,28 @@ export function SelfService({ compact }: { compact?: boolean }) {
   }
 
   return (
-    <Panel title="Testnet self-service" aside={<span>for the connected wallet</span>}>
-      <div className={compact ? "p-4 flex flex-col gap-4" : "p-4 grid gap-4 md:grid-cols-3"}>
-        <div className="flex flex-col gap-2">
-          <h4 className="text-[13px] font-semibold">1 · HBAR for gas</h4>
-          <Note>Every transaction here is paid in HBAR. The Hedera portal faucet gives testnet HBAR to any EVM address.</Note>
-          <div><Ext href={FAUCET}>Hedera testnet faucet</Ext></div>
-          {elig.data && <Note>Your balance: <span className="num text-fg">{(Number(elig.data.hbarTinybar) / 1e8).toFixed(2)} HBAR</span>{elig.data.hbarSufficientForGas ? "" : " — below the 1 HBAR the desk suggests for a few fills."}</Note>}
+    <Panel title="Testnet self-service" aside={<span>for the connected wallet · nothing here is real money</span>}>
+      <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
+        <div className="px-3 py-2 flex flex-col gap-1.5">
+          <span className="label">1 · HBAR for gas</span>
+          <Note>Every transaction is paid in HBAR. The portal faucet funds any EVM address.</Note>
+          <div className="flex items-center gap-3">
+            <Ext href={FAUCET} className="text-[12px]">Hedera faucet</Ext>
+            {elig.data && <span className="text-[11px] text-muted">balance <span className="num text-fg">{(Number(elig.data.hbarTinybar) / 1e8).toFixed(2)}</span> HBAR{elig.data.hbarSufficientForGas ? "" : ", low"}</span>}
+          </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <h4 className="text-[13px] font-semibold">2 · Test USDC</h4>
-          <Note>The settlement token is a mock USDC with an open <code className="font-mono">mint</code>. Orders are quoted and settled in it.</Note>
-          <div><ConfirmButton confirm="Mint 10,000 USDC to your wallet?" onConfirm={mint} busy={busy} disabled={!address}>Get 10,000 test USDC</ConfirmButton></div>
+        <div className="px-3 py-2 flex flex-col gap-1.5">
+          <span className="label">2 · Test USDC</span>
+          <Note>The settlement token is a mock USDC with an open mint. Orders are quoted and settled in it.</Note>
+          <div><ConfirmButton size="sm" confirm="Mint 10,000 USDC to your wallet?" onConfirm={mint} busy={busy} disabled={!address}>Get 10,000 test USDC</ConfirmButton></div>
         </div>
-        <div className="flex flex-col gap-2">
-          <h4 className="text-[13px] font-semibold">3 · KYC on the bond token</h4>
-          <Note>
-            The bond is an ATS security token: every transfer is checked on-chain and refused for wallets without KYC. On testnet the compliance officer is a bot that approves anyone who asks;
-            in production it is a human or a KYC provider. The point is that the <em>token</em>, not this page, enforces the result.
-          </Note>
+        <div className="px-3 py-2 flex flex-col gap-1.5">
+          <span className="label">3 · KYC on the bond tokens</span>
+          <Note>Each bond is an ATS security token that refuses transfers for wallets without KYC. On testnet the officer is a bot that approves anyone; the token still does the enforcing.</Note>
           {health.data?.kycDesk === false ? (
-            <Note className="text-warn">The KYC desk is offline on this API deployment (no officer key configured). A KYC officer can still grant KYC from the Compliance page.</Note>
+            <Note className="text-warn">The KYC desk is offline on this deployment (no officer key). An officer can still grant KYC from the Compliance page.</Note>
           ) : (
-            <KycDesk granted={granted} someGranted={someGranted} disabled={!address || elig.isLoading} onDone={() => elig.refetch()} />
+            <KycDesk granted={granted} someGranted={someGranted} disabled={!address || elig.isLoading} onDone={() => elig.refetch()} size="sm" />
           )}
         </div>
       </div>
@@ -65,7 +64,7 @@ export function SelfService({ compact }: { compact?: boolean }) {
   )
 }
 
-export function KycDesk({ granted, someGranted, disabled, onDone }: { granted: boolean; someGranted: boolean; disabled?: boolean; onDone?: () => void }) {
+export function KycDesk({ granted, someGranted, disabled, onDone, size = "md" }: { granted: boolean; someGranted: boolean; disabled?: boolean; onDone?: () => void; size?: "sm" | "md" }) {
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
   const toasts = useToasts()
@@ -92,16 +91,16 @@ export function KycDesk({ granted, someGranted, disabled, onDone }: { granted: b
   return (
     <div className="flex flex-wrap items-center gap-2">
       {!granted && (
-        <ConfirmButton confirm="Sign a message proving you control this wallet; the officer bot then calls grantKyc on the bond token." variant="primary" size="md" onConfirm={() => m.mutateAsync("request").catch(() => {})} busy={m.isPending} disabled={disabled}>
+        <ConfirmButton confirm="Sign a message proving you control this wallet; the officer bot then calls grantKyc on every bond token." variant="primary" size={size} onConfirm={() => m.mutateAsync("request").catch(() => {})} busy={m.isPending} disabled={disabled}>
           Request testnet KYC
         </ConfirmButton>
       )}
       {someGranted && (
-        <ConfirmButton confirm="Sign a message; the officer bot calls revokeKyc. Fills to or from this wallet will then be refused by the token." variant="danger" onConfirm={() => m.mutateAsync("revocation").catch(() => {})} busy={m.isPending} disabled={disabled}>
+        <ConfirmButton confirm="Sign a message; the officer bot calls revokeKyc. Fills to or from this wallet will then be refused by the token." variant="danger" size={size} onConfirm={() => m.mutateAsync("revocation").catch(() => {})} busy={m.isPending} disabled={disabled}>
           Revoke my KYC
         </ConfirmButton>
       )}
-      {granted && <span className="text-[12px] text-ok">KYC granted on every bond token.</span>}
+      {granted && <span className="text-[11px] text-ok">KYC granted on every bond token.</span>}
     </div>
   )
 }

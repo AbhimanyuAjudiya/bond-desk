@@ -52,12 +52,12 @@ const STATE_LABEL: Record<ToastState, string> = { info: "", signing: "Waiting fo
 function TxTray({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: number) => void }) {
   if (toasts.length === 0) return null
   return (
-    <div className="fixed bottom-3 right-3 left-3 sm:left-auto sm:w-[380px] z-50 flex flex-col gap-2" role="status" aria-live="polite">
+    <div className="fixed bottom-3 right-3 left-3 sm:left-auto sm:w-[360px] z-50 flex flex-col gap-1.5" role="status" aria-live="polite">
       {toasts.map((t) => {
         const ic = ICON[t.state]
         const done = t.state === "confirmed"
         return (
-          <div key={t.id} className={cx("panel shadow-md px-3 py-2.5 flex gap-3 items-start text-[13px]", done && "border-ok/60")}>
+          <div key={t.id} className={cx("panel shadow-md px-2.5 py-2 flex gap-2.5 items-start text-[12px]", done && "border-ok/60")}>
             <span className={`mt-0.5 h-5 w-5 shrink-0 rounded-full grid place-items-center text-[11px] font-semibold ${ic.cls}`} aria-hidden>{ic.glyph}</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">

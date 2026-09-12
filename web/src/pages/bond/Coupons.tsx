@@ -52,10 +52,10 @@ export function Coupons({ bond }: { bond: Bond }) {
   const scheduled = !!schedule && schedule !== "0x0000000000000000000000000000000000000000"
   const perBond = couponPerBond(BigInt(bond.faceValue), BigInt(bond.couponRateBps), BigInt(bond.couponInterval))
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
-      <div className="flex flex-col gap-5 min-w-0">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
+      <div className="flex flex-col gap-3 min-w-0">
         <Panel title="Coupon schedule">
-          <div className="p-4 grid gap-4 md:grid-cols-2">
+          <div className="p-3 grid gap-3 md:grid-cols-2">
             <KV rows={[
               ["Rate", `${Number(bond.couponRateBps) / 100}% per year, paid ${intervalName(bond.couponInterval)}`],
               ["Per bond per period", `${fmtUsdc(perBond)} USDC`],
@@ -63,7 +63,7 @@ export function Coupons({ bond }: { bond: Bond }) {
               ["Pool funded", `${fmtUsdc(funded)} USDC`],
               ["Due at next run", `${fmtUsdc(due)} USDC`],
             ]} />
-            <div className="text-[13px] leading-relaxed flex flex-col gap-1.5">
+            <div className="text-[12px] leading-snug flex flex-col gap-1.5">
               {noMore ? <p>Every coupon up to maturity has been paid.</p> : (
                 <p>Next coupon <Time unix={bond.nextCoupon} /> (<Countdown unix={bond.nextCoupon} />).{nextCoupon <= now && " It is due now: the scheduled run or anyone calling payCoupon will snapshot holders and reserve the coupon."}</p>
               )}
@@ -103,11 +103,11 @@ export function Coupons({ bond }: { bond: Bond }) {
               </table>
             </div>
           )}
-          <Note className="px-4 py-3 border-t border-border">Claims are pro-rata to the ATS snapshot taken when the coupon was paid, so buying after a coupon does not entitle you to it.</Note>
+          <Note className="px-3 py-2 border-t border-border">Claims are pro-rata to the ATS snapshot taken when the coupon was paid, so buying after a coupon does not entitle you to it.</Note>
         </Panel>
         <Redeem bond={bond} funded={funded} supply={supply} myBalance={myBalance} />
       </div>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
         {roles.isIssuer ? <IssuerPanel bond={bond} funded={funded} due={due} scheduled={scheduled} nextDue={nextCoupon <= now && !noMore} /> : (
           <Panel title="Issuer panel"><Empty>Funding, scheduling and paying coupons by hand are shown to the issuer wallet ({bond.terms.issuer.slice(0, 8)}…).</Empty></Panel>
         )}
@@ -129,7 +129,7 @@ function IssuerPanel({ bond, funded, due, scheduled, nextDue }: { bond: Bond; fu
   const float = useReadContract({ abi: erc20Abi, address: DEP.settlement, functionName: "balanceOf", args: [DEP.lifecycle] })
   return (
     <Panel title="Issuer" aside={<span>you are the issuer</span>}>
-      <div className="p-4 flex flex-col gap-4">
+      <div className="p-3 flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Field label="Fund the coupon pool (USDC)" htmlFor="fund" hint={`pool ${fmtUsdc(funded)} USDC · next coupon needs ${fmtUsdc(due)} USDC · you hold ${fmtUsdc(funds.usdc)} USDC`}>
             <Input id="fund" className="num" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -180,14 +180,14 @@ function Redeem({ bond, funded, supply, myBalance }: { bond: Bond; funded: bigin
   const can = !!address && matured && !defaulted && myBalance > 0n && funded >= mine
   return (
     <Panel title="Redeem at maturity">
-      <div className="p-4 grid gap-4 md:grid-cols-2">
+      <div className="p-3 grid gap-3 md:grid-cols-2">
         <KV rows={[
           ["Maturity", <><Time unix={bond.maturity} /> <span className="text-muted">(<Countdown unix={bond.maturity} />)</span></>],
           ["Principal for all bonds", `${fmtUsdc(all)} USDC`],
           ["Pool funded", `${fmtUsdc(funded)} USDC`],
           ["Your bonds", address ? `${fmtInt(myBalance)} ${bond.symbol} → ${fmtUsdc(mine)} USDC` : "connect a wallet"],
         ]} />
-        <div className="text-[13px] leading-relaxed flex flex-col gap-2">
+        <div className="text-[12px] leading-snug flex flex-col gap-2">
           <p>
             {defaulted && <>The bond is Defaulted: principal is not paid from the pool; holders claim the seized collateral instead (Collateral tab).</>}
             {!defaulted && !matured && <>Redemption opens at maturity, <Countdown unix={bond.maturity} />. Then any holder burns their whole balance through the token's maturity redeemer and receives face value from the pool; the first redemption also moves the bond to Matured.</>}

@@ -25,13 +25,13 @@ export function WalletChip() {
     const wrong = chainId !== chain.id
     return (
       <div ref={ref} className="relative">
-        <button type="button" className={cx("btn font-mono", wrong && "border-bad text-bad")} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
+        <button type="button" className={cx("btn font-mono text-[11px]", wrong && "border-bad text-bad")} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
           <span className={cx("h-2 w-2 rounded-full", wrong ? "bg-bad" : "bg-ok")} aria-hidden />
           {shortAddress(address)}
           {bal.data && !wrong && <span className="text-muted hidden sm:inline">{fmtUnits(bal.data.value, 18, 0, 2)} ℏ</span>}
         </button>
         {open && (
-          <div role="menu" className="absolute right-0 mt-1 w-64 panel shadow-lg p-3 text-[13px] flex flex-col gap-2 z-40">
+          <div role="menu" className="absolute right-0 mt-1 w-64 panel shadow-lg p-3 text-[12px] flex flex-col gap-2 z-40">
             <div className="flex items-center justify-between"><span className="label">Account</span><AddressChip address={address} /></div>
             <div className="flex items-center justify-between"><span className="label">Wallet</span><span>{connector?.name}</span></div>
             <div className="flex items-center justify-between"><span className="label">Network</span><span className={wrong ? "text-bad" : ""}>{wrong ? `chain ${chainId}` : chain.name}</span></div>
@@ -50,7 +50,7 @@ export function WalletChip() {
   return (
     <div ref={ref} className="relative">
       <Button variant="primary" busy={isPending} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
-        Connect wallet
+        Connect
       </Button>
       {open && (
         <div role="menu" className="absolute right-0 mt-1 w-72 panel shadow-lg p-1.5 z-40 flex flex-col">
@@ -58,7 +58,7 @@ export function WalletChip() {
             <p className="text-[12px] text-muted px-2.5 py-1.5">No wallet extension announced itself. Install MetaMask (or any EVM wallet that supports custom networks), then reload.</p>
           )}
           {connectors.map((c) => (
-            <button key={c.uid} role="menuitem" className="text-left text-[13px] px-2.5 py-1.5 rounded hover:bg-surface-2" onClick={() => pick(c)}>
+            <button key={c.uid} role="menuitem" className="text-left text-[12px] px-2.5 py-1.5 rounded-sm hover:bg-surface-2" onClick={() => pick(c)}>
               {label(c)}
             </button>
           ))}
@@ -82,7 +82,7 @@ export function NetworkGuard() {
     addEthereumChainParameter: { chainName: chain.name, nativeCurrency: chain.nativeCurrency, rpcUrls: [rpc], blockExplorerUrls: [chain.blockExplorers!.default.url] },
   })
   return (
-    <div className="bg-bad-soft text-bad text-[13px] px-4 py-2 flex flex-col gap-1.5" role="alert">
+    <div className="bg-bad-soft text-bad text-[12px] px-3 py-1.5 flex flex-col gap-1" role="alert">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>Your wallet is on chain {chainId ?? "?"}. Bond Desk runs on {chain.name} (chain {chain.id}).</span>
         <Button size="sm" busy={isPending} onClick={add}>Switch to {chain.name}</Button>

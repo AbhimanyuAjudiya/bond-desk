@@ -6,61 +6,40 @@
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 
-/* One accent, semantic colours for status and coverage bands; light and dark follow the system. */
+/* A terminal is dark. One accent, semantic colours for status, coverage bands and the two sides of a book. */
 :root {
-  color-scheme: light dark;
-  --bg: #f4f3ef;
-  --surface: #ffffff;
-  --surface-2: #f8f7f4;
-  --border: #dedcd5;
-  --border-strong: #c4c1b8;
-  --fg: #1c1b19;
-  --muted: #66645e;
-  --faint: #9a978f;
-  --accent: #1f3a5f;
-  --accent-fg: #ffffff;
-  --accent-soft: #e6edf6;
-  --ok: #1e7a4a;
-  --ok-soft: #e2f3e9;
-  --warn: #9a5a06;
-  --warn-soft: #fbeedb;
-  --bad: #b32a20;
-  --bad-soft: #fbe5e2;
-  --neutral: #5f6b7a;
-  --neutral-soft: #e8ebef;
-  --bid: #1e7a4a;
-  --ask: #b32a20;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121416;
-    --surface: #1a1d21;
-    --surface-2: #202429;
-    --border: #2c3138;
-    --border-strong: #3d434c;
-    --fg: #e9e7e1;
-    --muted: #a09d95;
-    --faint: #6e6c66;
-    --accent: #8db4e6;
-    --accent-fg: #0f1a28;
-    --accent-soft: #1d2a3b;
-    --ok: #55c586;
-    --ok-soft: #14301f;
-    --warn: #e2a648;
-    --warn-soft: #362810;
-    --bad: #f07a70;
-    --bad-soft: #3a1c19;
-    --neutral: #9aa6b4;
-    --neutral-soft: #262c34;
-    --bid: #55c586;
-    --ask: #f07a70;
-  }
+  color-scheme: dark;
+  --bg: #0f1113;
+  --surface: #15181b;
+  --surface-2: #1b1f23;
+  --surface-3: #22272c;
+  --border: #262b31;
+  --border-strong: #363c44;
+  --fg: #e6e4de;
+  --muted: #9b9890;
+  --faint: #66645e;
+  --accent: #8db4e6;
+  --accent-fg: #0f1a28;
+  --accent-soft: #1a2636;
+  --ok: #55c586;
+  --ok-soft: #12291b;
+  --warn: #e2a648;
+  --warn-soft: #30240f;
+  --bad: #f07a70;
+  --bad-soft: #341a17;
+  --neutral: #9aa6b4;
+  --neutral-soft: #21272e;
+  --bid: #55c586;
+  --ask: #f07a70;
+  --bid-soft: rgba(85, 197, 134, 0.14);
+  --ask-soft: rgba(240, 122, 112, 0.14);
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-fg: var(--fg);
@@ -84,41 +63,56 @@
   --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
 }
 
-html { background: var(--bg); color: var(--fg); font-family: var(--font-sans); font-size: 15px; -webkit-font-smoothing: antialiased; }
+html { background: var(--bg); color: var(--fg); font-family: var(--font-sans); font-size: 13px; -webkit-font-smoothing: antialiased; }
 body { margin: 0; min-height: 100vh; }
 .num, .font-mono, table td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 h1, h2, .display { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.005em; }
-p, .prose { line-height: 1.6; }
+p, .prose { line-height: 1.55; }
 a { color: inherit; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
 ::selection { background: var(--accent-soft); }
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 
-/* Small shared primitives (no UI kit). */
+/* Small shared primitives (no UI kit). Everything is one notch tighter than a document: 12px tables, 26px rows, 28px controls. */
 @layer components {
-  .panel { @apply bg-surface border border-border rounded-md; }
-  .panel-head { @apply flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-4 py-2.5 border-b border-border; }
-  .label { @apply text-[11px] uppercase tracking-[0.08em] text-muted font-medium; }
-  .btn { @apply inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded text-[13px] font-medium border border-border-strong bg-surface text-fg whitespace-nowrap select-none disabled:opacity-45 disabled:cursor-not-allowed enabled:hover:bg-surface-2 transition-colors; }
+  .panel { @apply bg-surface border border-border rounded-sm; }
+  .panel-head { @apply flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-1.5 border-b border-border; }
+  .label { @apply text-[10px] uppercase tracking-[0.1em] text-muted font-medium; }
+  .btn { @apply inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-sm text-[12px] font-medium border border-border-strong bg-surface-2 text-fg whitespace-nowrap select-none disabled:opacity-45 disabled:cursor-not-allowed enabled:hover:bg-surface-3 transition-colors; }
   .btn-primary { @apply bg-accent text-accent-fg border-accent enabled:hover:opacity-90; }
   .btn-danger { @apply text-bad border-bad/50 enabled:hover:bg-bad-soft; }
-  .btn-sm { @apply h-7 px-2 text-[12px]; }
-  .input { @apply h-8 w-full rounded border border-border-strong bg-surface px-2 text-[13px] text-fg placeholder:text-faint focus:border-accent outline-none; }
+  .btn-sm { @apply h-6 px-2 text-[11px]; }
+  .input { @apply h-7 w-full rounded-sm border border-border-strong bg-bg px-2 text-[12px] text-fg placeholder:text-faint focus:border-accent outline-none; }
   .input.num { @apply text-right; }
-  .table { @apply w-full text-[13px]; }
-  .table th { @apply text-[11px] uppercase tracking-[0.08em] text-muted font-medium text-left py-1.5 px-3 border-b border-border; }
-  .table td { @apply py-1.5 px-3 border-b border-border/60 align-middle; }
+  .table { @apply w-full text-[12px]; }
+  .table th { @apply text-[10px] uppercase tracking-[0.1em] text-muted font-medium text-left py-1 px-2 border-b border-border whitespace-nowrap; }
+  .table td { @apply py-[3px] px-2 border-b border-border/50 align-middle leading-[18px]; }
   .table tr:last-child td { @apply border-b-0; }
-  .badge { @apply inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px] font-medium leading-4 uppercase tracking-[0.06em]; }
-  .kv { @apply grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-[13px]; }
+  .table tbody tr:hover td { @apply bg-surface-2; }
+  .table tr[data-active="true"] td { @apply bg-surface-3; }
+  .badge { @apply inline-flex items-center gap-1 rounded-[2px] px-1 py-px text-[10px] font-medium leading-4 uppercase tracking-[0.08em]; }
+  .kv { @apply grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5 text-[12px]; }
   .kv dt { @apply text-muted; }
-  .note { @apply text-[13px] text-muted leading-relaxed; }
+  .note { @apply text-[12px] text-muted leading-snug; }
   /* Links are plain underlined text; the accent is kept for the primary action, the active marker and focus. */
   .link { @apply underline underline-offset-2 decoration-border-strong hover:decoration-current; }
-  .table th[aria-sort] button { @apply inline-flex items-center gap-1 uppercase tracking-[0.08em] font-medium text-muted hover:text-fg; }
+  .table th[aria-sort] button { @apply inline-flex items-center gap-1 uppercase tracking-[0.1em] font-medium text-muted hover:text-fg; }
   .table th[aria-sort="descending"] button, .table th[aria-sort="ascending"] button { @apply text-fg; }
   /* Wide content scrolls inside its panel, never the page. */
   .scroll-x { @apply overflow-x-auto overscroll-x-contain; }
+  /* A stat cell in a strip: label above, number below, hairline between cells. */
+  .stat { @apply px-3 py-1.5 min-w-0 border-r border-border last:border-r-0; }
+  .stat dt { @apply text-[10px] uppercase tracking-[0.1em] text-muted font-medium truncate; }
+  .stat dd { @apply text-[15px] leading-tight mt-0.5 truncate; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  /* Ticker items in the header strip. */
+  .tick { @apply inline-flex items-baseline gap-1.5 whitespace-nowrap text-[11px]; }
+  .tick .label { @apply text-[10px]; }
+  .tick .num { @apply text-fg; }
 }
+/* Depth bars behind ladder rows: the cumulative size as a fraction of the side's total, painted from the outer edge. */
+.depth { position: relative; }
+.depth::before { content: ""; position: absolute; inset: 1px 0; right: 0; width: calc(var(--depth, 0) * 100%); background: var(--depth-color, var(--surface-3)); opacity: 0.6; pointer-events: none; }
+.depth > * { position: relative; }
 /* Hand-drawn diagrams: one colour, hairline strokes, mono labels. */
 .diagram { width: 100%; height: auto; color: var(--fg); }
 .diagram text { font-family: var(--font-mono); font-size: 11px; fill: currentColor; }
@@ -127,4 +121,4 @@ a { color: inherit; }
 .diagram .soft { stroke: var(--border-strong); }
 .diagram .dashed { stroke-dasharray: 3 3; }
 .diagram marker path { fill: currentColor; stroke: none; }
-kbd { font-family: var(--font-mono); font-size: 11px; line-height: 1; padding: 1px 4px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 3px; }
+kbd { font-family: var(--font-mono); font-size: 10px; line-height: 1; padding: 1px 4px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 3px; color: var(--muted); }
