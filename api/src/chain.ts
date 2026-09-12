@@ -6,7 +6,7 @@ import { z } from "zod"
 import Registry from "./abi/BondRegistry.json" with { type: "json" }
 import Market from "./abi/BondMarket.json" with { type: "json" }
 import RiskGate from "./abi/RiskGate.json" with { type: "json" }
-import IKyc from "./abi/IKyc.json" with { type: "json" }
+import IKyc from "./abi/IATSAdmin.json" with { type: "json" }
 
 export const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/
 const address = z.string().regex(ADDRESS_RE).transform((a) => a as Address)

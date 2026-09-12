@@ -7,7 +7,6 @@ cd "$(dirname "$0")/.."
 for c in BondRegistry BondMarket RiskGate BondLifecycle CollateralVault NavOracle MockUSDC IATSBond IATSAdmin; do
   forge inspect "$c" abi --json > "api/src/abi/$c.json"
 done
-forge inspect IATSAdmin abi --json > api/src/abi/IKyc.json
 cp api/src/abi/RiskGate.json relayer/src/abi/RiskGate.json
 cp api/src/abi/RiskGate.json workflow/shared/abi/RiskGate.json
 echo "synced ABIs into api/ (also used by web/), relayer/, workflow/"
