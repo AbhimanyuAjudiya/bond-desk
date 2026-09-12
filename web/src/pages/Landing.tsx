@@ -8,6 +8,7 @@ import { coverageBand } from "../lib/coverage"
 import { countdown, fmtBps, fmtInt, fmtPrice, fmtUsd8, intervalName, shortHash } from "../lib/format"
 
 const OPENAPI = `${API_URL}/openapi.json`
+const DOCS = "https://bond-desk.mintlify.site"
 const MCP = "https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/mcp"
 const RECIPE = "https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation"
 const SCHEDULE = "https://hashscan.io/testnet/schedule/0.0.10482928"
@@ -31,7 +32,7 @@ export function Landing() {
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
           <Link to="/desk" className="btn btn-primary h-10 px-5 text-[14px]">Open the desk</Link>
-          <a className="link text-[14px]" href={OPENAPI} target="_blank" rel="noreferrer">Read the API document ↗</a>
+          <a className="link text-[14px]" href={DOCS} target="_blank" rel="noreferrer">Read the docs ↗</a>
         </div>
       </header>
 
@@ -97,7 +98,7 @@ export function Landing() {
           </dd>
           <dt className="display text-[22px] leading-tight">The API</dt>
           <dd className="prose max-w-[68ch]">
-            Every screen is a JSON route on the same origin: <code className="font-mono text-[13px]">/bonds</code>, <code className="font-mono text-[13px]">/bonds/1/orderbook</code>, <code className="font-mono text-[13px]">/bonds/1/risk</code>, <code className="font-mono text-[13px]">/wallets/{"{address}"}/eligibility</code>, <code className="font-mono text-[13px]">/events</code>. A browser gets the page, a program gets the document. <a className="link" href={OPENAPI} target="_blank" rel="noreferrer">OpenAPI document ↗</a>
+            Every screen is a JSON route on the same origin: <code className="font-mono text-[13px]">/bonds</code>, <code className="font-mono text-[13px]">/bonds/1/orderbook</code>, <code className="font-mono text-[13px]">/bonds/1/risk</code>, <code className="font-mono text-[13px]">/wallets/{"{address}"}/eligibility</code>, <code className="font-mono text-[13px]">/events</code>. A browser gets the page, a program gets the document. <a className="link" href={`${DOCS}/api/overview`} target="_blank" rel="noreferrer">API reference ↗</a> · <a className="link" href={OPENAPI} target="_blank" rel="noreferrer">OpenAPI document ↗</a>
           </dd>
           <dt className="display text-[22px] leading-tight">Agents</dt>
           <dd className="prose max-w-[68ch]">
