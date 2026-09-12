@@ -1,5 +1,6 @@
 import { useAccount, useReadContracts } from "wagmi"
 import { tokenAbi } from "../../config/abi"
+import { DEP } from "../../config/deployments"
 import { FAUCET } from "../../config/chain"
 import { KycDesk } from "../../components/SelfService"
 import { AddressChip, Badge, Empty, ErrorNote, Ext, KV, Loading, Note, Panel } from "../../components/ui"
@@ -24,6 +25,7 @@ export function Eligibility({ bond }: { bond: Bond }) {
           { abi: tokenAbi, address: bond.token, functionName: "paused" },
         ]
       : [],
+    account: DEP.market, // the probe asks as the market does: the market is the operator canTransferFrom judges
     query: { enabled: !!address, refetchInterval: 15_000 },
   })
   if (!address) return <Panel title="Eligibility"><Empty>Connect a wallet to see whether this bond's token will accept transfers to it.</Empty></Panel>

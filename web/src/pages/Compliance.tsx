@@ -82,6 +82,7 @@ function WalletReport({ address, me }: { address: Address; me?: Address }) {
       { abi: tokenAbi, address: DEP.token, functionName: "canTransferFrom", args: [DEP.deployer, address, 1n, "0x"] },
       { abi: tokenAbi, address: DEP.token, functionName: "paused" },
     ],
+    account: DEP.market, // the probe asks as the market does: the market is the operator canTransferFrom judges
     query: { refetchInterval: 15_000 },
   })
   if (q.isLoading) return <Loading rows={4} />
