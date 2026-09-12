@@ -19,7 +19,7 @@ Segment 6 is the short version of that recording, not a replacement for it.
 cd bond-desk
 source .env                     # HEDERA_PRIVATE_KEY (deployer = issuer = admin), RISK_SIGNER_KEY, COMPLIANCE_OFFICER_KEY
 export HEDERA_RPC_URL=https://testnet.hashio.io/api
-export API=https://wd6nrvmajt.ap-south-1.awsapprunner.com     # the app is served at the same origin
+export API=https://wd6nrvmajt.ap-south-1.awsapprunner.com     # the app is served at the same origin: / is the front page, /desk the desk
 export GATE=$(jq -r .riskGate  deployments/testnet.json)      # 0x1dFF1d5458D6a6f6af46014de76474DC3170C31B
 export TOKEN=$(jq -r .token    deployments/testnet.json)      # 0x0100526434C821d0df24f6CC60352F830F8b4504
 export SCHEDULE=$(jq -r .schedule deployments/testnet.json)   # coupon 3's schedule, 0.0.10482928
@@ -64,7 +64,8 @@ terminal between segments.
 
 ## 1 · 0:00–0:15 · What this is
 
-**On screen:** the flowchart from `docs/architecture.md`.
+**On screen:** the app's front page at `$API/` (the live strip and the two diagrams), then *Open the desk*. The
+flowchart in `docs/architecture.md` is the fallback if the API is slow.
 
 **Say:** a corporate bond issued through Hedera's Asset Tokenization Studio; an order book that asks the token's
 own compliance check before every fill; coupons fired by Hedera's Schedule Service; and a Chainlink CRE enclave
@@ -88,8 +89,8 @@ Hedera's *Tokenization of Anything* track requires issuance and configuration on
    ```
    Point at `internalKycActivated: true`, `isControllable: true`, the regulation type (REG_S) and the `rbacs`
    array: KYC, snapshot and maturity-redeemer roles granted to our contracts and the officer at creation.
-3. The app, **Compliance** page, officer wallet connected: the KYC table shows investor 1 and 2 granted, investor
-   3 not, and the token's `paused` / frozen state per address.
+3. The app, **Compliance** page, officer wallet connected, bond token BDB27 selected in the picker: look up investor 1
+   (KYC GRANTED) and investor 3 (NO KYC); the decision line is the token's own `canTransferFrom` answer.
 
 **Say:** we did not fork ATS, we called the factory at `0xd1F118A4…78379d`. The bond carries its own KYC list,
 its own freeze list and its own transfer rules; everything else in this demo has to go through them.

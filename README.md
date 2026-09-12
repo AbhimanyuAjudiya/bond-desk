@@ -274,13 +274,14 @@ is a page for a person and a document for a program.
 
 | Page | What a wallet can do there |
 |---|---|
-| Desk | every bond with status, bid/ask/mark, coverage and next coupon; connect a wallet; get 10,000 test USDC from `MockUSDC`'s open mint |
-| Bond → Order book | place a bid or ask, fill an order (USDC or bond approval first), cancel your own; trades from the mirror node with HashScan links |
+| `/` | the front page: one statement, a live strip read from the API (bonds, best ask, coverage, last verdict with nonce, next coupon, block), two hand-drawn diagrams of how a fill is judged and how a freeze happens, four receipts with HashScan links, and the three doors (app, API, agents) |
+| Desk (`/desk`) | every bond with status, bid/ask/mark, coverage and next coupon; connect a wallet; get 10,000 test USDC from `MockUSDC`'s open mint |
+| Bond → Order book | one ladder per bond: asks down to the best ask, the spread and mid, bids from the best down, your own rows marked and cancellable, the fill form under the row it came from; trades from the mirror node with HashScan links |
 | Bond → Eligibility | whether *this* wallet may hold the bond and why not (no Hedera account, no KYC, bond not active); **testnet self-service KYC**: sign a one-line message, the API's compliance-officer bot grants or revokes KYC on the ATS token |
 | Bond → Coupons | every coupon with its snapshot and schedule, claim your share, and for the issuer: fund the pool, pay a coupon by hand, schedule the next one, redeem at maturity |
 | Bond → Collateral | vault balance, the live Chainlink HBAR/USD price, coverage; the issuer deposits and withdraws |
 | Bond → Risk | verdict history with nonces, the trusted signer, and *Relay a signed verdict*: paste the enclave's `VERDICT_JSON`, the app verifies the signature against `RiskGate.signer()` and any wallet submits it; admin unfreeze |
-| Compliance | the officer's desk on the ATS token: KYC status and freeze state per address, grant, revoke, freeze, unfreeze, and what `canTransferFrom` would answer right now |
+| Compliance | the officer's desk on whichever bond token it picks: KYC status and freeze state per address, grant, revoke, freeze, unfreeze, and what `canTransferFrom` would answer right now |
 | Activity | every decoded event across the six contracts and the token, newest first |
 
 ![Bond #1, order book](docs/img/app-order-book.jpg)
