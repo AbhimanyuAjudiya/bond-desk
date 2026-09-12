@@ -14,6 +14,8 @@ const address = z.string().regex(ADDRESS_RE).transform((a) => a as Address)
 const Deployments = z.object({
   chainId: z.literal(hederaTestnet.id), registry: address, market: address, vault: address, riskGate: address,
   lifecycle: address, oracle: address, token: address, settlement: address,
+  // every registered bond (`token` above is bond 1, kept for the older consumers); the API reads the registry itself
+  bonds: z.array(z.object({ id: z.number().int().positive(), symbol: z.string(), token: address, schedule: address })).optional(),
 })
 export const dep = Deployments.parse(JSON.parse(readFileSync(process.env.DEPLOYMENTS_FILE ?? "../deployments/testnet.json", "utf8")))
 

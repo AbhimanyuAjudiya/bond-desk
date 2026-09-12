@@ -123,13 +123,16 @@ const TokenEvents = [
   { type: "event", name: "KycGranted", inputs: [{ name: "account", type: "address", indexed: true }, { name: "operator", type: "address", indexed: true }] },
   { type: "event", name: "KycRevoked", inputs: [{ name: "account", type: "address", indexed: true }, { name: "operator", type: "address", indexed: true }] },
 ]
+// One BondToken source per registered bond, read from the registry at boot (bond 1's `token` from the artifact when the
+// RPC is unreachable, so the process still comes up); restart the API after registering a bond.
+const tokens = await allIds().then((ids) => Promise.all(ids.map(async (id) => (await chain.terms(id)).token))).catch(() => [chain.dep.token])
 const SOURCES = [
   { contract: "BondMarket", address: chain.dep.market, abi: Market },
   { contract: "BondLifecycle", address: chain.dep.lifecycle, abi: Lifecycle },
   { contract: "RiskGate", address: chain.dep.riskGate, abi: RiskGate },
   { contract: "CollateralVault", address: chain.dep.vault, abi: Vault },
   { contract: "BondRegistry", address: chain.dep.registry, abi: Registry },
-  { contract: "BondToken", address: chain.dep.token, abi: TokenEvents },
+  ...tokens.map((address) => ({ contract: "BondToken", address, abi: TokenEvents })),
 ]
 app.get("/events", async (c) => {
   const limit = Math.min(Math.max(Number(c.req.query("limit") ?? 50) || 50, 1), 200)

@@ -28,5 +28,25 @@
     "investorKyc2": "0x8524F940EddC9EA98198Ee08071944a07C417D7b",
     "investorNoKyc": "0x3b44299d9F246dc775DC2e4A0B54e31DB5b31cb3",
     "issuer": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6"
-  }
+  },
+  "bonds": [
+    {
+      "id": 1,
+      "symbol": "BDB27",
+      "token": "0x0100526434C821d0df24f6CC60352F830F8b4504",
+      "schedule": "0x0000000000000000000000000000000000A031b5"
+    },
+    {
+      "id": 2,
+      "symbol": "BDB28",
+      "token": "0xf175d5B081d8A5187Bdb5b7fA6F621eFe9c6F40D",
+      "schedule": "0x0000000000000000000000000000000000A03a40"
+    },
+    {
+      "id": 3,
+      "symbol": "BDB30",
+      "token": "0xd6752FfC596C8F9D4F5D530246e5698ec65a983f",
+      "schedule": "0x0000000000000000000000000000000000A03baC"
+    }
+  ]
 }
