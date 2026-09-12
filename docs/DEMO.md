@@ -211,8 +211,8 @@ cd workflow && bun run sim:liq 2>&1 | grep -E 'Nitro|plan='  # plan=scenario-ina
 ```
 
 **On screen:** the four terminal outputs, then `docs/cre-evidence/challenge.md` with the Sepolia `join()`
-transaction (`0x22feaf45…64a9`), then the CRE dashboard showing the two deployed workflows if deploy access was
-granted in time (`cre workflow list --registry private`).
+transaction (`0x22feaf45…64a9`), then the terminal: `cre workflow list --registry private` (two ACTIVE workflows) and
+`cre execution list liquidation-protection-production` (a `SUCCESS` row every 30 s from the CRE network).
 
 **Say:** the harness is the Hedera boilerplate we had to write once, a Foundry base that fires due schedules,
 mocks for both system contracts, and validators that treat the mirror node as the authority, including the
@@ -251,7 +251,8 @@ track requirements and the submission.
 - The mirror node trails consensus by 2 to 5 seconds and the API caches reads for 10 s (the order book for 3 s).
   After a transaction, talk for a beat before pointing at a table.
 - The Risk tab refuses a verdict whose nonce is not `lastNonce + 1`, so a verdict from a rehearsal cannot be
-  replayed on the take. Re-run `sim:bond` for a fresh one.
+  replayed on the take. Re-run `sim:bond` for a fresh one, and relay it within the same hour: the deployed
+  bond-monitor fires at the top of every hour and takes the next nonce itself.
 - Never show `.env`, `workflow/.env`, `workflow/*/secrets.yaml`, `cre secrets` output, or a terminal with a
   private key in scrollback.
 - Every transaction shown should be linkable afterwards. The **Activity** page lists them newest first with

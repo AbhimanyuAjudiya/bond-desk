@@ -46,6 +46,7 @@ were recovered and every consumer reads the address above from `deployments/test
 | Coupon 2, self-scheduled from inside coupon 1 | [`0.0.10457462`](https://hashscan.io/testnet/schedule/0.0.10457462) (EVM `0x…009F9176`, executed at `1789121682.025` and reverted `CouponNotDue`: block-timestamp lag, step 13) |
 | Coupon 2, paid by hand on the lagged contract | [`0x5dc17671…4c22397f`](https://hashscan.io/testnet/transaction/0x5dc17671ed5ed779ff78c952ce312a053a1624f64aea39a7798c53544c22397f) (coupon id 1 on the new instance, `paidAt 1789154826`) |
 | Coupon 3, self-scheduled with the lag | [`0.0.10482928`](https://hashscan.io/testnet/schedule/0.0.10482928) (EVM `0x…9fF4F0`, `expiration_time 1789208092` = target `1789208082` + 10, fires 2026-09-12 10:14:52 UTC) |
+| Chainlink CRE workflows (private registry, deployed 2026-09-12) | `liquidation-protection-production` `00cdbaa2…48554f` (30 s), `bond-monitor-production` `0045bd36…5c96c8` (hourly, direct delivery); [`docs/cre-evidence/deployed-20260912.txt`](docs/cre-evidence/deployed-20260912.txt) |
 | Chainlink liquidation challenge, `join()` on Sepolia | [`0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9`](https://sepolia.etherscan.io/tx/0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9) |
 | Bond Desk app + API (AWS App Runner, `ap-south-1`) | [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com) — the app in a browser; `/healthz`, `/openapi.json` and the JSON routes for everything else |
 | Bazantic gateway (LIVE) | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com`, MCP at `/mcp` — unpaid `GET /bonds` returns 402 with an x402 challenge |
@@ -237,10 +238,10 @@ Run it locally with `cd web && npm install && npm run build` (writes `api/public
 
 | Track | Start here |
 |---|---|
-| Hedera, tokenization | [`ats/script/CreateBond.s.sol`](ats/script/CreateBond.s.sol) (the live ATS factory, not a fork), [`ats/README.md`](ats/README.md) (ABI provenance per facet), [`contracts/src/BondMarket.sol`](contracts/src/BondMarket.sol) (`fill` calls `canTransferFrom`), [`contracts/src/BondLifecycle.sol`](contracts/src/BondLifecycle.sol) (HIP-1215 `scheduleCall`, snapshot-based pull claims) |
-| Hedera, improve the harness | [`harness/README.md`](harness/README.md) (tiers, API table, before/after line counts), [`harness/src/HederaHarness.sol`](harness/src/HederaHarness.sol), [`harness/src/HederaTest.sol`](harness/src/HederaTest.sol), [`harness/src/mocks/MockHSS.sol`](harness/src/mocks/MockHSS.sol), [`harness/scripts/`](harness/scripts) (`doctor.sh`, `verify.sh`, `validate-schedule.sh`, `loc.sh`) |
+| Hedera, tokenization | [`ats/script/CreateBond.s.sol`](ats/script/CreateBond.s.sol) (the live ATS factory, not a fork), [`ats/README.md`](ats/README.md) (ABI provenance per facet), [`contracts/src/BondMarket.sol`](contracts/src/BondMarket.sol) (`fill` calls `canTransferFrom`), [`contracts/src/BondLifecycle.sol`](contracts/src/BondLifecycle.sol) (HIP-1215 `scheduleCall`, snapshot-based pull claims); upstream to ATS: issues [#1402](https://github.com/hashgraph/asset-tokenization-studio/issues/1402) (stale testnet factory in the docs), [#1403](https://github.com/hashgraph/asset-tokenization-studio/issues/1403) (`mint` needs a KYC'd recipient), [#1404](https://github.com/hashgraph/asset-tokenization-studio/issues/1404) (the `transferFrom` operator is never KYC-checked) and a confirmation on [#1390](https://github.com/hashgraph/asset-tokenization-studio/issues/1390#issuecomment-5644153422) |
+| Hedera, improve the harness | [`harness/README.md`](harness/README.md) (tiers, API table, before/after line counts), [`harness/src/HederaHarness.sol`](harness/src/HederaHarness.sol), [`harness/src/HederaTest.sol`](harness/src/HederaTest.sol), [`harness/src/mocks/MockHSS.sol`](harness/src/mocks/MockHSS.sol), [`harness/scripts/`](harness/scripts) (`doctor.sh`, `verify.sh`, `validate-schedule.sh`, `loc.sh`); upstream: [hedera-dev/hedera-harness#62](https://github.com/hedera-dev/hedera-harness/pull/62), a CHAIN-stage check that a scheduled transaction executed *and* its child succeeded, with our two schedules as fixtures |
 | Chainlink, confidential workflow | [`workflow/bond-monitor/handler.ts`](workflow/bond-monitor/handler.ts), [`workflow/shared/decide.ts`](workflow/shared/decide.ts), [`workflow/shared/rpc.ts`](workflow/shared/rpc.ts), evidence in [`docs/cre-evidence/`](docs/cre-evidence): the final re-run on the submitted code is `bond-monitor-20260912-0057-warn.log` (banner `AWS Nitro in us-west-2`), and the direct-delivery run signed a WARN verdict in the enclave and landed it on Hedera itself, no relayer, in [`0x681cb6a2…f2bb95b`](https://hashscan.io/testnet/transaction/0x681cb6a29fd3b39144d3e799090fa2c25efcb1376760943f2cf7edb66f2bb95b) (nonce 3, `coverageObserved 595`) |
-| Chainlink, liquidation challenge | [`workflow/liquidation-protection/main.ts`](workflow/liquidation-protection/main.ts), [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md) (how the position is defended during the 24 h scoring window, both branches), fallback runner [`workflow/scripts/defend-loop.sh`](workflow/scripts/defend-loop.sh) |
+| Chainlink, liquidation challenge | [`workflow/liquidation-protection/main.ts`](workflow/liquidation-protection/main.ts), [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md) (the deployment record and how the position is defended during the 24 h scoring window), the deployed workflow's executions in [`docs/cre-evidence/deployed-20260912.txt`](docs/cre-evidence/deployed-20260912.txt), backup runner [`workflow/scripts/defend-loop.sh`](workflow/scripts/defend-loop.sh) |
 | Bazantic | Three live gateways ([`api/bazantic/gateway.md`](api/bazantic/gateway.md)): Bond Desk API `axuvor5zujgk5hdcydzjdi742m`, Hedera Mirror Node (testnet) `txrkgk2mezhbln4aeo2tdji6s4`, and Bank of Canada Valet `4q4fqndwcnhxrfk6thlgjnodca`, the service that was on neither Bazantic nor a sponsor's list, entered for *Agentify a new API*. The published Recipe [Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation) chains all three ([`api/bazantic/recipe.md`](api/bazantic/recipe.md)) and is our entry for *Best Recipe that uses EthGlobal Hackathon Sponsor APIs*; the A/B evidence (Recipe 4/4 vs raw spec 2/4) is in [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md); the OpenAPI source is [`api/src/openapi.ts`](api/src/openapi.ts) |
 
 Demo script and shot list: [`docs/DEMO.md`](docs/DEMO.md). Sponsor feedback:
@@ -401,18 +402,21 @@ live policy, and the check now reports no hit across all logs. The check is in
   relative-value sanity check rather than a hedgeable spread. The A/B run in
   [`docs/bazantic-ab/README.md`](docs/bazantic-ab/README.md) calls the public API directly in both arms, so its
   x402 spend is `0` by design rather than by omission.
-- **CRE deploy access came late.** Two gates apply, the Confidential Workflows early-access form and the separate
-  `cre account access` request; access was enabled on 2026-09-12. Until then both workflows were exercised through
-  `cre workflow simulate` only (final re-run on the submitted code: `docs/cre-evidence/*20260912*`). During the
-  24 h scoring window the position is defended by the deployed workflow, with
-  [`workflow/scripts/defend-loop.sh`](workflow/scripts/defend-loop.sh) as the fallback: it re-runs the same handler
-  through the simulator every 30 s from our machine, unattested, with secrets read from `workflow/.env` rather
-  than the Vault DON (`workflow/README.md`, "Scoring window fallback"). The Sepolia `join()` and the position it
-  created are live regardless.
-- **Relay mode is simulator-only.** A production enclave emits no logs, so the `VERDICT_JSON` line that `relayer/`
-  reads exists only in `cre workflow simulate`; a deployed bond-monitor delivers its own verdict (`deliver:
-  "direct"` in `workflow/bond-monitor/config.production.json`, hourly). The relayer remains the courier for
-  simulator-produced verdicts and for re-submitting a signed verdict from a log.
+- **Deployed on the CRE network on 2026-09-12, a day before the deadline.** Deploy access was enabled that morning;
+  both workflows are on the private registry (`liquidation-protection-production` `00cdbaa2…48554f`, every
+  30 s; `bond-monitor-production` `0045bd36…5c96c8`, hourly, delivering its own verdicts to Hedera) and the
+  record is [`docs/cre-evidence/deployed-20260912.txt`](docs/cre-evidence/deployed-20260912.txt). What the CLI
+  does not show is whether the network ran the handler inside the Nitro enclave the constraint asks for
+  (`cre execution events` lists only the trigger and the HTTP batch), and the Confidential Workflows
+  early-access form was never confirmed, so the attested-execution evidence is the simulator runs in
+  `docs/cre-evidence/*20260912*`, whose banner names the enclave. [`workflow/scripts/defend-loop.sh`](workflow/scripts/defend-loop.sh)
+  stays armed as the backup for the scoring window. The Sepolia `join()` and the position it created are live
+  regardless.
+- **Logs from a deployed confidential handler are visible, once per node.** The simulator banner says they never
+  leave the TEE; `cre execution logs` returns them from every DON node. Nothing we log is sensitive (a coverage
+  bucket, a plan word), and the deployed bond-monitor delivers its own verdict (`deliver: "direct"` in
+  `workflow/bond-monitor/config.production.json`, hourly) rather than relying on a log-line relay; the relayer
+  remains the courier for simulator-produced verdicts and for re-submitting a signed verdict from a log.
 - **One process, one cache.** The API caches reads for 10 s in memory. It is a demo service, not an HA
   deployment.
 - **The relayer inbox is gitignored.** `relayer/inbox/*.json` and every `.env` are excluded, so the extracted

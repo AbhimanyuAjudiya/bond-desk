@@ -194,9 +194,12 @@ closing banner (`Run cre account access to request deployment access.`) is the f
 about even the first one. We asked on 2026-09-10. On 2026-09-11 (19:18 UTC) deploy access was still not enabled
 and `cre whoami` failed with an HTTP 500 from the auth backend ("unable to retrieve organization info … token
 refresh failed: auth response: 500 Internal Server Error") while `cre workflow simulate` kept working on the
-cached session. The workflows in this repository are therefore simulated only, and the scoring window is
-covered by a local loop (`workflow/scripts/defend-loop.sh`, documented in `workflow/README.md`) instead of an
-enclave. Three concrete asks:
+cached session. On 2026-09-12 (about 01:00 UTC) a fresh `cre login` showed `Deploy Access: Enabled`, so the gate opened
+somewhere between the 500 and the re-login, without an email either of us noticed; the Confidential Workflows
+form was never answered at all, and `cre workflow deploy` accepted the `handlerInTee` workflow regardless
+(`docs/cre-evidence/deployed-20260912.txt`). The secrets step then failed once on a limit no page mentions:
+`cannot have more than 10 items in a single payload; check your secrets YAML`, so one project-wide secrets file
+became one file per workflow. Three concrete asks:
 
 - Put both gates, and the fact that they are two, in the first paragraph of the challenge brief, and either
   honour the 24 h figure or remove it. A hackathon team that reads the brief on day 7 has already lost.
@@ -207,31 +210,35 @@ enclave. Three concrete asks:
   supported for secrets operations". Before approval there is no unattended path at all; our fallback loop
   rides on the cached browser session and retries when the backend answers 500.
 
-## A production enclave has no log channel, so a log-line relay is simulator-only
+## The banner says logs never leave the TEE; `cre execution logs` shows them from every node
 
 The simulator banner says it in every run ("During real execution, user logs for this trigger will not be
 visible, and will not leave the TEE") and the hello-confidential template's README repeats it ("Every
-`runtime.log()` inside the enclave MUST be removed before deploying to production"). That closes a question we
-had left open: there is no production observability for a confidential handler, by design.
+`runtime.log()` inside the enclave MUST be removed before deploying to production"). We designed to that:
+the deployed `bond-monitor` delivers its own verdict (`deliver: "direct"`), because the `VERDICT_JSON` log line
+the relayer reads was supposed to exist only in the simulator.
 
-For our design it means the relayer's input, the `VERDICT_JSON {…}` log line, exists only in the simulator. A
-deployed `bond-monitor` has to deliver the verdict itself, which is what `config.production.json` does with
-`deliver: "direct"` (the enclave signs `RiskGate.submit` with the Hedera submit key and sends it over JSON-RPC),
-and the only trace of an execution is its on-chain effect plus `cre execution` history. Two things would help:
-one sentence in the concept page saying that logs are simulator-only and the return value / chain effect is the
-production interface; and some attested execution receipt for confidential handlers (even a hash of the return
-value) that a relayer or auditor could fetch. "Confidential execution evidence or an execution receipt" is a
-scored item of the challenge, and today the only artifact a team can produce for it is a simulator transcript.
+Then we deployed. `cre execution logs <id>` on `liquidation-protection-production` returned the handler's user
+log line nine times, once per DON node (`[Node 1] liq plan=scenario-inactive (gate closed)` … `[Node 9]`), and
+`cre execution events` listed the trigger and one `http-actions SendRequest` and nothing that names an enclave,
+an attestation, or the `nitro`/`us-west-2` constraint the handler was registered with. So either the logs do
+leave the TEE, or the handler did not run in one; the CLI cannot tell us which, and neither can we. Two asks:
 
-## **[to confirm]**
+- Make the banner and the CLI agree. If confidential handlers' logs are returned by `cre execution logs`, say so
+  and say who can read them; if they are not supposed to be, the deployed run above is a bug report.
+- Give a deployed execution a visible confidentiality marker: the enclave type and region that served it, or an
+  attestation hash, in `cre execution status` or `events`. "Confidential execution evidence or an execution
+  receipt" is a scored item of the challenge, and today the only artifact a team can produce for it is a
+  simulator transcript plus a `SUCCESS` row that looks identical for a plain workflow.
 
-- `cre secrets create secrets.yaml --target staging-settings --secrets-auth=browser`, and whether secret
-  rotation requires a redeploy. Written up in `workflow/README.md` from the reference, not yet run; the secrets
-  reference does say the step is browser-login only (no API key), and says nothing about rotation.
+## Open questions
+
+- Secret rotation: `cre secrets create` is browser-login only (confirmed), and the reference says nothing about
+  whether rotating a value needs a redeploy. Not tested.
 - Whether a batched JSON-RPC request counts as one call against the 5-per-execution quota. Our workflows are
-  designed to it, and a 9-sub-call batch executed fine in the simulator with no quota complaint, but the
-  simulator prints per-call limits rather than a running count, so we cannot prove the accounting. If a batch is
-  counted per sub-call, a lot of workflows are silently near the limit.
+  designed to it, a 9-sub-call batch executes fine both in the simulator and on the network, but nothing prints
+  a running count, so we cannot prove the accounting. If a batch is counted per sub-call, a lot of workflows are
+  silently near the limit.
 ## What worked well
 
 The simulator's TEE banner and `[USER LOG]` lines are exactly the right evidence artifact: readable,

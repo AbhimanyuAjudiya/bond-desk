@@ -27,7 +27,7 @@ curl -sf "$PUBLIC_URL/openapi.json" | jq -r '.info.title, (.paths | keys[])'
 
 Both must succeed **before** registering — Bazantic fetches the spec at registration time. Verified on
 2026-09-10: `/healthz` returns `{"ok":true,"chainId":296,…}`, and `/openapi.json` is OpenAPI 3.1 with
-`servers[0].url` equal to `$PUBLIC_URL` and the six operations priced below.
+`servers[0].url` equal to `$PUBLIC_URL` and the six operations priced below. (The API has since grown to ten operations, `/openapi.json` on the live URL; the gateway was registered from this six-operation spec and still exposes exactly those six. The four newer ones, verdict history, the activity feed and the testnet KYC desk, are deliberately outside the paid surface: the KYC desk in particular must stay a same-origin call from the app, not a marketplace tool.)
 
 ## 1. Register the gateway — done
 

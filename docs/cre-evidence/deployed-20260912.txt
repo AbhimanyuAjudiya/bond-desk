@@ -1,0 +1,58 @@
+# cre workflow list --registry private   (2026-09-12T06:22:12Z)
+Workflows
+1. bond-monitor-production
+     Workflow ID:  0045bd363636904bec39160d0a7958052f28ec1b8886546acbae3bc8b55c96c8
+     Owner:        8070ad0f08c4d9c7ef586c70b47f78e6abec4abc
+     Status:       ACTIVE
+     Registry:     private
+2. liquidation-protection-production
+     Workflow ID:  00cdbaa2a96e93c92fefd715757d621c448fd30fa4cb4f509caaa07a4648554f
+     Owner:        8070ad0f08c4d9c7ef586c70b47f78e6abec4abc
+     Status:       ACTIVE
+     Registry:     private
+Inspect executions:
+     cre execution list <workflow-id-or-name>
+     cre execution list <workflow-id-or-name> --status FAILURE
+     cre execution status <execution-id>
+     cre execution events  <execution-id>
+     cre execution logs    <execution-id>
+
+# cre execution list liquidation-protection-production
+Resolving workflow "liquidation-protection-production"...
+Fetching executions...
+Executions
+1. ee8ce08a3463d5ecb0ec46560e71ace7ac7195084c513d126c07b0387c3c4080
+     Workflow:  liquidation-protection-production
+     Status:    IN_PROGRESS
+     Started:   2026-09-12 06:22:01 UTC
+     Finished:  2026-09-12 06:22:10 UTC (9s)
+2. a4b90d33558c675078db051bfd76d2938b2a6cf10dac08862ecbfc5c72ff12bb
+     Workflow:  liquidation-protection-production
+     Status:    SUCCESS
+     Started:   2026-09-12 06:21:31 UTC
+     Finished:  2026-09-12 06:21:38 UTC (7s)
+3. 70504973644da216938c3b386b193fe6feb46f89761a09eeef303a655d5836de
+     Workflow:  liquidation-protection-production
+     Status:    SUCCESS
+     Started:   2026-09-12 06:21:01 UTC
+     Finished:  2026-09-12 06:21:09 UTC (8s)
+4. 3ab4caa8428a5ec05558dbdeae029bac8776b0970fa52584a6d85d638631bc80
+     Workflow:  liquidation-protection-production
+     Status:    SUCCESS
+     Started:   2026-09-12 06:20:31 UTC
+     Finished:  2026-09-12 06:20:39 UTC (8s)
+5. a45b819e6b04d2b66191eb35e7f744f778419c2f2af576569b840b1bf86537ba
+     Workflow:  liquidation-protection-production
+     Status:    SUCCESS
+     Started:   2026-09-12 06:20:01 UTC
+     Finished:  2026-09-12 06:20:08 UTC (7s)
+6. 2d16ed161802dd52055405d61dea5e99fb483433b96a62ef4c31b9387c9053a4
+     Workflow:  liquidation-protection-production
+     Status:    SUCCESS
+     Started:   2026-09-12 06:19:30 UTC
+     Finished:  2026-09-12 06:19:39 UTC (8s)
+
+# cre execution list bond-monitor-production
+Resolving workflow "bond-monitor-production"...
+Fetching executions...
+! No executions found

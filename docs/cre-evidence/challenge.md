@@ -43,26 +43,41 @@ rotated at the same time, for hygiene.
 
 ## How the position is defended during scoring
 
-Chainlink runs the price scenarios during the 24 hours after the submission deadline, 2026-09-13 16:00 UTC. The
-code, the wallet and the policy are the same in both branches below; what differs is where the secrets are read
-from and whether the execution is attested.
+Chainlink runs the price scenarios during the 24 hours after the submission deadline, 2026-09-13 16:00 UTC.
 
-**Branch A: deploy access arrives in time.** `cre secrets create secrets.yaml --target staging-settings
---secrets-auth=browser` puts the wallet key and the five policy values into the Vault DON, then
-`cre workflow deploy liquidation-protection --target staging-settings` deploys to the private registry. From
-then on an AWS Nitro enclave in `us-west-2` (the constraint in `main.ts`) executes the handler every 30 s, the
-Vault DON releases the secrets only into that attested enclave, nothing runs on our machines, and the
-deployment record (workflow name, registry, time) is appended to this file.
+**Deployed, 2026-09-12.** Deploy access flipped to `Enabled` after a fresh `cre login` on 2026-09-12. The secrets
+went to the private registry in two files (the registry caps one payload at 10 ids):
+`cre secrets create liquidation-protection/secrets.yaml --target production-settings --secrets-auth=browser`
+created `LIQ_WALLET_KEY`, `LIQ_TRIGGER_HF`, `LIQ_TARGET_HF`, `LIQ_MAX_REPAY_VUSD`, `LIQ_MAX_DEPOSIT_VETH`,
+`LIQ_COOLDOWN_SECS` (owner `0x8070ad0f…4aBC`, namespace `main`). Then
+`cre workflow deploy liquidation-protection --target production-settings`:
 
-**Branch B: access is still pending at 16:00 UTC.** `workflow/scripts/defend-loop.sh` runs on our machine from
-2026-09-13 16:00 UTC for the 24 h window. Every 30 s it executes the same handler through
-`cre workflow simulate`: the same batched reads, the same gate probe, the same private decision, the same
-in-process signing, and the same JSON-RPC `eth_sendRawTransaction` (the reverted `1426` transaction is the
-proof that the simulator's sends are real). Stated plainly: the simulator is not an enclave, so nothing about
-those runs is attested, and the secrets come from `workflow/.env` on our disk rather than from the Vault DON.
-The full output goes to `workflow/.defend-logs/` (gitignored).
+| | |
+|---|---|
+| Workflow name | `liquidation-protection-production` |
+| Workflow ID | `00cdbaa2a96e93c92fefd715757d621c448fd30fa4cb4f509caaa07a4648554f` |
+| Registry / DON family | private / `zone-a` |
+| Status | ACTIVE, cron every 30 s |
+| First executions | `2d16ed16…9053a4` 06:19:30 UTC, `a45b819e…6537ba` 06:20:01 UTC, `3ab4caa8…31bc80` 06:20:31 UTC, all `SUCCESS` (7–9 s each) |
+| Evidence | [`deployed-20260912.txt`](deployed-20260912.txt): `cre workflow list`, `cre execution list`, one execution's `status`, `events` and `logs` |
 
-Which branch ran, and the Sepolia transactions it produced, are appended here after the window.
+Every run so far reports `liq plan=scenario-inactive (gate closed)`, which is the correct answer while no scoring
+scenario is open: the probe finds `repay` reverting and the workflow spends nothing. From the first `start()` it
+acts on the next tick with the private policy.
+
+Two things the CLI shows that are worth stating plainly. `cre execution events` lists the trigger and one
+`http-actions SendRequest` (the batched JSON-RPC read); it shows nothing about the enclave the `nitro`
+constraint asks for, and `cre execution logs` returns the handler's coarse log line once per DON node (nine
+nodes). Whether the network executed the handler inside the Nitro enclave is therefore not visible from the
+CLI, and the Confidential Workflows early-access form submitted on 2026-09-10 was never confirmed. The
+attested-execution claim rests on the simulator runs above, which name the enclave in their banner; the
+deployment is claimed only as what it is: the same handler, running on the CRE network every 30 s during the
+scoring window, with its secrets released by the Vault DON rather than read from our disk.
+
+**Fallback, kept armed.** `workflow/scripts/defend-loop.sh` (30 s ticks through `cre workflow simulate`, secrets
+from `workflow/.env`, unattested) is no longer the plan; it is the backup if the deployed workflow stops
+executing before or during the window. The scoring-window outcome and the Sepolia transactions it produced are
+appended here after the window.
 
 ## What the workflow does at the first tick of each scenario (current policy, qualitatively)
 

@@ -305,3 +305,17 @@ the call *ran*, not that it *succeeded*. Chainlink feeds on testnet behave as
 plain `AggregatorV3Interface` with no Hedera-specific wrapper, which made the NAV/collateral path portable
 EVM code. And `forge script --broadcast --rpc-url` against hashio works, which is the single biggest reason a
 Solidity team can ship here in a week.
+
+## Filed upstream (2026-09-12)
+
+- Asset Tokenization Studio: [#1402](https://github.com/hashgraph/asset-tokenization-studio/issues/1402)
+  `deployed-addresses.md` still lists the v4.0.0 testnet factory `0.0.7708432` while the current v8 factory is
+  `0.0.9213391` / `0xd1F1…379d`; [#1403](https://github.com/hashgraph/asset-tokenization-studio/issues/1403)
+  `mint` needs a KYC-granted recipient, the issuer minting to itself included, and only the web-app guide says so;
+  [#1404](https://github.com/hashgraph/asset-tokenization-studio/issues/1404) the `transferFrom` operator is never
+  KYC-checked (only `from` and `to` are), so market and escrow contracts must not be granted KYC; and the
+  `addIssuer → grantKyc` ordering above was already reported as
+  [#1390](https://github.com/hashgraph/asset-tokenization-studio/issues/1390#issuecomment-5644153422), where we
+  added the confirmation instead of a duplicate.
+- Hedera Harness: [hedera-dev/hedera-harness#62](https://github.com/hedera-dev/hedera-harness/pull/62), the
+  scheduled-transaction result check described in the schedule section above.

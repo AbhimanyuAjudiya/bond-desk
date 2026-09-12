@@ -182,3 +182,15 @@ executed at 1789155023.095848659  https://hashscan.io/testnet/schedule/0.0.10482
 The `Pinged` log the execution emitted carries `block.timestamp = 1789155022`: the run landed in block `40394623`,
 whose window starts at `1789155022.915953220`, one second before the expiry second it was asked for. `ping()` has
 no time gate so it did not care; a coupon would have. That is the lag bullet in *Things that bite*.
+
+## Upstream
+
+The gap this harness closes in its own validator is filed against the Hedera Harness itself:
+[hedera-dev/hedera-harness#62](https://github.com/hedera-dev/hedera-harness/pull/62), based on `dev`
+(2.0.0-rc.4, schema v3), adds `src/validation/scheduleExecution.ts`: after a deploy command prints
+`HARNESS_SCHEDULE_ID=0.0.x`, the CHAIN stage waits for `executed_timestamp` on `/api/v1/schedules/{id}`, then
+reads the scheduled child at that consensus timestamp (`/api/v1/transactions?timestamp=…`, `scheduled: true`)
+and fails the attempt unless its `result` is `SUCCESS`, naming the real result otherwise. Nine offline tests run
+against captured mirror-node JSON for `0.0.10457460` (executed, `SUCCESS`) and `0.0.10457462` (executed,
+`CONTRACT_REVERT_EXECUTED`), the two schedules from this repo's storyline, and the write-up explains why the
+lookup goes through the timestamp and not the transaction id.

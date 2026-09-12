@@ -156,8 +156,19 @@ submission.
 - **`don-report=ok` attests to a DON round**, not to the enclave that produced the payload.
 - **They do not prove on-chain effect on their own.** That is the relay transaction table above, and the full
   storyline in the root `README.md`.
-- **The workflows are not deployed.** CRE deploy access was requested on 2026-09-10 and was still not enabled on
-  2026-09-11, so `cre workflow deploy` has not run and the deployment record in `challenge.md` is still open.
-  During the scoring window the position is defended either by the deployed workflow, if access arrives in
-  time, or by `workflow/scripts/defend-loop.sh` re-running this same handler through the simulator every 30 s;
-  `challenge.md` ("How the position is defended during scoring") states both branches and their caveats.
+- **The workflows are deployed since 2026-09-12 06:19 UTC**, both on the private registry, and `cre execution list`
+  shows the liquidation defender succeeding every 30 s; the record is `deployed-20260912.txt` and the deployment
+  table in `challenge.md`. What the deployment does not prove is enclave execution: `cre execution events` shows
+  no TEE capability and `cre execution logs` returns the handler's log line from every DON node, so the
+  attested-execution evidence remains the simulator banners above. `workflow/scripts/defend-loop.sh` stays as the
+  backup for the scoring window.
+
+## Deployed on the CRE network (2026-09-12)
+
+[`deployed-20260912.txt`](deployed-20260912.txt) is the raw CLI output captured at 06:22 UTC: `cre workflow list
+--registry private` (two ACTIVE workflows, `bond-monitor-production` `0045bd36…5c96c8` and
+`liquidation-protection-production` `00cdbaa2…48554f`), `cre execution list` for both, and for execution
+`a45b819e…6537ba` its `status` (SUCCESS, 06:20:01 to 06:20:08 UTC), `events` (trigger, one `http-actions
+SendRequest`) and `logs` (`liq plan=scenario-inactive (gate closed)` from nine nodes). The bond monitor is on an
+hourly cron with `deliver: "direct"`, so from 07:00 UTC each run signs a verdict and lands it on Hedera itself;
+the resulting `VerdictApplied` events are on RiskGate and in the app's Risk tab.
