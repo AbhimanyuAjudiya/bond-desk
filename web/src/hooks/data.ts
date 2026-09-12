@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import type { Address } from "viem"
 import { useAccount, useReadContract, useReadContracts } from "wagmi"
 import { ROLES, erc20Abi, oracleAbi, registryAbi, tokenAbi, vaultAbi } from "../config/abi"
@@ -10,6 +10,9 @@ const every = (ms: number) => ({ refetchInterval: ms, staleTime: ms / 2 })
 export const useBonds = () => useQuery({ queryKey: ["bonds"], queryFn: () => api<{ bonds: BondSummary[] }>("/bonds"), ...every(15_000) })
 export const useBond = (id: string) => useQuery({ queryKey: ["bond", id], queryFn: () => api<Bond>(`/bonds/${id}`), ...every(15_000), enabled: /^\d+$/.test(id) })
 export const useOrderbook = (id: string) => useQuery({ queryKey: ["orderbook", id], queryFn: () => api<Orderbook>(`/bonds/${id}/orderbook`), ...every(6_000) })
+/** One book per bond for the desk's depth column; the same keys as useOrderbook, so the bond page finds them warm. */
+export const useOrderbooks = (ids: string[]) =>
+  useQueries({ queries: ids.map((id) => ({ queryKey: ["orderbook", id], queryFn: () => api<Orderbook>(`/bonds/${id}/orderbook`), ...every(15_000) })) })
 export const useRisk = (id: string) => useQuery({ queryKey: ["risk", id], queryFn: () => api<Risk>(`/bonds/${id}/risk`), ...every(15_000) })
 export const useVerdicts = (id: string) => useQuery({ queryKey: ["verdicts", id], queryFn: () => api<{ bondId: string; verdicts: VerdictRow[] }>(`/bonds/${id}/verdicts`), ...every(20_000) })
 export const useEvents = (limit = 60) => useQuery({ queryKey: ["events", limit], queryFn: () => api<{ events: DeskEvent[] }>(`/events?limit=${limit}`), ...every(15_000) })

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react"
 import { useAccount } from "wagmi"
-import { ActionBadge, AddressChip, Badge, Empty, ErrorNote, Loading, Panel, StatusBadge, Time, TxLink, cx } from "../components/ui"
+import { ActionBadge, AddressChip, Badge, Empty, ErrorNote, Loading, Panel, Refreshed, StatusBadge, Time, TxLink, cx } from "../components/ui"
 import { useEvents } from "../hooks/data"
 import type { DeskEvent } from "../lib/api"
 import { actionName, fmtHbar, fmtInt, fmtPrice, fmtTime, fmtUsdc, sameAddress, statusName } from "../lib/format"
@@ -16,32 +16,35 @@ export function Activity() {
     <>
       <div>
         <h1 className="text-[30px] leading-none">Activity</h1>
-        <p className="note mt-1.5 max-w-[70ch]">Decoded events from every desk contract and the bond token, read from the Hedera mirror node. Newest first.</p>
+        <p className="note mt-1.5 max-w-[70ch]">Decoded events from every desk contract and the bond tokens, read from the Hedera mirror node. Newest first; rows that involve your wallet are tinted.</p>
       </div>
       <Panel
         title="Recent events"
         aside={
-          <div className="flex flex-wrap gap-1" role="tablist" aria-label="Filter by contract">
-            {CONTRACTS.map((c) => (
-              <button key={c} role="tab" aria-selected={filter === c} className={cx("px-2 py-0.5 rounded text-[12px]", filter === c ? "bg-accent text-accent-fg" : "text-muted hover:text-fg")} onClick={() => setFilter(c)}>{c}</button>
-            ))}
-          </div>
+          <>
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by contract">
+              {CONTRACTS.map((c) => (
+                <button key={c} type="button" aria-pressed={filter === c} className={cx("px-2 py-0.5 rounded text-[12px]", filter === c ? "bg-surface-2 text-fg font-medium" : "text-muted hover:text-fg")} onClick={() => setFilter(c)}>{c}</button>
+              ))}
+            </div>
+            <Refreshed at={ev.dataUpdatedAt} />
+          </>
         }
       >
-        {ev.isLoading && <Loading rows={6} />}
+        {ev.isLoading && <Loading />}
         {ev.isError && <ErrorNote error={ev.error} />}
-        {ev.data && rows.length === 0 && <Empty>No events yet.</Empty>}
+        {ev.data && rows.length === 0 && <Empty>{filter === "All" ? "No events yet." : `No ${filter} events in the last ${ev.data.events.length}.`}</Empty>}
         {rows.length > 0 && (
-          <div className="overflow-x-auto">
+          <div className="scroll-x">
             <table className="table">
               <thead><tr><th>When</th><th>Contract</th><th>Event</th><th>Tx</th></tr></thead>
               <tbody>
                 {rows.map((e, i) => (
                   <tr key={`${e.txHash}-${i}`} className={cx(involves(e, address) && "bg-accent-soft/40")}>
-                    <td className="whitespace-nowrap"><Time unix={e.timestamp} /></td>
-                    <td className="whitespace-nowrap text-muted">{e.contract}</td>
-                    <td className="min-w-[320px]"><Sentence e={e} me={address} /></td>
-                    <td className="whitespace-nowrap"><TxLink hash={e.txHash} /></td>
+                    <td className="whitespace-nowrap align-top"><Time unix={e.timestamp} /></td>
+                    <td className="whitespace-nowrap text-muted align-top">{e.contract}</td>
+                    <td className="min-w-[320px] align-top"><Sentence e={e} me={address} /></td>
+                    <td className="whitespace-nowrap align-top"><TxLink hash={e.txHash} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -113,9 +116,9 @@ export function Sentence({ e, me }: { e: DeskEvent; me?: string }): ReactNode {
     case "RoleRevoked":
       return <>Registry role <span className="font-mono text-[11px]">{s(a.role).slice(0, 10)}…</span> revoked from <A a={a.account} me={me} />.</>
     case "KycGranted":
-      return <><Badge tone="ok">KYC</Badge> granted to <A a={a.account} me={me} /> on the bond token by <A a={a.operator} me={me} />.</>
+      return <><Badge tone="ok">KYC</Badge> granted to <A a={a.account} me={me} /> on <A a={e.address} /> by <A a={a.operator} me={me} />.</>
     case "KycRevoked":
-      return <><Badge tone="bad">KYC</Badge> revoked for <A a={a.account} me={me} /> on the bond token by <A a={a.operator} me={me} />.</>
+      return <><Badge tone="bad">KYC</Badge> revoked for <A a={a.account} me={me} /> on <A a={e.address} /> by <A a={a.operator} me={me} />.</>
     case "BandSet":
       return <>Price band for bond #{s(a.bondId)} set to {Number(a.bps) / 100}% around the oracle mark.</>
     case "FeeSet":

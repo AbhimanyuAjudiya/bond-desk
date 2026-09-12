@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buyerTotal, countdown, couponPerBond, currentYieldBps, fmtHbar, fmtPrice, fmtUsdc, orderCost, parseAmount, parseTinybar, parseUsdc, parseWeibar, shortAddress } from "./format"
+import { buyerTotal, countdown, couponPerBond, currentYieldBps, fmtHbar, fmtPrice, fmtUsdc, orderCost, parseAmount, parseTinybar, parseUsdc, parseWeibar, shortAddress, spreadMid } from "./format"
 
 describe("order maths", () => {
   it("costs amount * price / 10^bondDecimals like BondMarket.cost", () => {
@@ -37,6 +37,14 @@ describe("HBAR units", () => {
     expect(parseWeibar("1")).toBe(10n ** 18n)
     expect(fmtHbar(8_000_000_000n)).toBe("80")
     expect(fmtHbar(123_456_789n)).toBe("1.2346")
+  })
+})
+
+describe("book", () => {
+  it("spread and mid from the best bid and ask, null while a side is empty, negative when crossed", () => {
+    expect(spreadMid("980000", "990000")).toEqual({ spread: 10_000n, mid: 985_000n, spreadBps: 101n })
+    expect(spreadMid("0", "990000")).toBeNull()
+    expect(spreadMid("1000000", "990000")?.spread).toBe(-10_000n)
   })
 })
 

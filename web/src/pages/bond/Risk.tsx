@@ -35,10 +35,10 @@ export function Risk({ bond }: { bond: Bond }) {
   const tx = useTx()
   const [busy, setBusy] = useState(false)
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_400px] items-start">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px] items-start">
       <div className="flex flex-col gap-5 min-w-0">
         <Panel title="Risk gate" aside={<StatusBadge status={status} />}>
-          {q.isLoading && <Loading rows={4} />}
+          {q.isLoading && <Loading />}
           {q.isError && <ErrorNote error={q.error} />}
           {snap && (
             <div className="p-4 grid gap-4 md:grid-cols-2">
@@ -67,11 +67,11 @@ export function Risk({ bond }: { bond: Bond }) {
           )}
         </Panel>
         <Panel title="Verdict history" aside={<span>VerdictApplied events, newest first</span>}>
-          {verdicts.isLoading && <Loading rows={3} />}
+          {verdicts.isLoading && <Loading />}
           {verdicts.isError && <ErrorNote error={verdicts.error} />}
           {verdicts.data && verdicts.data.verdicts.length === 0 && <Empty>No verdict has been applied to this bond yet.</Empty>}
           {verdicts.data && verdicts.data.verdicts.length > 0 && (
-            <div className="overflow-x-auto">
+            <div className="scroll-x">
               <table className="table">
                 <thead><tr><th>Applied</th><th>Action</th><th className="text-right">Coverage observed</th><th className="text-right">Nonce</th><th>Relayer</th><th>Tx</th></tr></thead>
                 <tbody>

@@ -7,7 +7,7 @@ import { AddressChip, Badge, Button, ConfirmButton, Countdown, Empty, Field, Inp
 import { useRoles, useWalletFunds } from "../../hooks/data"
 import { useTx } from "../../hooks/useTx"
 import type { Bond } from "../../lib/api"
-import { couponPerBond, fmtInt, fmtUsdc, parseUsdc } from "../../lib/format"
+import { couponPerBond, fmtInt, fmtUsdc, intervalName, parseUsdc } from "../../lib/format"
 
 export function Coupons({ bond }: { bond: Bond }) {
   const { address } = useAccount()
@@ -52,12 +52,12 @@ export function Coupons({ bond }: { bond: Bond }) {
   const scheduled = !!schedule && schedule !== "0x0000000000000000000000000000000000000000"
   const perBond = couponPerBond(BigInt(bond.faceValue), BigInt(bond.couponRateBps), BigInt(bond.couponInterval))
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_380px] items-start">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
       <div className="flex flex-col gap-5 min-w-0">
         <Panel title="Coupon schedule">
           <div className="p-4 grid gap-4 md:grid-cols-2">
             <KV rows={[
-              ["Rate", `${Number(bond.couponRateBps) / 100}% per year, paid every ${Number(bond.couponInterval) / 86400} day(s)`],
+              ["Rate", `${Number(bond.couponRateBps) / 100}% per year, paid ${intervalName(bond.couponInterval)}`],
               ["Per bond per period", `${fmtUsdc(perBond)} USDC`],
               ["Outstanding supply", `${fmtInt(supply)} ${bond.symbol}`],
               ["Pool funded", `${fmtUsdc(funded)} USDC`],
@@ -77,10 +77,10 @@ export function Coupons({ bond }: { bond: Bond }) {
           </div>
         </Panel>
         <Panel title="Paid coupons" aside={address ? <span>claimable amounts for your wallet</span> : <span>connect a wallet to see claimable amounts</span>}>
-          {base.isLoading && <Loading rows={2} />}
+          {base.isLoading && <Loading />}
           {count === 0 && !base.isLoading && <Empty>No coupon has been paid yet.</Empty>}
           {count > 0 && (
-            <div className="overflow-x-auto">
+            <div className="scroll-x">
               <table className="table">
                 <thead><tr><th>#</th><th>Paid</th><th className="text-right">Amount</th><th className="text-right">Snapshot</th><th className="text-right">Claimed</th><th className="text-right">Yours</th><th></th></tr></thead>
                 <tbody>

@@ -35,6 +35,16 @@ export const shortAddress = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…
 export const shortHash = (h: string) => `${h.slice(0, 10)}…${h.slice(-6)}`
 export const sameAddress = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase()
 
+/** Wall clock "14:03:27" for "read at" stamps (24 h, the viewer's zone). */
+export const fmtClock = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })
+/** Spread and mid of a book from its best bid and ask; null while either side is empty. A crossed book gives a negative spread. */
+export const spreadMid = (bid: bigint | string, ask: bigint | string) => {
+  const b = BigInt(bid), a = BigInt(ask)
+  if (b === 0n || a === 0n) return null
+  const mid = (a + b) / 2n
+  return { spread: a - b, mid, spreadBps: ((a - b) * 10_000n) / mid }
+}
+
 /** Locale timestamp plus the UTC form for a tooltip. */
 export const fmtTime = (unix: bigint | string | number) => {
   const d = new Date(Number(unix) * 1000)

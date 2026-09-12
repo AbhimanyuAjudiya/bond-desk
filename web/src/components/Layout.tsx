@@ -6,7 +6,7 @@ import { NetworkGuard, WalletChip } from "./Wallet"
 import { cx } from "./ui"
 
 const nav = [
-  { to: "/", label: "Desk", end: true },
+  { to: "/desk", label: "Desk" },
   { to: "/compliance", label: "Compliance" },
   { to: "/activity", label: "Activity" },
 ]
@@ -16,15 +16,16 @@ export function Layout() {
   const health = useHealth()
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="bg-accent-soft text-accent text-[12px] text-center px-3 py-1 tracking-wide">
-        Hedera <strong>testnet</strong> · chain 296 · nothing here is real money. Bond token, USDC and collateral are test assets.
-      </div>
+      <p className="text-[12px] text-muted text-center px-4 py-1 border-b border-border truncate">
+        Hedera testnet, chain 296. Nothing here is real money; the bond, the USDC and the collateral are test assets.
+      </p>
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto max-w-[1200px] px-4 h-14 flex items-center gap-4">
+        <div className="mx-auto max-w-[1200px] px-4 min-h-14 py-2 flex flex-wrap items-center gap-x-4 gap-y-1">
           <NavLink to="/" className="display text-[22px] leading-none tracking-tight whitespace-nowrap">Bond Desk</NavLink>
-          <nav className="flex items-center gap-1 text-[13px]" aria-label="Primary">
+          {/* on phones the nav takes its own line under the wordmark and the wallet chip */}
+          <nav className="flex items-center gap-0.5 text-[13px] order-3 w-full -mx-2 sm:order-none sm:w-auto sm:mx-0" aria-label="Primary">
             {nav.map((n) => (
-              <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => cx("px-2.5 py-1.5 rounded", isActive ? "bg-surface-2 text-fg font-medium" : "text-muted hover:text-fg")}>
+              <NavLink key={n.to} to={n.to} className={({ isActive }) => cx("px-2.5 py-1.5 rounded", isActive ? "bg-surface-2 text-fg font-medium" : "text-muted hover:text-fg")}>
                 {n.label}
               </NavLink>
             ))}
@@ -47,10 +48,11 @@ export function Layout() {
         <Outlet />
       </main>
       <footer className="mx-auto w-full max-w-[1200px] px-4 py-6 text-[12px] text-muted flex flex-wrap gap-x-5 gap-y-1 border-t border-border">
-        <span>Bond Desk · ETHOnline 2026</span>
-        <a className="hover:text-fg" href={`${API_URL}/openapi.json`} target="_blank" rel="noreferrer">API (OpenAPI)</a>
-        <a className="hover:text-fg" href="https://github.com/AbhimanyuAjudiya/bond-desk" target="_blank" rel="noreferrer">Source</a>
-        <a className="hover:text-fg" href="https://hashscan.io/testnet" target="_blank" rel="noreferrer">HashScan</a>
+        <span>Bond Desk, ETHOnline 2026</span>
+        <a className="link" href="https://github.com/AbhimanyuAjudiya/bond-desk" target="_blank" rel="noreferrer">Source on GitHub</a>
+        <a className="link" href={`${API_URL}/openapi.json`} target="_blank" rel="noreferrer">API document</a>
+        <a className="link" href="https://hashscan.io/testnet" target="_blank" rel="noreferrer">HashScan</a>
+        <span className="sm:ml-auto">Hedera testnet, nothing here is real money.</span>
       </footer>
     </div>
   )

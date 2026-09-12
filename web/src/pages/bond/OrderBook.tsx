@@ -1,21 +1,22 @@
-import { useState, type ReactNode } from "react"
+import { Fragment, useState, type ReactNode } from "react"
 import { useAccount, useReadContract } from "wagmi"
 import { erc20Abi, marketAbi, tokenAbi } from "../../config/abi"
 import { DEP } from "../../config/deployments"
-import { AddressChip, Badge, Button, ConfirmButton, Countdown, Empty, ErrorNote, Field, Input, Loading, Note, Panel, Time, TxLink, cx } from "../../components/ui"
+import { AddressChip, Badge, Button, ConfirmButton, Countdown, Empty, ErrorNote, Field, Input, Loading, Note, Panel, Refreshed, Time, TxLink, cx } from "../../components/ui"
 import { useOrderbook, useWalletFunds } from "../../hooks/data"
 import { useTx } from "../../hooks/useTx"
 import type { Bond, Order } from "../../lib/api"
-import { buyerTotal, fmtInt, fmtPrice, fmtUsdc, orderCost, parseAmount, parseUsdc, sameAddress } from "../../lib/format"
+import { buyerTotal, fmtBps, fmtInt, fmtPrice, fmtUsdc, orderCost, parseAmount, parseUsdc, sameAddress, spreadMid } from "../../lib/format"
+
+type Fill = { orderId: string; side: "buy" | "sell" }
 
 export function OrderBook({ bond }: { bond: Bond }) {
   const book = useOrderbook(bond.id)
   const { address } = useAccount()
   const funds = useWalletFunds(bond.token, bond.settlement)
   const fee = useReadContract({ abi: marketAbi, address: DEP.market, functionName: "feeBps", query: { staleTime: 300_000 } })
-  const feeBps = fee.data ?? 0
-  const [filling, setFilling] = useState<Order | null>(null)
-  const [fillSide, setFillSide] = useState<"buy" | "sell">("buy")
+  const feeBps = Number(fee.data ?? 0)
+  const [filling, setFilling] = useState<Fill | null>(null)
   const tx = useTx()
   const [busy, setBusy] = useState<string | null>(null)
   const cancel = async (o: Order) => {
@@ -23,52 +24,90 @@ export function OrderBook({ bond }: { bond: Bond }) {
     try { await tx({ title: `Cancel order #${o.orderId}`, summary: `Remove your order #${o.orderId} (${fmtInt(o.amount)} ${bond.symbol} at ${fmtPrice(o.price)} USDC) from the book.`, abi: marketAbi, address: DEP.market, functionName: "cancel", args: [BigInt(o.orderId)] }) } finally { setBusy(null) }
   }
   const active = bond.status === "Active"
-  const side = (rows: Order[], isAsk: boolean): ReactNode => (
-    <table className="table">
-      <thead><tr><th className="text-right">Price</th><th className="text-right">Amount</th><th className="text-right">Total</th><th>Maker</th><th>Expires</th><th></th></tr></thead>
-      <tbody>
-        {rows.length === 0 && <tr><td colSpan={6} className="text-center text-muted py-4">No {isAsk ? "asks" : "bids"}.</td></tr>}
-        {rows.map((o) => {
-          const mine = sameAddress(o.maker, address)
-          return (
-            <tr key={o.orderId} className={cx(mine && "bg-accent-soft/50")}>
-              <td className={cx("num text-right font-medium", isAsk ? "text-ask" : "text-bid")}>{fmtPrice(o.price)}</td>
-              <td className="num text-right">{fmtInt(o.amount)}</td>
-              <td className="num text-right">{fmtUsdc(orderCost(BigInt(o.amount), BigInt(o.price), bond.terms.bondDecimals))}</td>
-              <td><AddressChip address={o.maker} me={mine} /></td>
-              <td className="whitespace-nowrap">{o.expiry === "0" ? <span className="text-muted">GTC</span> : <Countdown unix={o.expiry} />}</td>
-              <td className="text-right whitespace-nowrap">
-                {mine ? (
-                  <ConfirmButton size="sm" variant="danger" confirm={`Cancel order #${o.orderId}?`} busy={busy === `cancel-${o.orderId}`} onConfirm={() => cancel(o)}>Cancel</ConfirmButton>
-                ) : (
-                  <Button size="sm" disabled={!address || !active} onClick={() => { setFilling(o); setFillSide(isAsk ? "buy" : "sell") }}>{isAsk ? "Buy" : "Sell"}</Button>
-                )}
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
-  )
+  // best first on both sides, whatever order the API used
+  const bids = [...(book.data?.bids ?? [])].sort((a, b) => (BigInt(b.price) > BigInt(a.price) ? 1 : -1))
+  const asks = [...(book.data?.asks ?? [])].sort((a, b) => (BigInt(a.price) > BigInt(b.price) ? 1 : -1))
+  const sm = book.data ? spreadMid(book.data.bestBid, book.data.bestAsk) : null
+  const mine = (o: Order) => sameAddress(o.maker, address)
+  const myCount = bids.filter(mine).length + asks.filter(mine).length
+  const dec = bond.terms.bondDecimals
+
+  // One ladder: asks from the dearest down to the best ask, the spread, then bids from the best down. Side is written
+  // out as well as coloured.
+  const row = (o: Order, isAsk: boolean): ReactNode => {
+    const me = mine(o)
+    const open = filling?.orderId === o.orderId
+    return (
+      <Fragment key={o.orderId}>
+        <tr className={cx(me && "bg-accent-soft/40", open && "bg-surface-2")}>
+          <td className={cx("text-[11px] uppercase tracking-[0.06em] font-medium", isAsk ? "text-ask" : "text-bid")}>{isAsk ? "ask" : "bid"}</td>
+          <td className={cx("num text-right font-medium", isAsk ? "text-ask" : "text-bid")}>{fmtPrice(o.price)}</td>
+          <td className="num text-right">{fmtInt(o.amount)}</td>
+          <td className="num text-right">{fmtUsdc(orderCost(BigInt(o.amount), BigInt(o.price), dec))}</td>
+          <td className="whitespace-nowrap"><AddressChip address={o.maker} me={me} /></td>
+          <td className="whitespace-nowrap">{o.expiry === "0" ? <span className="text-muted">GTC</span> : <Countdown unix={o.expiry} />}</td>
+          <td className="text-right whitespace-nowrap">
+            {me ? (
+              <ConfirmButton size="sm" variant="danger" confirm={`Cancel order #${o.orderId}: ${fmtInt(o.amount)} ${bond.symbol} at ${fmtPrice(o.price)} USDC comes off the book.`} busy={busy === `cancel-${o.orderId}`} onConfirm={() => cancel(o)}>Cancel</ConfirmButton>
+            ) : open ? (
+              <Button size="sm" onClick={() => setFilling(null)} aria-expanded="true">Close</Button>
+            ) : (
+              <Button size="sm" disabled={!address || !active} onClick={() => setFilling({ orderId: o.orderId, side: isAsk ? "buy" : "sell" })} aria-expanded="false">{isAsk ? "Buy" : "Sell"}</Button>
+            )}
+          </td>
+        </tr>
+        {open && filling && (
+          <tr className="bg-surface-2">
+            <td colSpan={7} className="p-0">
+              {/* the form stays under the row it came from; on a phone it pins to the visible left edge of the scrolling table */}
+              <div className="sticky left-0 max-w-[calc(100vw-2rem-2px)]">
+                <FillForm bond={bond} order={o} side={filling.side} feeBps={feeBps} funds={funds} onClose={() => setFilling(null)} />
+              </div>
+            </td>
+          </tr>
+        )}
+      </Fragment>
+    )
+  }
+  const gap = (text: string) => <tr><td colSpan={7} className="text-muted text-[12px] py-2">{text}</td></tr>
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_360px] items-start">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
       <div className="flex flex-col gap-5 min-w-0">
         {!active && <Note className="panel p-3 text-warn">Bond is {bond.status}: orders can be cancelled but not placed or filled until it is Active again.</Note>}
-        <Panel title="Order book" aside={<span>fee {Number(feeBps) / 100}% paid by the buyer · your orders highlighted</span>}>
-          {book.isLoading && <Loading rows={4} />}
+        <Panel title="Order book" aside={<><span className="hidden sm:inline">fee {fmtBps(feeBps)} paid by the buyer{address ? ` · ${myCount} of these are yours` : ""}</span><Refreshed at={book.dataUpdatedAt} /></>}>
+          {book.isLoading && <Loading />}
           {book.isError && <ErrorNote error={book.error} />}
           {book.data && (
-            <div className="grid md:grid-cols-2">
-              <div className="border-b md:border-b-0 md:border-r border-border overflow-x-auto"><div className="label px-3 pt-2">Bids · buyers</div>{side(book.data.bids, false)}</div>
-              <div className="overflow-x-auto"><div className="label px-3 pt-2">Asks · sellers</div>{side(book.data.asks, true)}</div>
-            </div>
+            <>
+              <dl className="grid grid-cols-3 sm:grid-cols-5 border-b border-border">
+                <Quote label="Best bid" value={fmtPrice(book.data.bestBid)} tone="text-bid" />
+                <Quote label="Best ask" value={fmtPrice(book.data.bestAsk)} tone="text-ask" />
+                <Quote label="Spread" value={sm ? (sm.spread < 0n ? "crossed" : `${fmtPrice(sm.spread)} · ${fmtBps(sm.spreadBps)}`) : "—"} />
+                <Quote label="Mid" value={sm ? fmtPrice(sm.mid) : "—"} />
+                <Quote label="Mark" value={fmtPrice(bond.mark)} />
+              </dl>
+              <div className="scroll-x">
+                <table className="table">
+                  <thead><tr><th>Side</th><th className="text-right">Price</th><th className="text-right">Amount</th><th className="text-right">Total</th><th>Maker</th><th>Expires</th><th></th></tr></thead>
+                  <tbody>
+                    {asks.length === 0 ? gap("No asks on the book.") : [...asks].reverse().map((o) => row(o, true))}
+                    <tr className="bg-surface-2">
+                      <td colSpan={7} className="num text-[12px] text-muted py-1.5">
+                        {sm ? (sm.spread < 0n ? "crossed book: the best bid is above the best ask" : `spread ${fmtPrice(sm.spread)} USDC (${fmtBps(sm.spreadBps)}) · mid ${fmtPrice(sm.mid)} · ${asks.length} ask${asks.length === 1 ? "" : "s"} above, ${bids.length} bid${bids.length === 1 ? "" : "s"} below`) : `no spread: ${bids.length === 0 ? "no bids" : "no asks"} on the book`}
+                      </td>
+                    </tr>
+                    {bids.length === 0 ? gap("No bids on the book.") : bids.map((o) => row(o, false))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </Panel>
-        {filling && <FillForm bond={bond} order={filling} side={fillSide} feeBps={Number(feeBps)} funds={funds} onClose={() => setFilling(null)} />}
         <Panel title="Recent fills">
+          {book.isLoading && <Loading />}
           {book.data && book.data.trades.length === 0 && <Empty>No fills yet.</Empty>}
           {book.data && book.data.trades.length > 0 && (
-            <div className="overflow-x-auto">
+            <div className="scroll-x">
               <table className="table">
                 <thead><tr><th>When</th><th className="text-right">Amount</th><th className="text-right">Price</th><th>Maker</th><th>Taker</th><th>Tx</th></tr></thead>
                 <tbody>
@@ -77,8 +116,8 @@ export function OrderBook({ bond }: { bond: Bond }) {
                       <td className="whitespace-nowrap"><Time unix={t.timestamp} /></td>
                       <td className="num text-right">{fmtInt(t.amount)}</td>
                       <td className="num text-right">{fmtPrice(t.price)}</td>
-                      <td><AddressChip address={t.maker} me={sameAddress(t.maker, address)} /></td>
-                      <td><AddressChip address={t.taker} me={sameAddress(t.taker, address)} /></td>
+                      <td className="whitespace-nowrap"><AddressChip address={t.maker} me={sameAddress(t.maker, address)} /></td>
+                      <td className="whitespace-nowrap"><AddressChip address={t.taker} me={sameAddress(t.taker, address)} /></td>
                       <td><TxLink hash={t.txHash} /></td>
                     </tr>
                   ))}
@@ -88,10 +127,17 @@ export function OrderBook({ bond }: { bond: Bond }) {
           )}
         </Panel>
       </div>
-      <PlaceOrder bond={bond} feeBps={Number(feeBps)} funds={funds} active={active} />
+      <PlaceOrder bond={bond} feeBps={feeBps} funds={funds} active={active} />
     </div>
   )
 }
+
+const Quote = ({ label, value, tone }: { label: string; value: ReactNode; tone?: string }) => (
+  <div className="px-3 py-2 min-w-0 border-r border-border last:border-r-0">
+    <dt className="label truncate">{label}</dt>
+    <dd className={cx("num text-[15px] leading-tight mt-0.5 truncate", tone)}>{value}</dd>
+  </div>
+)
 
 type Funds = ReturnType<typeof useWalletFunds>
 
@@ -118,13 +164,14 @@ function ApproveThen({ bond, need, kind, funds, children, unlimited, setUnlimite
         <>
           <Note>Step 1 · the market holds <span className="num">{kind === "usdc" ? fmtUsdc(have) + " USDC" : fmtInt(have) + " " + bond.symbol}</span> of allowance; it needs {label}.</Note>
           <label className="flex items-center gap-2 text-[12px] text-muted"><input type="checkbox" checked={unlimited} onChange={(e) => setUnlimited(e.target.checked)} /> approve unlimited instead, so later orders skip this step</label>
-          <Button variant="primary" busy={busy} onClick={approve}>Approve {unlimited ? "unlimited" : label}</Button>
+          <div><Button variant="primary" busy={busy} onClick={approve}>Approve {unlimited ? "unlimited" : label}</Button></div>
         </>
       ) : children}
     </div>
   )
 }
 
+/** Sits directly under the order row it was opened from. */
 function FillForm({ bond, order, side, feeBps, funds, onClose }: { bond: Bond; order: Order; side: "buy" | "sell"; feeBps: number; funds: Funds; onClose: () => void }) {
   const tx = useTx()
   const [amount, setAmount] = useState(order.amount)
@@ -145,22 +192,20 @@ function FillForm({ bond, order, side, feeBps, funds, onClose }: { bond: Bond; o
     } finally { setBusy(false) }
   }
   return (
-    <Panel title={`${side === "buy" ? "Buy from" : "Sell into"} order #${order.orderId}`} aside={<button className="text-muted hover:text-fg" onClick={onClose}>close</button>}>
-      <div className="p-4 grid gap-4 md:grid-cols-[200px_1fr]">
-        <Field label={`Amount (${bond.symbol})`} htmlFor="fill-amount" hint={err ? <span className="text-bad">{err}</span> : `up to ${fmtInt(order.amount)}`}>
-          <Input id="fill-amount" className="num" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        </Field>
-        <div className="flex flex-col gap-2">
-          <p className="text-[13px] leading-relaxed">{err ? "Fix the amount to see what this will do." : summary}</p>
-          <Note>The token's compliance check runs first: a wallet without KYC gets a decoded refusal, not a silent failure.</Note>
-          {!err && (
-            <ApproveThen bond={bond} need={side === "buy" ? total : amt} kind={side === "buy" ? "usdc" : "bond"} funds={funds} unlimited={unlimited} setUnlimited={setUnlimited}>
-              <div><Button variant="primary" busy={busy} onClick={fill}>{side === "buy" ? `Buy ${fmtInt(amt)} for ${fmtUsdc(total)} USDC` : `Sell ${fmtInt(amt)} for ${fmtUsdc(cost)} USDC`}</Button></div>
-            </ApproveThen>
-          )}
-        </div>
+    <div className="px-3 py-3 border-t border-border grid gap-4 md:grid-cols-[180px_1fr] text-[13px]" role="region" aria-label={`${side === "buy" ? "Buy from" : "Sell into"} order #${order.orderId}`}>
+      <Field label={`${side === "buy" ? "Buy" : "Sell"} amount (${bond.symbol})`} htmlFor="fill-amount" hint={err ? <span className="text-bad">{err}</span> : `up to ${fmtInt(order.amount)} on order #${order.orderId}`}>
+        <Input id="fill-amount" className="num" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+      </Field>
+      <div className="flex flex-col gap-2 min-w-0">
+        <p className="leading-relaxed">{err ? "Fix the amount to see what this will do." : summary}</p>
+        <Note>The token's compliance check runs first, as a dry run: a wallet without KYC gets the decoded refusal, nothing is signed.</Note>
+        {!err && (
+          <ApproveThen bond={bond} need={side === "buy" ? total : amt} kind={side === "buy" ? "usdc" : "bond"} funds={funds} unlimited={unlimited} setUnlimited={setUnlimited}>
+            <div><Button variant="primary" busy={busy} onClick={fill}>{side === "buy" ? `Buy ${fmtInt(amt)} for ${fmtUsdc(total)} USDC` : `Sell ${fmtInt(amt)} for ${fmtUsdc(cost)} USDC`}</Button></div>
+          </ApproveThen>
+        )}
       </div>
-    </Panel>
+    </div>
   )
 }
 
@@ -195,8 +240,8 @@ function PlaceOrder({ bond, feeBps, funds, active }: { bond: Bond; feeBps: numbe
     <Panel title="Place an order" aside={<span>limit order</span>}>
       <div className="p-4 flex flex-col gap-3">
         <div className="grid grid-cols-2 rounded border border-border-strong overflow-hidden text-[13px]" role="radiogroup" aria-label="Side">
-          <button role="radio" aria-checked={!isSell} className={cx("py-1.5", !isSell ? "bg-bid text-white font-medium" : "text-muted hover:bg-surface-2")} onClick={() => setIsSell(false)}>Buy · bid</button>
-          <button role="radio" aria-checked={isSell} className={cx("py-1.5", isSell ? "bg-ask text-white font-medium" : "text-muted hover:bg-surface-2")} onClick={() => setIsSell(true)}>Sell · ask</button>
+          <button type="button" role="radio" aria-checked={!isSell} className={cx("py-1.5", !isSell ? "bg-bid text-white font-medium" : "text-muted hover:bg-surface-2")} onClick={() => setIsSell(false)}>Buy · bid</button>
+          <button type="button" role="radio" aria-checked={isSell} className={cx("py-1.5", isSell ? "bg-ask text-white font-medium" : "text-muted hover:bg-surface-2")} onClick={() => setIsSell(true)}>Sell · ask</button>
         </div>
         <Field label={`Amount (${bond.symbol})`} htmlFor="amount" hint={funds.loaded ? `you hold ${fmtInt(funds.bonds)} ${bond.symbol} · ${fmtUsdc(funds.usdc)} USDC` : undefined}>
           <Input id="amount" className="num" inputMode="numeric" placeholder="10" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -218,7 +263,7 @@ function PlaceOrder({ bond, feeBps, funds, active }: { bond: Bond; feeBps: numbe
             <div><Button variant="primary" busy={busy} onClick={place}>Place {isSell ? "ask" : "bid"}</Button></div>
           </ApproveThen>
         )}
-        <Note>Allowances are only used when the order fills: a bid needs USDC approved to the market, an ask needs {bond.symbol} approved. <Badge tone="neutral">maker</Badge> pays no fee; the buyer pays {feeBps / 100}% on top.</Note>
+        <Note>Allowances are only used when the order fills: a bid needs USDC approved to the market, an ask needs {bond.symbol} approved. <Badge tone="neutral">maker</Badge> pays no fee; the buyer pays {fmtBps(feeBps)} on top.</Note>
       </div>
     </Panel>
   )

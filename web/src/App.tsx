@@ -4,13 +4,15 @@ import { Activity } from "./pages/Activity"
 import { BondPage } from "./pages/Bond"
 import { Compliance } from "./pages/Compliance"
 import { Desk } from "./pages/Desk"
+import { Landing } from "./pages/Landing"
 import { Empty } from "./components/ui"
 
 export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Desk />} />
+        <Route index element={<Landing />} />
+        <Route path="desk" element={<Desk />} />
         <Route path="bonds/:id/:tab?" element={<BondPage />} />
         <Route path="compliance" element={<Compliance />} />
         <Route path="activity" element={<Activity />} />

@@ -62,7 +62,7 @@ export function WalletChip() {
               {label(c)}
             </button>
           ))}
-          <p className="text-[11px] text-muted px-2.5 pt-1.5 border-t border-line mt-1">EVM wallets only (MetaMask, Rabby, …) on Hedera testnet, chain {chain.id}. HashPack is not an EVM wallet.</p>
+          <p className="text-[11px] text-muted px-2.5 pt-1.5 border-t border-border mt-1">EVM wallets only (MetaMask, Rabby, …) on Hedera testnet, chain {chain.id}. HashPack is not an EVM wallet.</p>
         </div>
       )}
       {error && !open && <p className="absolute right-0 mt-1 w-72 text-bad text-[12px] panel p-2 z-40">{error.message.split("\n")[0]}</p>}

@@ -27,7 +27,7 @@ export function Eligibility({ bond }: { bond: Bond }) {
     query: { enabled: !!address, refetchInterval: 15_000 },
   })
   if (!address) return <Panel title="Eligibility"><Empty>Connect a wallet to see whether this bond's token will accept transfers to it.</Empty></Panel>
-  if (q.isLoading) return <Panel title="Eligibility"><Loading rows={4} /></Panel>
+  if (q.isLoading) return <Panel title="Eligibility"><Loading /></Panel>
   if (q.isError) return <Panel title="Eligibility"><ErrorNote error={q.error} /></Panel>
   const kyc = q.data?.[0]?.result === 1
   const frozen = q.data?.[1]?.result === true
@@ -44,7 +44,7 @@ export function Eligibility({ bond }: { bond: Bond }) {
         ? <>The token's compliance checks <strong>pass</strong> for {what}: KYC granted, not frozen, not paused. Its last check, the operator's allowance, is the market's to hold (the issuer approved it), so a fill through the market goes ahead; this read-only probe has no operator, hence code {probe[1]}.</>
         : <>The token <strong>refuses</strong> {what}: {explainReason(probe[2])} (code {probe[1]}).</>
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_380px] items-start">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
       <Panel title="Your standing with this bond" aside={<AddressChip address={address} />}>
         <div className="p-4 flex flex-col gap-4">
           <div className="flex flex-wrap gap-1.5">

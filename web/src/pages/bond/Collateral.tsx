@@ -24,7 +24,7 @@ export function Collateral({ bond }: { bond: Bond }) {
     ],
     query: { refetchInterval: 12_000 },
   })
-  if (q.isLoading) return <Panel title="Collateral"><Loading rows={4} /></Panel>
+  if (q.isLoading) return <Panel title="Collateral"><Loading /></Panel>
   const collateral = (q.data?.[0]?.result as bigint | undefined) ?? 0n
   const coverage = q.data?.[1]?.status === "success" ? (q.data[1].result as bigint) : null
   const min = (q.data?.[2]?.result as bigint | undefined) ?? 0n
@@ -38,7 +38,7 @@ export function Collateral({ bond }: { bond: Bond }) {
   const frac = gaugeFraction(coverage, min)
   const tone = { ok: "var(--ok)", warn: "var(--warn)", bad: "var(--bad)", neutral: "var(--neutral)" }[band.tone]
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_380px] items-start">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
       <div className="flex flex-col gap-5 min-w-0">
         <Panel title="Coverage" aside={<Badge tone={band.tone}>{band.label}</Badge>}>
           <div className="p-4 flex flex-col gap-4">

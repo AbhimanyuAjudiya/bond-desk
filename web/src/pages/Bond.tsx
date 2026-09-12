@@ -20,7 +20,7 @@ export function BondPage() {
   const { id = "", tab = "book" } = useParams()
   const bond = useBond(id)
   if (!/^\d+$/.test(id)) return <Empty>Bond ids are numbers.</Empty>
-  if (bond.isLoading) return <Loading rows={4} />
+  if (bond.isLoading) return <Loading />
   if (bond.isError) return <ErrorNote error={bond.error} />
   if (!bond.data) return <Empty>Bond #{id} does not exist.</Empty>
   const b = bond.data

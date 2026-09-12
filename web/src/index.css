@@ -96,7 +96,7 @@ a { color: inherit; }
 /* Small shared primitives (no UI kit). */
 @layer components {
   .panel { @apply bg-surface border border-border rounded-md; }
-  .panel-head { @apply flex items-baseline justify-between gap-3 px-4 py-2.5 border-b border-border; }
+  .panel-head { @apply flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-4 py-2.5 border-b border-border; }
   .label { @apply text-[11px] uppercase tracking-[0.08em] text-muted font-medium; }
   .btn { @apply inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded text-[13px] font-medium border border-border-strong bg-surface text-fg whitespace-nowrap select-none disabled:opacity-45 disabled:cursor-not-allowed enabled:hover:bg-surface-2 transition-colors; }
   .btn-primary { @apply bg-accent text-accent-fg border-accent enabled:hover:opacity-90; }
@@ -112,4 +112,19 @@ a { color: inherit; }
   .kv { @apply grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-[13px]; }
   .kv dt { @apply text-muted; }
   .note { @apply text-[13px] text-muted leading-relaxed; }
+  /* Links are plain underlined text; the accent is kept for the primary action, the active marker and focus. */
+  .link { @apply underline underline-offset-2 decoration-border-strong hover:decoration-current; }
+  .table th[aria-sort] button { @apply inline-flex items-center gap-1 uppercase tracking-[0.08em] font-medium text-muted hover:text-fg; }
+  .table th[aria-sort="descending"] button, .table th[aria-sort="ascending"] button { @apply text-fg; }
+  /* Wide content scrolls inside its panel, never the page. */
+  .scroll-x { @apply overflow-x-auto overscroll-x-contain; }
 }
+/* Hand-drawn diagrams: one colour, hairline strokes, mono labels. */
+.diagram { width: 100%; height: auto; color: var(--fg); }
+.diagram text { font-family: var(--font-mono); font-size: 11px; fill: currentColor; }
+.diagram text.quiet { fill: var(--muted); }
+.diagram rect, .diagram path, .diagram line, .diagram polyline { fill: none; stroke: currentColor; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.diagram .soft { stroke: var(--border-strong); }
+.diagram .dashed { stroke-dasharray: 3 3; }
+.diagram marker path { fill: currentColor; stroke: none; }
+kbd { font-family: var(--font-mono); font-size: 11px; line-height: 1; padding: 1px 4px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 3px; }
