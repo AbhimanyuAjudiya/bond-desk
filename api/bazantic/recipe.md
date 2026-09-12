@@ -187,6 +187,12 @@ Expected answer: no bond can be held; bond 1 (BDB27) excluded for `no-kyc`; the 
 9.95 HBAR, gas covered, 2 transactions on record) and needs KYC from the issuer's compliance officer before the order
 book will accept a fill from it. Steps 4–6 must not run.
 
+### Dashboard test runs, 2026-09-12 10:20 UTC (three services, seven bindings)
+
+Both wallets were run from the dashboard's Test panel and checked number by number against the direct endpoints;
+the tool-call tables, the verbatim answers and one recorded deviation are in [`test-runs-20260912.md`](test-runs-20260912.md).
+Run 1's answer is the published `output_example`.
+
 ### Republished, 2026-09-12 06:43 UTC (three services, seven bindings)
 
 Applied through the control MCP with the CLI session (`dashboard-steps.md`, status note): unpublish at 06:43:41,
