@@ -1,0 +1,354 @@
+{
+  "date": "2026-09-12",
+  "chainId": 296,
+  "purpose": "Two more ATS bonds issued through the live factory and three seeded order books (README storyline step 20)",
+  "contracts": {
+    "factory": "0xd1F118A40f3b02883D35909eF2517e7EDd78379d",
+    "registry": "0x378F45197809358b10d4F4FaBc1F9AAD6bB9b53E",
+    "market": "0x9e393461E165E9975A0A74f7FC378E6C342104B1",
+    "vault": "0x82db4a2ba9859816D60E3d3CE2F6F1E29818FaF7",
+    "lifecycle": "0xeB363F5aEd5D2a94b41EBF0876bd36864255C956",
+    "settlement": "0xF712daABfF190B34fd6C870761Ac4efa54E821B1"
+  },
+  "wallets": {
+    "issuer": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+    "investor1": "0x897f8b6F2876d61E661889b578F4435E406baFdf",
+    "investor2": "0x8524F940EddC9EA98198Ee08071944a07C417D7b",
+    "investor3NoKyc": "0x3b44299d9F246dc775DC2e4A0B54e31DB5b31cb3",
+    "complianceOfficer": "0x5Dd0d6c14204971dA12da62081c51597186909ef",
+    "funding": "0xdD019ba29fBf374d5BB5A92D7E6F3CDcfC7B93a5"
+  },
+  "orderExpiry": 1789821349,
+  "priceUnits": "settlement base units per whole bond (6 decimals)",
+  "bandBps": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+  },
+  "funding": {
+    "issuer120Hbar": "0xc5f2f8dd138cc092359a21eb222a43013aba8000115aed0981c8bafbf10c2970",
+    "investor1_12Hbar": "0x8bb3235d8470d20ed4ccdc5bc28bef03440afcbb82d2e3787831a786262ec94b",
+    "investor2_12Hbar": "0x1eb5991b5b95cd2c4965c0c266a5cf60488cb0a3e9b78f9744107b6c7ef668a3",
+    "usdc": "both investors already held about 1,000,000 mock USDC; nothing minted"
+  },
+  "approvals": {
+    "approve issuer USDC->lifecycle max": "0x9ec2ee9f005fadb7dcec4796e94016d1e0c000d758db751bfcbca356bf302ce4",
+    "approve inv2 USDC->market max": "0x7af3fb2f588955c681e37ced1ad7bf061828403bae0f4a3950f3f86f9d05043a",
+    "approve inv2 BDB27->market max": "0x027ecf548c44a095c31723d8e35287ff0e7d05b412481b99b65fedec7a3a1f5b",
+    "approve inv1 BDB28->market max": "0xc24f856f7bfcfda34ca6a2e9b79974c8d080f7c314286261d06429355340977b",
+    "approve inv2 BDB28->market max": "0x21bd05951a3b27ef72b931e9420d2aaa6b8e561a438e18adfdfb20cb5dcbf8a5",
+    "approve issuer BDB28->market max": "0x3292ba06bbd0fe8860cc5eeb61b059555604f74316fb0cdf0a1e480d71b49fc3",
+    "approve issuer BDB30->market max": "0xb280e30b7e1d116fdb3973332ede5146df05915a4be1a9f433acfb61210ae73a",
+    "approve inv1 BDB30->market max": "0x489c29d8a67cf31252006117ea61b2f8fb692055a8d720e9fe609fef678c4743",
+    "approve inv2 BDB30->market max": "0xb3a7633779c926e2a4faba4cc4c66d5d85fe67236c8a283c9f4140b67ac05d91",
+    "approve issuer USDC->market max": "0xf910af482fbd9dfff526cc9b9203e07fb82444c840afae0e29bb1b356eca3714"
+  },
+  "bonds": [
+    {
+      "id": 1,
+      "symbol": "BDB27",
+      "token": "0x0100526434C821d0df24f6CC60352F830F8b4504",
+      "schedule": {
+        "evm": "0x0000000000000000000000000000000000A031b5",
+        "entity": "0.0.10498485"
+      },
+      "note": "existing bond; collateral and status untouched by this run",
+      "orders": [
+        {
+          "orderId": 3,
+          "maker": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+          "side": "ask",
+          "amount": 10,
+          "price": 1000000,
+          "tx": "0xd3dd3088227e6c976893e669fd37a4adb4089128cbd68a05704ed7b4c2bf6e0d"
+        },
+        {
+          "orderId": 4,
+          "maker": "0x897f8b6F2876d61E661889b578F4435E406baFdf",
+          "side": "ask",
+          "amount": 2,
+          "price": 1010000,
+          "tx": "0xf307a5846643678e204730519f7fbf99fbff01a6bd4b58d48cc43ec0681301f8"
+        },
+        {
+          "orderId": 5,
+          "maker": "0x897f8b6F2876d61E661889b578F4435E406baFdf",
+          "side": "bid",
+          "amount": 3,
+          "price": 970000,
+          "tx": "0x68ee01410a906357b3de413d1d7101d618b8202300366ed906cef8dfeb2c339d"
+        },
+        {
+          "orderId": 6,
+          "maker": "0x8524F940EddC9EA98198Ee08071944a07C417D7b",
+          "side": "bid",
+          "amount": 2,
+          "price": 960000,
+          "tx": "0x493268aa6cb8573485fdf76f46e490bdf1fced13342f0e15daaf3718f5c543fe"
+        }
+      ],
+      "fills": []
+    },
+    {
+      "id": 2,
+      "symbol": "BDB28",
+      "name": "Bond Desk 7.25% 2028",
+      "isin": "XS2028091200",
+      "token": "0xf175d5B081d8A5187Bdb5b7fA6F621eFe9c6F40D",
+      "supply": 60,
+      "faceValue": 1000000,
+      "couponRateBps": 725,
+      "couponInterval": 604800,
+      "firstCoupon": 1789820081,
+      "maturity": 1852329600,
+      "collateralTinybar": 4000000000,
+      "coverageBpsAfterDeposit": 498,
+      "fundedSettlementUnits": 15000000,
+      "schedule": {
+        "evm": "0x0000000000000000000000000000000000A03a40",
+        "entity": "0.0.10500672",
+        "expirationTime": "1789820091",
+        "executedTimestamp": null
+      },
+      "creation": {
+        "deployBond": "0xa7095a24565eb49d9250dc2d02f9427e4f9f59c4e9dbe5083cd7296abb8036d3",
+        "addIssuer": "0xaa86aa5ec3cf0920dba0d9e00df6900b328cf65a6d293ea70c645c194f9388c9",
+        "grantKycIssuer": "0x11862c0b884cd6e609a2af6722ad7bb37d93d730bf9383a8f9653139e5034b83",
+        "grantKycInvestor1": "0xb1ceb7a696b0b49e178b138b76651c742ae1c2eccadc705b819736a430cfedc2",
+        "grantKycInvestor2": "0x413d6f55023f560aabbb99436448e6311690377be8a95d1fd1ab4d8cbd808d94",
+        "mint": "0x9721561f271d9d0163657eac8e32a0c18f553149ac22b96e83d554a55fa7cf6e"
+      },
+      "desk": {
+        "grantRoleSnapshotLifecycle": "0xc12895374d902fca25461689dc6e2644fbdc521cfcd68cbe538f54ba3786d1d6",
+        "grantRoleSnapshotVault": "0x1a8477135cf36199f4d873e0e9edd1c67aae1155f17107e288b3cb26666e1ff7",
+        "grantRoleMaturityRedeemerLifecycle": "0x4ecb9e03ab5ba602d09f2e43335f49ca8bcde786ca22dd8a2febb936636de1ce",
+        "register": "0x32591c86e1a256b9ddf07d214f827df3639e2931e9ec1fa9552f158eaff892b3",
+        "vaultDeposit40Hbar": "0xb464624de8e430704cded582190be77213e541c185354b9b833fac1611c368e5",
+        "fund15Usdc": "0x674346501156cbbadc462ae938a87244fb98baa3d5b35ab5a4903a3801b74e2b",
+        "schedule": "0x3e2ceccea58a6f2f78a55305fa5bb2a72173e318ff137bf457ba42a3754b6076"
+      },
+      "orders": [
+        {
+          "orderId": 7,
+          "maker": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+          "side": "ask",
+          "amount": 15,
+          "price": 985000,
+          "tx": "0x36f129fb4b48bb2f600a0d9ad9da09aeda5772b051932bdc81c650493d5e587f"
+        },
+        {
+          "orderId": 8,
+          "maker": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+          "side": "ask",
+          "amount": 20,
+          "price": 990000,
+          "tx": "0xa32c9c0a98bda5cf21fd588ec2540a7252072e5c5707becae4aef36c7a3103bb"
+        },
+        {
+          "orderId": 9,
+          "maker": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+          "side": "ask",
+          "amount": 20,
+          "price": 1000000,
+          "tx": "0xac487411513ce9d6a2daf262200a9f935e04fd6ac09d222a0ac3504eee28ca6c"
+        },
+        {
+          "orderId": 10,
+          "maker": "0x897f8b6F2876d61E661889b578F4435E406baFdf",
+          "side": "bid",
+          "amount": 10,
+          "price": 970000,
+          "tx": "0xdd3f5bc0e86c447b4f064ae1d480270c0e271ede9253aa16e0299842a1ea494a"
+        },
+        {
+          "orderId": 11,
+          "maker": "0x8524F940EddC9EA98198Ee08071944a07C417D7b",
+          "side": "bid",
+          "amount": 5,
+          "price": 975000,
+          "tx": "0x2dd10d039dadbdfa4b372464ef83bb6824fccc72b1b575666d5b4e8fc788cd50"
+        },
+        {
+          "orderId": 12,
+          "maker": "0x8524F940EddC9EA98198Ee08071944a07C417D7b",
+          "side": "ask",
+          "amount": 3,
+          "price": 1010000,
+          "tx": "0x7474018576347360136087ae42f33cead69e3988fbc64fc6ab73b3a32ac3aab7"
+        }
+      ],
+      "fills": [
+        {
+          "orderId": 7,
+          "taker": "0x8524F940EddC9EA98198Ee08071944a07C417D7b",
+          "amount": 5,
+          "price": 985000,
+          "tx": "0xc4fa8fad6a230166aa5e8b09f25921c8d579de4fc5483e6918efde0a6c16c67d"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "symbol": "BDB30",
+      "name": "Bond Desk 3.75% 2030",
+      "isin": "XS2030091206",
+      "token": "0xd6752FfC596C8F9D4F5D530246e5698ec65a983f",
+      "supply": 40,
+      "faceValue": 1000000,
+      "couponRateBps": 375,
+      "couponInterval": 2592000,
+      "firstCoupon": 1791808385,
+      "maturity": 1915401600,
+      "collateralTinybar": 3000000000,
+      "coverageBpsAfterDeposit": 561,
+      "fundedSettlementUnits": 10000000,
+      "schedule": {
+        "evm": "0x0000000000000000000000000000000000A03baC",
+        "entity": "0.0.10501036",
+        "expirationTime": "1791808395",
+        "executedTimestamp": null
+      },
+      "creation": {
+        "deployBond": "0x5fa1d505b1baf0c09d080aaff8652447438a1795addba54ea72e11341389b273",
+        "addIssuer": "0x99c3b07b7d3a65299e15f6c31005a85a993acd935bc144fac4e14e6095d6bc4c",
+        "grantKycIssuer": "0x7010cfa74e7f538cb4b5816d979dca6d0235ec4070079f4714b1333d2a624ce0",
+        "grantKycInvestor1": "0xa653917aae08dd9d340c5881a3ca89bb6c2abd3e24ceb511d90f384cbc4ac31b",
+        "grantKycInvestor2": "0x448fb08fb11765acca1ffb23c72e7d2fcf6fa3d27fbc8bb1bf64c56cc9954316",
+        "mint": "0xeb82181530ea2a891274c0aebf44828a65ba0be2f9c03afcbeadc2cacc0d995e"
+      },
+      "desk": {
+        "grantRoleSnapshotLifecycle": "0x87838916bbec11dd2ec5d46c13a6856c68b7d999130dbfa794992e30b2a5ff6d",
+        "grantRoleSnapshotVault": "0x49606e71ef01351342e25715a5f88bb328e72a45316d001652f8f71ed03bacf5",
+        "grantRoleMaturityRedeemerLifecycle": "0xe30ed152823dd16911f1ccf2a7c68b97dbc0306aa222f5574e8dc08aff1bd400",
+        "register": "0x67726b77ff52d8061ffea9651803a96ffd456a3a3215b3bc49de22cefed59084",
+        "vaultDeposit30Hbar": "0x25afe204e082687593a4d91f990e9a76774e64d1a248591072672950e232ac1b",
+        "fund10Usdc": "0x24f0d7ef6739c6bca72212991c864f2a755807177e46124953e3773d749432aa",
+        "schedule": "0x82b8745d598d707b98909c4b2afba738c387f05796bd0d6106982f51a0318829"
+      },
+      "orders": [
+        {
+          "orderId": 13,
+          "maker": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+          "side": "ask",
+          "amount": 10,
+          "price": 995000,
+          "tx": "0xcd4e3e8466caa5c1be805ff8c82e4545fe3c01845ca8c068bfe25466f6557af7"
+        },
+        {
+          "orderId": 14,
+          "maker": "0xe7F5773A3d8f3dF15FE4474637cCCCF79d2CD3D6",
+          "side": "ask",
+          "amount": 15,
+          "price": 1005000,
+          "tx": "0xf429d543fc34fe02a7143b7da9a81e175c4e8933058685cd2a5ab0b3cc304002"
+        },
+        {
+          "orderId": 15,
+          "maker": "0x897f8b6F2876d61E661889b578F4435E406baFdf",
+          "side": "bid",
+          "amount": 8,
+          "price": 980000,
+          "tx": "0x707f05cd57bb9bd06160ffbf105ab46351fb144043bad0dd45fbe895a0d9c2c9"
+        },
+        {
+          "orderId": 16,
+          "maker": "0x8524F940EddC9EA98198Ee08071944a07C417D7b",
+          "side": "bid",
+          "amount": 4,
+          "price": 985000,
+          "tx": "0xfc7fa1f5c69d1e82998c2f60d39e35a5734fc905a437440fc26bbd29f135c8d0"
+        },
+        {
+          "orderId": 17,
+          "maker": "0x897f8b6F2876d61E661889b578F4435E406baFdf",
+          "side": "ask",
+          "amount": 2,
+          "price": 1020000,
+          "tx": "0x6240baa8bc616b89fb9cc0ac9215e32c25699a3a9c77493f87bc609b0270cc88"
+        }
+      ],
+      "fills": [
+        {
+          "orderId": 13,
+          "taker": "0x897f8b6F2876d61E661889b578F4435E406baFdf",
+          "amount": 4,
+          "price": 995000,
+          "tx": "0x64b5770582746a34414d7a40be9cb63ac4cc0eb0a9c6c1ca0120a221d2f4751e"
+        }
+      ]
+    }
+  ],
+  "hbarSpent": {
+    "issuer": {
+      "start": "177.71302403",
+      "topup": "120",
+      "end": "179.64868643",
+      "outflow": "118.06433760",
+      "of which": "70 collateral (bonds 2 and 3), 20 collateral on bond 1 from the parallel app session, the rest gas (two deployBond calls at ~8.0M gas dominate)"
+    },
+    "investor1": {
+      "start": "7.68566950",
+      "topup": "12",
+      "end": "17.90281552",
+      "outflow": "1.78285398"
+    },
+    "investor2": {
+      "start": "8.52528004",
+      "topup": "12",
+      "end": "18.68852116",
+      "outflow": "1.83675888"
+    },
+    "funding": {
+      "start": "659.05845526",
+      "end": "499.76229861",
+      "outflow": "159.29615665",
+      "of which": "144 top-ups plus their gas; the remainder is HCS activity from another process on the same account"
+    }
+  },
+  "transactions": {
+    "topup issuer 120 HBAR": "0xc5f2f8dd138cc092359a21eb222a43013aba8000115aed0981c8bafbf10c2970",
+    "topup inv1 12 HBAR": "0x8bb3235d8470d20ed4ccdc5bc28bef03440afcbb82d2e3787831a786262ec94b",
+    "topup inv2 12 HBAR": "0x1eb5991b5b95cd2c4965c0c266a5cf60488cb0a3e9b78f9744107b6c7ef668a3",
+    "approve issuer USDC->lifecycle max": "0x9ec2ee9f005fadb7dcec4796e94016d1e0c000d758db751bfcbca356bf302ce4",
+    "approve inv2 USDC->market max": "0x7af3fb2f588955c681e37ced1ad7bf061828403bae0f4a3950f3f86f9d05043a",
+    "approve inv2 BDB27->market max": "0x027ecf548c44a095c31723d8e35287ff0e7d05b412481b99b65fedec7a3a1f5b",
+    "bond2 grantRole SNAPSHOT lifecycle": "0xc12895374d902fca25461689dc6e2644fbdc521cfcd68cbe538f54ba3786d1d6",
+    "bond2 grantRole SNAPSHOT vault": "0x1a8477135cf36199f4d873e0e9edd1c67aae1155f17107e288b3cb26666e1ff7",
+    "bond2 grantRole MATURITY_REDEEMER lifecycle": "0x4ecb9e03ab5ba602d09f2e43335f49ca8bcde786ca22dd8a2febb936636de1ce",
+    "bond2 register": "0x32591c86e1a256b9ddf07d214f827df3639e2931e9ec1fa9552f158eaff892b3",
+    "bond2 vault deposit 40 HBAR": "0xb464624de8e430704cded582190be77213e541c185354b9b833fac1611c368e5",
+    "bond2 lifecycle fund 15 USDC": "0x674346501156cbbadc462ae938a87244fb98baa3d5b35ab5a4903a3801b74e2b",
+    "bond2 lifecycle schedule": "0x3e2ceccea58a6f2f78a55305fa5bb2a72173e318ff137bf457ba42a3754b6076",
+    "approve inv1 BDB28->market max": "0xc24f856f7bfcfda34ca6a2e9b79974c8d080f7c314286261d06429355340977b",
+    "approve inv2 BDB28->market max": "0x21bd05951a3b27ef72b931e9420d2aaa6b8e561a438e18adfdfb20cb5dcbf8a5",
+    "bond3 grantRole SNAPSHOT lifecycle": "0x87838916bbec11dd2ec5d46c13a6856c68b7d999130dbfa794992e30b2a5ff6d",
+    "bond3 grantRole SNAPSHOT vault": "0x49606e71ef01351342e25715a5f88bb328e72a45316d001652f8f71ed03bacf5",
+    "bond3 grantRole MATURITY_REDEEMER lifecycle": "0xe30ed152823dd16911f1ccf2a7c68b97dbc0306aa222f5574e8dc08aff1bd400",
+    "bond3 register": "0x67726b77ff52d8061ffea9651803a96ffd456a3a3215b3bc49de22cefed59084",
+    "bond3 vault deposit 30 HBAR": "0x25afe204e082687593a4d91f990e9a76774e64d1a248591072672950e232ac1b",
+    "bond3 lifecycle fund 10 USDC": "0x24f0d7ef6739c6bca72212991c864f2a755807177e46124953e3773d749432aa",
+    "bond3 lifecycle schedule": "0x82b8745d598d707b98909c4b2afba738c387f05796bd0d6106982f51a0318829",
+    "approve issuer BDB28->market max": "0x3292ba06bbd0fe8860cc5eeb61b059555604f74316fb0cdf0a1e480d71b49fc3",
+    "approve issuer BDB30->market max": "0xb280e30b7e1d116fdb3973332ede5146df05915a4be1a9f433acfb61210ae73a",
+    "approve inv1 BDB30->market max": "0x489c29d8a67cf31252006117ea61b2f8fb692055a8d720e9fe609fef678c4743",
+    "approve inv2 BDB30->market max": "0xb3a7633779c926e2a4faba4cc4c66d5d85fe67236c8a283c9f4140b67ac05d91",
+    "approve issuer USDC->market max": "0xf910af482fbd9dfff526cc9b9203e07fb82444c840afae0e29bb1b356eca3714",
+    "bond1 issuer ask 10 @ 1.000000": "0xd3dd3088227e6c976893e669fd37a4adb4089128cbd68a05704ed7b4c2bf6e0d",
+    "bond1 inv1 ask 2 @ 1.010000": "0xf307a5846643678e204730519f7fbf99fbff01a6bd4b58d48cc43ec0681301f8",
+    "bond1 inv1 bid 3 @ 0.970000": "0x68ee01410a906357b3de413d1d7101d618b8202300366ed906cef8dfeb2c339d",
+    "bond1 inv2 bid 2 @ 0.960000": "0x493268aa6cb8573485fdf76f46e490bdf1fced13342f0e15daaf3718f5c543fe",
+    "bond2 issuer ask 15 @ 0.985000": "0x36f129fb4b48bb2f600a0d9ad9da09aeda5772b051932bdc81c650493d5e587f",
+    "bond2 issuer ask 20 @ 0.990000": "0xa32c9c0a98bda5cf21fd588ec2540a7252072e5c5707becae4aef36c7a3103bb",
+    "bond2 issuer ask 20 @ 1.000000": "0xac487411513ce9d6a2daf262200a9f935e04fd6ac09d222a0ac3504eee28ca6c",
+    "bond2 inv1 bid 10 @ 0.970000": "0xdd3f5bc0e86c447b4f064ae1d480270c0e271ede9253aa16e0299842a1ea494a",
+    "bond2 inv2 bid 5 @ 0.975000": "0x2dd10d039dadbdfa4b372464ef83bb6824fccc72b1b575666d5b4e8fc788cd50",
+    "bond2 inv2 fills 5 of ask 7 @ 0.985000": "0xc4fa8fad6a230166aa5e8b09f25921c8d579de4fc5483e6918efde0a6c16c67d",
+    "bond2 inv2 ask 3 @ 1.010000": "0x7474018576347360136087ae42f33cead69e3988fbc64fc6ab73b3a32ac3aab7",
+    "bond3 issuer ask 10 @ 0.995000": "0xcd4e3e8466caa5c1be805ff8c82e4545fe3c01845ca8c068bfe25466f6557af7",
+    "bond3 issuer ask 15 @ 1.005000": "0xf429d543fc34fe02a7143b7da9a81e175c4e8933058685cd2a5ab0b3cc304002",
+    "bond3 inv1 bid 8 @ 0.980000": "0x707f05cd57bb9bd06160ffbf105ab46351fb144043bad0dd45fbe895a0d9c2c9",
+    "bond3 inv2 bid 4 @ 0.985000": "0xfc7fa1f5c69d1e82998c2f60d39e35a5734fc905a437440fc26bbd29f135c8d0",
+    "bond3 inv1 fills 4 of ask 13 @ 0.995000": "0x64b5770582746a34414d7a40be9cb63ac4cc0eb0a9c6c1ca0120a221d2f4751e",
+    "bond3 inv1 ask 2 @ 1.020000": "0x6240baa8bc616b89fb9cc0ac9215e32c25699a3a9c77493f87bc609b0270cc88"
+  }
+}

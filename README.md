@@ -25,6 +25,8 @@ Built for ETHOnline 2026. Everything below ran on Hedera testnet (chain 296) on 
 | RiskGate | [`0x1dFF1d5458D6a6f6af46014de76474DC3170C31B`](https://hashscan.io/testnet/contract/0x1dFF1d5458D6a6f6af46014de76474DC3170C31B) | verified |
 | MockUSDC (settlement) | [`0xF712daABfF190B34fd6C870761Ac4efa54E821B1`](https://hashscan.io/testnet/contract/0xF712daABfF190B34fd6C870761Ac4efa54E821B1) | verified |
 | ATS bond token (bondId 1) | [`0x0100526434C821d0df24f6CC60352F830F8b4504`](https://hashscan.io/testnet/contract/0x0100526434C821d0df24f6CC60352F830F8b4504) | ATS factory proxy |
+| ATS bond token (bondId 2, BDB28) | [`0xf175d5B0…c6F40D`](https://hashscan.io/testnet/contract/0xf175d5B081d8A5187Bdb5b7fA6F621eFe9c6F40D) | ATS factory proxy |
+| ATS bond token (bondId 3, BDB30) | [`0xd6752FfC…5a983f`](https://hashscan.io/testnet/contract/0xd6752FfC596C8F9D4F5D530246e5698ec65a983f) | ATS factory proxy |
 
 The seven contracts marked verified are source-verified on Sourcify (exact match) and show as verified on
 HashScan; `contracts/script/verify.sh` reproduces it. The bond token is a resolver proxy deployed by the ATS
@@ -47,6 +49,8 @@ were recovered and every consumer reads the address above from `deployments/test
 | Coupon 2, paid by hand on the lagged contract | [`0x5dc17671…4c22397f`](https://hashscan.io/testnet/transaction/0x5dc17671ed5ed779ff78c952ce312a053a1624f64aea39a7798c53544c22397f) (coupon id 1 on the new instance, `paidAt 1789154826`) |
 | Coupon 3, self-scheduled with the lag | [`0.0.10482928`](https://hashscan.io/testnet/schedule/0.0.10482928) (EVM `0x…9fF4F0`, `expiration_time 1789208092` = target + 10; **executed at `1789208092.013`, child `CONTRACTCALL SUCCESS`**, coupon id 2 on the lagged contract: snapshot 3, 13,698 units, `paidAt 1789208091`) |
 | Coupon 4, armed by coupon 3 from inside itself | EVM `0x…A031b5` = [`0.0.10498485`](https://hashscan.io/testnet/schedule/0.0.10498485), due 2026-09-13 10:14:52 UTC + 10 s |
+| Bond 2 (BDB28) coupon 1, HSS schedule | [`0.0.10500672`](https://hashscan.io/testnet/schedule/0.0.10500672) (EVM `0x…A03a40`, `expiration_time 1789820091` = first coupon `1789820081` + 10, pending until 2026-09-19 12:14:51 UTC) |
+| Bond 3 (BDB30) coupon 1, HSS schedule | [`0.0.10501036`](https://hashscan.io/testnet/schedule/0.0.10501036) (EVM `0x…A03baC`, `expiration_time 1791808395` = first coupon `1791808385` + 10, pending until 2026-10-12 12:33:15 UTC) |
 | Chainlink CRE workflows (private registry, deployed 2026-09-12) | `liquidation-protection-production` `00cdbaa2…48554f` (30 s), `bond-monitor-production` `0045bd36…5c96c8` (hourly, direct delivery); [`docs/cre-evidence/deployed-20260912.txt`](docs/cre-evidence/deployed-20260912.txt) |
 | First FREEZE delivered by the deployed monitor, from the CRE network | [`0x79168dab…657b5a`](https://hashscan.io/testnet/transaction/0x79168dab6bc406a757a4c7aa76039f94da662512430ec9cae4e6611ad6657b5a) (execution `3b141694…d719`, 2026-09-12 12:00:01–12:00:09 UTC; `VerdictApplied(1, FREEZE, 448, nonce 10)` and Active → Frozen in one transaction) |
 | First verdict delivered by the deployed monitor, from the CRE network | [`0xe1bc8a6d…2e5cb2`](https://hashscan.io/testnet/transaction/0xe1bc8a6d205c62d0d0123a91a77100dcb8da5a77810fbbe0e85de4de5f2e5cb2) (execution `b20c80c2…92fa`, 2026-09-12 07:00:02–07:00:12 UTC; `VerdictApplied(1, WARN, 595, nonce 4)`, sent by the enclave's own submit key, 58,086 gas) |
@@ -265,6 +269,66 @@ snapshot the decision used, so a resubmitted verdict is rejected.
     simulator, no relayer, no human: the same policy that WARNed every hour since 07:00 halted trading the hour
     coverage was below its line. The issuer then restored coverage ([`0x28af8eaa…5d7e0a`](https://hashscan.io/testnet/transaction/0x28af8eaad0bc7698152895702c20e9620be6aad5428de04ceb080d80185d7e0a),
     20 HBAR back, 5.98%) and the admin unfroze ([`0xc71d7edf…52ca66`](https://hashscan.io/testnet/transaction/0xc71d7edf40e01341e5c9895cc29b41d647e36bfc18304d24b092f5732652ca66)).
+
+20. **Two more bonds, three live books (2026-09-12, 12:13–12:41 UTC).** The desk had one book with one ask; it now
+    has three. Two more bonds went through the same live ATS factory with the same script, generalised:
+    `forge script ats/script/CreateBond.s.sol:CreateBond --sig "create(string,string,string,uint256,uint256)" <name> <symbol> <isin> <supply> <maturity>`
+    builds the same `deployBond` call as bond 1 (Reg S, internal KYC, the nine-role `Rbac` list,
+    `BondDetailsData("USD", 1, 0, start, maturity)`), grants KYC to the issuer and investors 1 and 2 only, mints the
+    supply to the issuer and appends the token to `bonds` in [`ats/testnet.json`](ats/testnet.json). Both ISINs pass
+    the factory's Luhn check. Every hash below is also in [`docs/seed-20260912.json`](docs/seed-20260912.json).
+    - **Bond 2, "Bond Desk 7.25% 2028" (BDB28)**, ISIN `XS2028091200`, 60 bonds at 1 USDC face, 725 bps paid weekly
+      (`couponInterval 604800`), maturity `1852329600` (2028-09-12): token [`0xf175d5B0…c6F40D`](https://hashscan.io/testnet/contract/0xf175d5B081d8A5187Bdb5b7fA6F621eFe9c6F40D).
+      `deployBond` [`0xa7095a24…8036d3`](https://hashscan.io/testnet/transaction/0xa7095a24565eb49d9250dc2d02f9427e4f9f59c4e9dbe5083cd7296abb8036d3), `addIssuer` [`0xaa86aa5e…9388c9`](https://hashscan.io/testnet/transaction/0xaa86aa5ec3cf0920dba0d9e00df6900b328cf65a6d293ea70c645c194f9388c9), `grantKyc` for the issuer
+      [`0x11862c0b…034b83`](https://hashscan.io/testnet/transaction/0x11862c0b884cd6e609a2af6722ad7bb37d93d730bf9383a8f9653139e5034b83), investor 1 [`0xb1ceb7a6…cfedc2`](https://hashscan.io/testnet/transaction/0xb1ceb7a696b0b49e178b138b76651c742ae1c2eccadc705b819736a430cfedc2) and investor 2 [`0x413d6f55…808d94`](https://hashscan.io/testnet/transaction/0x413d6f55023f560aabbb99436448e6311690377be8a95d1fd1ab4d8cbd808d94),
+      `mint(issuer, 60)` [`0x9721561f…a7cf6e`](https://hashscan.io/testnet/transaction/0x9721561f271d9d0163657eac8e32a0c18f553149ac22b96e83d554a55fa7cf6e). `ROLE_SNAPSHOT` to the lifecycle [`0xc1289537…86d1d6`](https://hashscan.io/testnet/transaction/0xc12895374d902fca25461689dc6e2644fbdc521cfcd68cbe538f54ba3786d1d6) and
+      the vault [`0x1a847713…6e1ff7`](https://hashscan.io/testnet/transaction/0x1a8477135cf36199f4d873e0e9edd1c67aae1155f17107e288b3cb26666e1ff7), `ROLE_MATURITY_REDEEMER` to the lifecycle
+      [`0x4ecb9e03…6de1ce`](https://hashscan.io/testnet/transaction/0x4ecb9e03ab5ba602d09f2e43335f49ca8bcde786ca22dd8a2febb936636de1ce); `register` [`0x32591c86…f892b3`](https://hashscan.io/testnet/transaction/0x32591c86e1a256b9ddf07d214f827df3639e2931e9ec1fa9552f158eaff892b3) (bondId 2, first coupon
+      `1789820081` = registration plus one interval); 40 HBAR of collateral [`0xb464624d…c368e5`](https://hashscan.io/testnet/transaction/0xb464624de8e430704cded582190be77213e541c185354b9b833fac1611c368e5)
+      (coverage **498 bps**); `fund(2, 15 USDC)` [`0x67434650…b74e2b`](https://hashscan.io/testnet/transaction/0x674346501156cbbadc462ae938a87244fb98baa3d5b35ab5a4903a3801b74e2b); `schedule(2)` [`0x3e2cecce…4b6076`](https://hashscan.io/testnet/transaction/0x3e2ceccea58a6f2f78a55305fa5bb2a72173e318ff137bf457ba42a3754b6076) (1,505,292 gas)
+      created HSS schedule [`0.0.10500672`](https://hashscan.io/testnet/schedule/0.0.10500672) (EVM `0x…A03a40`, `expiration_time 1789820091`
+      = target + 10 s, `executed_timestamp null`).
+    - **Bond 3, "Bond Desk 3.75% 2030" (BDB30)**, ISIN `XS2030091206`, 40 bonds at 1 USDC face, 375 bps every 30 days
+      (`couponInterval 2592000`), maturity `1915401600` (2030-09-12): token [`0xd6752FfC…5a983f`](https://hashscan.io/testnet/contract/0xd6752FfC596C8F9D4F5D530246e5698ec65a983f).
+      `deployBond` [`0x5fa1d505…89b273`](https://hashscan.io/testnet/transaction/0x5fa1d505b1baf0c09d080aaff8652447438a1795addba54ea72e11341389b273), `addIssuer` [`0x99c3b07b…d6bc4c`](https://hashscan.io/testnet/transaction/0x99c3b07b7d3a65299e15f6c31005a85a993acd935bc144fac4e14e6095d6bc4c), `grantKyc` for the issuer
+      [`0x7010cfa7…624ce0`](https://hashscan.io/testnet/transaction/0x7010cfa74e7f538cb4b5816d979dca6d0235ec4070079f4714b1333d2a624ce0), investor 1 [`0xa653917a…4ac31b`](https://hashscan.io/testnet/transaction/0xa653917aae08dd9d340c5881a3ca89bb6c2abd3e24ceb511d90f384cbc4ac31b) and investor 2 [`0x448fb08f…954316`](https://hashscan.io/testnet/transaction/0x448fb08fb11765acca1ffb23c72e7d2fcf6fa3d27fbc8bb1bf64c56cc9954316),
+      `mint(issuer, 40)` [`0xeb821815…0d995e`](https://hashscan.io/testnet/transaction/0xeb82181530ea2a891274c0aebf44828a65ba0be2f9c03afcbeadc2cacc0d995e). `ROLE_SNAPSHOT` to the lifecycle [`0x87838916…a5ff6d`](https://hashscan.io/testnet/transaction/0x87838916bbec11dd2ec5d46c13a6856c68b7d999130dbfa794992e30b2a5ff6d) and
+      the vault [`0x49606e71…3bacf5`](https://hashscan.io/testnet/transaction/0x49606e71ef01351342e25715a5f88bb328e72a45316d001652f8f71ed03bacf5), `ROLE_MATURITY_REDEEMER` to the lifecycle
+      [`0xe30ed152…1bd400`](https://hashscan.io/testnet/transaction/0xe30ed152823dd16911f1ccf2a7c68b97dbc0306aa222f5574e8dc08aff1bd400); `register` [`0x67726b77…d59084`](https://hashscan.io/testnet/transaction/0x67726b77ff52d8061ffea9651803a96ffd456a3a3215b3bc49de22cefed59084) (bondId 3, first coupon
+      `1791808385`); 30 HBAR of collateral [`0x25afe204…32ac1b`](https://hashscan.io/testnet/transaction/0x25afe204e082687593a4d91f990e9a76774e64d1a248591072672950e232ac1b) (coverage **561 bps**);
+      `fund(3, 10 USDC)` [`0x24f0d7ef…9432aa`](https://hashscan.io/testnet/transaction/0x24f0d7ef6739c6bca72212991c864f2a755807177e46124953e3773d749432aa); `schedule(3)` [`0x82b8745d…318829`](https://hashscan.io/testnet/transaction/0x82b8745d598d707b98909c4b2afba738c387f05796bd0d6106982f51a0318829) created [`0.0.10501036`](https://hashscan.io/testnet/schedule/0.0.10501036)
+      (EVM `0x…A03baC`, `expiration_time 1791808395`, pending).
+    - Gas money first: 120 HBAR to the issuer [`0xc5f2f8dd…0c2970`](https://hashscan.io/testnet/transaction/0xc5f2f8dd138cc092359a21eb222a43013aba8000115aed0981c8bafbf10c2970), 12 HBAR each to investor 1
+      [`0x8bb3235d…2ec94b`](https://hashscan.io/testnet/transaction/0x8bb3235d8470d20ed4ccdc5bc28bef03440afcbb82d2e3787831a786262ec94b) and investor 2 [`0x1eb5991b…f668a3`](https://hashscan.io/testnet/transaction/0x1eb5991b5b95cd2c4965c0c266a5cf60488cb0a3e9b78f9744107b6c7ef668a3) from the funding account. Both
+      investors already held about 1,000,000 mock USDC, so nothing was minted. Allowances raised to max where they
+      were not already: issuer USDC→lifecycle [`0x9ec2ee9f…302ce4`](https://hashscan.io/testnet/transaction/0x9ec2ee9f005fadb7dcec4796e94016d1e0c000d758db751bfcbca356bf302ce4), USDC→market
+      [`0xf910af48…ca3714`](https://hashscan.io/testnet/transaction/0xf910af482fbd9dfff526cc9b9203e07fb82444c840afae0e29bb1b356eca3714), BDB28→market [`0x3292ba06…b49fc3`](https://hashscan.io/testnet/transaction/0x3292ba06bbd0fe8860cc5eeb61b059555604f74316fb0cdf0a1e480d71b49fc3), BDB30→market
+      [`0xb280e30b…0ae73a`](https://hashscan.io/testnet/transaction/0xb280e30b7e1d116fdb3973332ede5146df05915a4be1a9f433acfb61210ae73a); investor 1 BDB28 [`0xc24f856f…40977b`](https://hashscan.io/testnet/transaction/0xc24f856f7bfcfda34ca6a2e9b79974c8d080f7c314286261d06429355340977b) and BDB30
+      [`0x489c29d8…8c4743`](https://hashscan.io/testnet/transaction/0x489c29d8a67cf31252006117ea61b2f8fb692055a8d720e9fe609fef678c4743); investor 2 USDC→market [`0x7af3fb2f…05043a`](https://hashscan.io/testnet/transaction/0x7af3fb2f588955c681e37ced1ad7bf061828403bae0f4a3950f3f86f9d05043a), BDB27
+      [`0x027ecf54…3a1f5b`](https://hashscan.io/testnet/transaction/0x027ecf548c44a095c31723d8e35287ff0e7d05b412481b99b65fedec7a3a1f5b), BDB28 [`0x21bd0595…cbf8a5`](https://hashscan.io/testnet/transaction/0x21bd05951a3b27ef72b931e9420d2aaa6b8e561a438e18adfdfb20cb5dcbf8a5) and BDB30
+      [`0xb3a76337…c05d91`](https://hashscan.io/testnet/transaction/0xb3a7633779c926e2a4faba4cc4c66d5d85fe67236c8a283c9f4140b67ac05d91).
+    - **Book 1, BDB27** (order 1, the issuer's remaining 2 @ 0.99, still standing): issuer ask 10 @ 1.000
+      (order 3, [`0xd3dd3088…bf6e0d`](https://hashscan.io/testnet/transaction/0xd3dd3088227e6c976893e669fd37a4adb4089128cbd68a05704ed7b4c2bf6e0d)); investor 1 ask 2 @ 1.010 (order 4, [`0xf307a584…1301f8`](https://hashscan.io/testnet/transaction/0xf307a5846643678e204730519f7fbf99fbff01a6bd4b58d48cc43ec0681301f8)); investor 1 bid 3 @ 0.970 (order 5, [`0x68ee0141…2c339d`](https://hashscan.io/testnet/transaction/0x68ee01410a906357b3de413d1d7101d618b8202300366ed906cef8dfeb2c339d));
+      investor 2 bid 2 @ 0.960 (order 6, [`0x493268aa…c543fe`](https://hashscan.io/testnet/transaction/0x493268aa6cb8573485fdf76f46e490bdf1fced13342f0e15daaf3718f5c543fe)). Quote 0.970 / 0.990.
+    - **Book 2, BDB28**: issuer asks 15 @ 0.985 (order 7, [`0x36f129fb…5e587f`](https://hashscan.io/testnet/transaction/0x36f129fb4b48bb2f600a0d9ad9da09aeda5772b051932bdc81c650493d5e587f)), 20 @ 0.990 (order 8, [`0xa32c9c0a…3103bb`](https://hashscan.io/testnet/transaction/0xa32c9c0a98bda5cf21fd588ec2540a7252072e5c5707becae4aef36c7a3103bb)) and 20 @ 1.000 (order 9, [`0xac487411…28ca6c`](https://hashscan.io/testnet/transaction/0xac487411513ce9d6a2daf262200a9f935e04fd6ac09d222a0ac3504eee28ca6c)); investor 1
+      bid 10 @ 0.970 (order 10, [`0xdd3f5bc0…ea494a`](https://hashscan.io/testnet/transaction/0xdd3f5bc0e86c447b4f064ae1d480270c0e271ede9253aa16e0299842a1ea494a)); investor 2 bid 5 @ 0.975 (order 11, [`0x2dd10d03…88cd50`](https://hashscan.io/testnet/transaction/0x2dd10d039dadbdfa4b372464ef83bb6824fccc72b1b575666d5b4e8fc788cd50)); investor 2 takes 5 of order 7
+      [`0xc4fa8fad…16c67d`](https://hashscan.io/testnet/transaction/0xc4fa8fad6a230166aa5e8b09f25921c8d579de4fc5483e6918efde0a6c16c67d) (it holds 5 BDB28, the ask shrinks to 10) and asks 3 @ 1.010 (order 12, [`0x74740185…c3aab7`](https://hashscan.io/testnet/transaction/0x7474018576347360136087ae42f33cead69e3988fbc64fc6ab73b3a32ac3aab7)). Quote 0.975 / 0.985.
+    - **Book 3, BDB30**: issuer asks 10 @ 0.995 (order 13, [`0xcd4e3e84…557af7`](https://hashscan.io/testnet/transaction/0xcd4e3e8466caa5c1be805ff8c82e4545fe3c01845ca8c068bfe25466f6557af7)) and 15 @ 1.005 (order 14, [`0xf429d543…304002`](https://hashscan.io/testnet/transaction/0xf429d543fc34fe02a7143b7da9a81e175c4e8933058685cd2a5ab0b3cc304002)); investor 1 bid 8 @ 0.980 (order 15, [`0x707f05cd…d9c2c9`](https://hashscan.io/testnet/transaction/0x707f05cd57bb9bd06160ffbf105ab46351fb144043bad0dd45fbe895a0d9c2c9));
+      investor 2 bid 4 @ 0.985 (order 16, [`0xfc7fa1f5…35c8d0`](https://hashscan.io/testnet/transaction/0xfc7fa1f5c69d1e82998c2f60d39e35a5734fc905a437440fc26bbd29f135c8d0)); investor 1 takes 4 of order 13 [`0x64b57705…f4751e`](https://hashscan.io/testnet/transaction/0x64b5770582746a34414d7a40be9cb63ac4cc0eb0a9c6c1ca0120a221d2f4751e) (it holds 4 BDB30,
+      6 left on the ask) and asks 2 @ 1.020 (order 17, [`0x6240baa8…70cc88`](https://hashscan.io/testnet/transaction/0x6240baa8bc616b89fb9cc0ac9215e32c25699a3a9c77493f87bc609b0270cc88)). Quote 0.985 / 0.995.
+    - No price band is set on any bond (`bandBps` is 0 for all three), so no price had to move; every order sits
+      within 4% of the oracle marks (1.000013, 1.000003 and 1.000000 at the time). All orders expire at `1789821349`,
+      seven days out. Investor 3 still has no KYC on any of the three tokens.
+    - What went wrong: `forge script` pins the sender's nonce when it starts, and the issuer key was in use from the
+      app session at the same time (on top of the seven desk transactions for bond 2 sent while bond 3 was still
+      simulating), so bond 3's first broadcast failed with `Nonce too low` after its seven-minute simulation. The saved
+      sequence in `broadcast/CreateBond.s.sol/296/create-latest.json` was replayed with `--resume` after correcting its
+      nonces, which is why bond 3's six receipts sit in one run at nonces 75–80. `CreateBond` never reaches the
+      Schedule Service, so it runs without `--skip-simulation`, as its header says.
+    - `GET /bonds` lists three bonds, each `/bonds/{id}/orderbook` shows both sides from several makers with its fill
+      in `trades`, and `/events` decodes `KycGranted` / `KycRevoked` on every registered token: the API reads the
+      registry at boot instead of the artifact's `token` alone. [`deployments/testnet.json`](deployments/testnet.json)
+      carries the three tokens and their pending schedules under `bonds`; every flat key is unchanged.
 
 ## The app
 
