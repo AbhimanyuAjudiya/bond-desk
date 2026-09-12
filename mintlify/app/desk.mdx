@@ -12,17 +12,19 @@ three doors: the app, the API and the agents.
 
 ## The desk
 
-`/desk` is the trading view.
+`/desk` is the trading view. The app is built like a terminal: dark, dense, one screen per job, and driven from
+the keyboard as much as the mouse.
 
-<Frame caption="The desk with three bonds.">
+<Frame caption="The desk: the live strip and one grid of three bonds.">
   <img src="/images/app-desk.jpg" alt="The desk" />
 </Frame>
 
 ### Bonds
 
-One row per bond: status, coupon, maturity, best bid and ask, depth (count of bids and asks), current yield,
-coverage with a **thin** tag when it is low, the next coupon, and a HashScan link. Click the symbol to open the
-bond. The yield column sorts.
+One row per bond: status, coupon and interval, maturity, best bid and ask with the size offered at each, spread,
+mark, current yield, coverage with its band (**thin** when it is low), depth (count of bids and asks), the last
+fill and the next coupon. Every column sorts; click a row, or move with `j` and `k` and press `Enter`, to open
+the bond.
 
 ### Your eligibility
 
@@ -39,11 +41,29 @@ Three things a new wallet needs, in order:
 3. **KYC on the bond tokens**: sign one message; the API's officer bot grants KYC on every bond token. See
    [compliance](/how-it-works/compliance).
 
-## The header
+## The header and the live strip
 
-The top bar shows the live HBAR/USD price and the latest block, and the wallet chip with the connected address
-and its HBAR balance. Clicking the chip opens the wallet chooser or disconnects. If the wallet is on another
-network, a bar asks it to switch to Hedera testnet and shows the network details for adding it by hand.
+The top bar carries the pages and the wallet chip with the connected address and its HBAR balance. Clicking the
+chip opens the wallet chooser or disconnects. If the wallet is on another network, a bar asks it to switch to
+Hedera testnet and shows the network details for adding it by hand.
+
+Under it, one line of live numbers on every page: the HBAR/USD feed, the latest block, each bond's best bid, best
+ask and coverage (click one to open the bond), and the last verdict with its nonce and age.
+
+## Keyboard
+
+Press `?` on any page for the list. Shortcuts pause while a field has focus.
+
+| Keys | What they do |
+|---|---|
+| `d` `c` `a` | Desk, Compliance, Activity |
+| `1` to `9` | open bond n |
+| `j` `k` `Enter` | move through the desk grid and open the row |
+| `[` `]` | previous and next tab on a bond |
+| `b` `s` | buy or sell in the order form |
+| `↑` `↓` | nudge the order price by 0.005 |
+| `Enter` | place the order, or fill the open row |
+| `Esc` | cancel a confirm, close the fill form |
 
 ## Every write, the same way
 

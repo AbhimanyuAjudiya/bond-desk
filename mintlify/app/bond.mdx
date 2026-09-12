@@ -10,7 +10,8 @@ with copy buttons, the issuer, the next coupon, the current yield, the coverage 
 <Tabs>
   <Tab title="Order book">
     The ladder: asks from the highest down to the best ask, a strip with the spread and the mid, then bids from
-    the best down. Each row shows the price, the amount left, the total in USDC, the maker and the expiry. Your
+    the best down. Each row shows the price, the size left, the cumulative size from the best price to that row (also drawn as a
+    bar behind the row), the total in USDC, the maker and the expiry. Your
     own rows are marked and have a **Cancel** button.
 
     **Buy** on an ask or **Sell** on a bid opens the fill form under that row: an amount up to what the order
