@@ -15,6 +15,7 @@ const TX = {
   issuance: "0xf12ba21df080b14138f1a48adc31bb777ed192278d71f87ae98c021212bcf173",
   fill: "0x07e85a43f2528f87172d71beaf61f60d8f0552859d01b29bf7536dbb7d067bd4",
   verdict: "0xe1bc8a6d205c62d0d0123a91a77100dcb8da5a77810fbbe0e85de4de5f2e5cb2",
+  freeze: "0x79168dab6bc406a757a4c7aa76039f94da662512430ec9cae4e6611ad6657b5a",
 }
 
 export function Landing() {
@@ -51,7 +52,7 @@ export function Landing() {
       </Section>
 
       <Section n="04" title="Receipts">
-        <p className="note max-w-[68ch]">Four things that happened on Hedera testnet, in the order they happened. Every hash opens on HashScan.</p>
+        <p className="note max-w-[68ch]">Five things that happened on Hedera testnet, in the order they happened. Every hash opens on HashScan.</p>
         <div className="scroll-x mt-4 border-y border-border">
           <table className="table min-w-[720px]">
             <thead><tr><th className="w-[26%]">What happened</th><th className="w-[22%]">Receipt</th><th>What it shows</th></tr></thead>
@@ -77,6 +78,11 @@ export function Landing() {
                 <td className="align-top">A verdict from the CRE network</td>
                 <td className="align-top"><Hash hash={TX.verdict} /></td>
                 <td className="align-top prose text-[13px]"><code className="font-mono text-[12px]">VerdictApplied(1, WARN, 595, nonce 4)</code>, sent by the enclave's own submit key on 2026-09-12 at 07:00 UTC. The thresholds it compared against are not in the transaction, and cannot be read from it.</td>
+              </tr>
+              <tr>
+                <td className="align-top">The enclave freezes the market on its own</td>
+                <td className="align-top"><Hash hash={TX.freeze} /></td>
+                <td className="align-top prose text-[13px]">The issuer withdrew 20 HBAR at 11:03 UTC; at the next hourly run, 12:00:01 UTC, the same workflow found coverage at 4.48% and signed FREEZE: <code className="font-mono text-[12px]">VerdictApplied(1, FREEZE, 448, nonce 10)</code> and the registry's Active → Frozen in one transaction. Nobody relayed it. The admin unfroze it once the collateral was back.</td>
               </tr>
             </tbody>
           </table>
