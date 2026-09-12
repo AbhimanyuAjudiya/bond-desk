@@ -62,6 +62,11 @@ cast call "$TOKEN" 'getKycStatusFor(address)(uint8)' "$(jq -r .wallets.investorN
 needs. If investor 3 has KYC from a rehearsal, revoke it from the Compliance page (officer wallet) before
 recording; if the bond is `Frozen`, unfreeze it from the Risk tab (admin wallet).
 
+The app is a terminal: everything you would click has a key, and the keys read well on camera. `d` `c` `a` switch
+pages, `1`–`3` open a bond, `[` `]` move between its tabs, `j` `k` `Enter` walk the desk grid, `b` `s` pick the
+side of an order, `↑` `↓` nudge its price, `Enter` places or fills, `Esc` cancels; `?` shows the list. Shortcuts
+pause while a field has focus, so type an amount first and press `Enter` after.
+
 Screen setup: the app in one browser window at 125% zoom, MetaMask pinned; a second window with three tabs,
 the rendered `docs/architecture.md`, HashScan on `$TOKEN`, and
 `https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10482928`; one terminal at ~18pt. Clear the

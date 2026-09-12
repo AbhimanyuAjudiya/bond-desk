@@ -336,23 +336,29 @@ The same origin that serves the API serves a browser app for every role in the s
 to any path gets the app; a `fetch`, `curl` or agent asking for JSON gets the JSON it always did, so `/bonds/1`
 is a page for a person and a document for a program.
 
+The app is built like a terminal: dark, dense, one screen per job, and driven from the keyboard as much as the
+mouse. A live strip under the header carries the HBAR/USD feed, the block, every book's quote and coverage and
+the last verdict; `?` lists the keys (`d` `c` `a` for the pages, `1`–`9` to open a bond, `j` `k` `Enter` on the
+desk grid, `[` `]` between a bond's tabs, `b` `s` for the side of an order, `↑` `↓` to nudge its price,
+`Enter` to place or fill, `Esc` to cancel). Shortcuts pause while a field has focus.
+
 | Page | What a wallet can do there |
 |---|---|
-| `/` | the front page: one statement, a live strip read from the API (bonds, best ask, coverage, last verdict with nonce, next coupon, block), two hand-drawn diagrams of how a fill is judged and how a freeze happens, four receipts with HashScan links, and the three doors (app, API, agents) |
-| Desk (`/desk`) | every bond with status, bid/ask/mark, coverage and next coupon; connect a wallet; get 10,000 test USDC from `MockUSDC`'s open mint |
-| Bond → Order book | one ladder per bond: asks down to the best ask, the spread and mid, bids from the best down, your own rows marked and cancellable, the fill form under the row it came from; trades from the mirror node with HashScan links |
+| `/` | the front page: one statement, a live strip read from the API (bonds, best ask, coverage, last verdict with nonce, next coupon, block), two hand-drawn diagrams of how a fill is judged and how a freeze happens, five receipts with HashScan links, and the three doors (app, API, agents) |
+| Desk (`/desk`) | one grid of every bond: status, coupon and interval, maturity, best bid and ask with the size at each, spread, mark, yield, coverage with its band, depth, last fill and next coupon, every column sortable; your eligibility per bond; get 10,000 test USDC from `MockUSDC`'s open mint and request testnet KYC |
+| Bond → Order book | one ladder per bond with cumulative size and a depth bar behind each row, asks down to the best ask, the spread and mid, bids from the best down, your own rows marked and cancellable, the fill form under the row it came from; the order form with the cost, fee and total worked out; trades from the mirror node with HashScan links |
 | Bond → Eligibility | whether *this* wallet may hold the bond and why not (no Hedera account, no KYC, bond not active); **testnet self-service KYC**: sign a one-line message, the API's compliance-officer bot grants or revokes KYC on the ATS token |
 | Bond → Coupons | every coupon with its snapshot and schedule, claim your share, and for the issuer: fund the pool, pay a coupon by hand, schedule the next one, redeem at maturity |
 | Bond → Collateral | vault balance, the live Chainlink HBAR/USD price, coverage; the issuer deposits and withdraws |
 | Bond → Risk | verdict history with nonces, the trusted signer, and *Relay a signed verdict*: paste the enclave's `VERDICT_JSON`, the app verifies the signature against `RiskGate.signer()` and any wallet submits it; admin unfreeze |
 | Compliance | the officer's desk on whichever bond token it picks: KYC status and freeze state per address, grant, revoke, freeze, unfreeze, and what `canTransferFrom` would answer right now |
-| Activity | every decoded event across the six contracts and the token, newest first |
+| Activity | every decoded event across the six contracts and the tokens, newest first, filtered by contract, by text, or to your own wallet |
 
 ![The front page: the statement, the live strip and the first diagram](docs/img/app-landing.jpg)
 
-![The desk: three bonds with bid, ask, depth, yield, coverage and the next coupon](docs/img/app-desk.jpg)
+![The desk: the live strip and one grid of three bonds with bid, ask, size, spread, mark, yield, coverage, depth, last fill and the next coupon](docs/img/app-desk.jpg)
 
-![Bond #2, order book: four asks and two bids from three makers, the spread and the mid, the fill form](docs/img/app-order-book.jpg)
+![Bond #2, order book: the ladder with cumulative size and depth bars, the spread and the mid, the order form](docs/img/app-order-book.jpg)
 
 ![Bond #1, risk gate: the last verdict, the verdict history with nonces, and the relay box](docs/img/app-risk.jpg)
 
