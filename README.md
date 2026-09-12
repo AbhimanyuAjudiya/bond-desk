@@ -48,6 +48,7 @@ were recovered and every consumer reads the address above from `deployments/test
 | Coupon 3, self-scheduled with the lag | [`0.0.10482928`](https://hashscan.io/testnet/schedule/0.0.10482928) (EVM `0x…9fF4F0`, `expiration_time 1789208092` = target + 10; **executed at `1789208092.013`, child `CONTRACTCALL SUCCESS`**, coupon id 2 on the lagged contract: snapshot 3, 13,698 units, `paidAt 1789208091`) |
 | Coupon 4, armed by coupon 3 from inside itself | EVM `0x…A031b5` = [`0.0.10498485`](https://hashscan.io/testnet/schedule/0.0.10498485), due 2026-09-13 10:14:52 UTC + 10 s |
 | Chainlink CRE workflows (private registry, deployed 2026-09-12) | `liquidation-protection-production` `00cdbaa2…48554f` (30 s), `bond-monitor-production` `0045bd36…5c96c8` (hourly, direct delivery); [`docs/cre-evidence/deployed-20260912.txt`](docs/cre-evidence/deployed-20260912.txt) |
+| First FREEZE delivered by the deployed monitor, from the CRE network | [`0x79168dab…657b5a`](https://hashscan.io/testnet/transaction/0x79168dab6bc406a757a4c7aa76039f94da662512430ec9cae4e6611ad6657b5a) (execution `3b141694…d719`, 2026-09-12 12:00:01–12:00:09 UTC; `VerdictApplied(1, FREEZE, 448, nonce 10)` and Active → Frozen in one transaction) |
 | First verdict delivered by the deployed monitor, from the CRE network | [`0xe1bc8a6d…2e5cb2`](https://hashscan.io/testnet/transaction/0xe1bc8a6d205c62d0d0123a91a77100dcb8da5a77810fbbe0e85de4de5f2e5cb2) (execution `b20c80c2…92fa`, 2026-09-12 07:00:02–07:00:12 UTC; `VerdictApplied(1, WARN, 595, nonce 4)`, sent by the enclave's own submit key, 58,086 gas) |
 | Chainlink liquidation challenge, `join()` on Sepolia | [`0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9`](https://sepolia.etherscan.io/tx/0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9) |
 | Bond Desk app + API (AWS App Runner, `ap-south-1`) | [`https://wd6nrvmajt.ap-south-1.awsapprunner.com`](https://wd6nrvmajt.ap-south-1.awsapprunner.com) — the app in a browser; `/healthz`, `/openapi.json` and the JSON routes for everything else |
@@ -255,6 +256,15 @@ snapshot the decision used, so a resubmitted verdict is rejected.
     puts the account on the *control list* (`isInControlList` is the getter; `isFrozen` stays false), and
     Hedera's `eth_call` does not impersonate a contract as `from`, so a read-only `canTransferFrom` can never be
     asked "as the market": the app now says that instead of quoting the allowance code as a refusal.
+
+19. **The deployed enclave freezes the market by itself.** With the 20 HBAR still out after step 18 (coverage
+    4.48%), the hourly network run at 12:00:01 UTC on 2026-09-12 (execution `3b141694…d719`, `SUCCESS`, 8 s)
+    decided FREEZE against its private thresholds, signed the verdict in the enclave and delivered it from its own
+    key: [`0x79168dab…657b5a`](https://hashscan.io/testnet/transaction/0x79168dab6bc406a757a4c7aa76039f94da662512430ec9cae4e6611ad6657b5a) carries `VerdictApplied(bondId 1,
+    FREEZE, coverageObserved 448, nonce 10)` and, in the same transaction, the registry's Active → Frozen. No
+    simulator, no relayer, no human: the same policy that WARNed every hour since 07:00 halted trading the hour
+    coverage was below its line. The issuer then restored coverage ([`0x28af8eaa…5d7e0a`](https://hashscan.io/testnet/transaction/0x28af8eaad0bc7698152895702c20e9620be6aad5428de04ceb080d80185d7e0a),
+    20 HBAR back, 5.98%) and the admin unfroze ([`0xc71d7edf…52ca66`](https://hashscan.io/testnet/transaction/0xc71d7edf40e01341e5c9895cc29b41d647e36bfc18304d24b092f5732652ca66)).
 
 ## The app
 

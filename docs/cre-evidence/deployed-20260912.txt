@@ -68,3 +68,16 @@ mirror node /contracts/results/0xe1bc8a6d205c62d0d0123a91a77100dcb8da5a77810fbbe
      result SUCCESS  to 0x1dff1d5458d6a6f6af46014de76474dc3170c31b  from 0x00000000000000000000000000000000009f8b9b (= 0xc4691b9250FbAbB2102485D8AE2B8955f901ba91, the HEDERA_SUBMIT_KEY account)
      gas_used 58086  timestamp 1789196412.555347594  block 40414052
      log topics [VerdictApplied, bondId 1]  data: action 1 (WARN), coverageObserved 0x253 = 595, nonce 4, relayer 0xc4691b9250fbabb2102485d8ae2b8955f901ba91
+
+# 12:00 UTC: the network run freezes the market on its own (coverage 448 bps after the issuer withdrew 20 HBAR at 11:03 UTC)
+cre execution list bond-monitor-production
+1. 3b141694c16210d4a1d9cfa51289837f9df6bdafe68593e32a18e3300bf7d719
+     Workflow:  bond-monitor-production
+     Status:    SUCCESS
+     Started:   2026-09-12 12:00:01 UTC
+     Finished:  2026-09-12 12:00:09 UTC (8s)
+mirror node /contracts/results/0x79168dab6bc406a757a4c7aa76039f94da662512430ec9cae4e6611ad6657b5a
+     result SUCCESS  to 0x1dff1d5458d6a6f6af46014de76474dc3170c31b  from 0x00000000000000000000000000000000009f8b9b (submit key)  gas_used 71396  timestamp 1789214409.691856618
+     log BondRegistry 0x378f4519… StatusChanged(bondId 1): 1 (Active) -> 2 (Frozen)
+     log RiskGate 0x1dff1d54… VerdictApplied(bondId 1): action 2 (FREEZE), coverageObserved 448, nonce 10, relayer 0xc4691b9250fbabb2102485d8ae2b8955f901ba91
+restore: vault.deposit(1) 20 HBAR 0x28af8eaad0bc7698152895702c20e9620be6aad5428de04ceb080d80185d7e0a; riskGate.unfreeze(1) 0xc71d7edf40e01341e5c9895cc29b41d647e36bfc18304d24b092f5732652ca66; status Active, coverage 598 bps, lastNonce 10 at 12:01:38 UTC
