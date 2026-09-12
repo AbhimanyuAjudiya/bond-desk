@@ -1,5 +1,14 @@
 # Dashboard steps — putting the three-service Recipe live, and the recording
 
+> **Status 2026-09-12 06:43 UTC.** Steps 2 and 4 are done, without the dashboard: the control MCP
+> (`https://api.bazantic.com/control-mcp`, section 5) accepted the CLI session, and
+> `bazantic_recipe_unpublish` → `bazantic_recipe_update` (the four fields of `recipe-update.json`) →
+> `bazantic_recipe_publish` ran in three seconds; publish validated all seven bindings live, including
+> `getTransactions` on the mirror-node gateway whose inventory the control plane reports as `oversized_inventory`.
+> The public catalog now shows the three-service description and a non-empty `output_example`. What is still
+> dashboard-only: the listing copy (step 1), the two **Test** runs and *Use as output example* (step 3), and the
+> recording (step 6).
+
 Everything here is click work in the bazantic.com dashboard (signed in as **Abhimanyu**) because the released CLI
 (`@bazantic/cli` 0.8.0) has no `recipe` command and the CLI session cannot edit a listing (`gateway.md`, section 8).
 The texts to paste are in this file and, machine-readable, in `recipe-update.json` (a valid *update file* in the

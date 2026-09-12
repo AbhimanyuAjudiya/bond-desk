@@ -187,6 +187,14 @@ Expected answer: no bond can be held; bond 1 (BDB27) excluded for `no-kyc`; the 
 9.95 HBAR, gas covered, 2 transactions on record) and needs KYC from the issuer's compliance officer before the order
 book will accept a fill from it. Steps 4–6 must not run.
 
+### Republished, 2026-09-12 06:43 UTC (three services, seven bindings)
+
+Applied through the control MCP with the CLI session (`dashboard-steps.md`, status note): unpublish at 06:43:41,
+update with the four fields of `recipe-update.json` at 06:43:42, publish at 06:43:43 with live binding validation.
+`GET https://api.bazantic.com/v1/recipes/best-eligible-hedera-bond-recommendation` now returns the three-service
+description and the hand-derived `output_example`; the dashboard test runs below replace that example with a real
+run.
+
 ### Previous version — dashboard test run, 2026-09-11 (two services, four tool calls)
 
 Run from the Bazantic dashboard with the operator credential (no payment charged), wallet
