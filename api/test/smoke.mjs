@@ -2,7 +2,7 @@
 //  1. mirror.events decoding against synthetic mirror-node logs (fetch stubbed, no network)
 //  2. boots the API against the placeholder deployments file and an unreachable RPC (override with HEDERA_RPC_URL /
 //     MIRROR_URL to hit real endpoints) and asserts the public contract: /healthz shape, /openapi.json structure
-//     (3.1, all six paths, unique operationIds, no dangling $ref) and the error shapes 400/404/502.
+//     (3.1, all ten operations, unique operationIds, no dangling $ref) and the error shapes 400/404/502.
 import { spawn } from "node:child_process"
 import { readFileSync } from "node:fs"
 import assert from "node:assert/strict"
@@ -57,10 +57,11 @@ try {
 
   const [os, spec] = await get("/openapi.json")
   assert.equal(os, 200); assert.match(spec.openapi, /^3\.1\./); assert.equal(spec.servers[0].url, base)
-  const paths = ["/bonds", "/bonds/{id}", "/bonds/{id}/orderbook", "/bonds/{id}/risk", "/wallets/{address}/eligibility", "/healthz"]
+  const paths = ["/bonds", "/bonds/{id}", "/bonds/{id}/orderbook", "/bonds/{id}/risk", "/bonds/{id}/verdicts", "/events", "/wallets/{address}/eligibility", "/healthz"]
   for (const p of paths) assert.ok(spec.paths[p]?.get?.operationId, `missing ${p}`)
+  assert.ok(spec.paths["/wallets/{address}/kyc"]?.post?.operationId && spec.paths["/wallets/{address}/kyc"]?.delete?.operationId, "missing testnet KYC desk")
   const ops = Object.values(spec.paths).flatMap((p) => Object.values(p).map((o) => o.operationId))
-  assert.equal(new Set(ops).size, ops.length, "duplicate operationIds"); assert.ok(ops.length <= 6, "more than 6 operations")
+  assert.equal(new Set(ops).size, ops.length, "duplicate operationIds"); assert.equal(ops.length, 10, "operation count drifted; update the Bazantic price table too")
   assert.ok(Array.isArray(spec.paths["/bonds"].get["x-agent-hints"]))
   const refs = JSON.stringify(spec).match(/#\/components\/schemas\/\w+/g).map((r) => r.split("/").pop())
   for (const name of new Set(refs)) assert.ok(spec.components.schemas[name], `dangling $ref ${name}`)
