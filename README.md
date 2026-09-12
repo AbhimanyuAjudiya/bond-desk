@@ -218,6 +218,44 @@ snapshot the decision used, so a resubmitted verdict is rejected.
     `harness/scripts/validate-schedule.sh 0.0.10482928` exits 0 on the executed-and-succeeded check. Nobody sent
     a transaction: the timer wound itself, and this time the fix from step 13 held.
 
+18. **The same storyline, driven from the app (2026-09-12, 10:57–11:23 UTC).** Every beat below was clicked in
+    the app on `localhost:5173?burners=1` (dev mode, demo keys, no wallet extension) against the live testnet, and
+    every transaction is in the app's **Activity** page with its HashScan link.
+    - Investor 3, no KYC, connects: the Desk shows **NOT ELIGIBLE** with the reason. It tries to buy 2 bonds from
+      the issuer's ask: the app simulates first and shows *The token refused this transfer: KYC status invalid
+      (code 0x10, disallowed)*; nothing was signed.
+    - Investor 3 presses *Request testnet KYC*, signs a one-line message, and the API's officer bot grants KYC on
+      the token ([`0x6ce3d667…562943`](https://hashscan.io/testnet/transaction/0x6ce3d667562943)); the standing
+      panel flips to **KYC GRANTED** without a reload.
+    - The same wallet buys 2 bonds at 0.99: [`0x6e478f70…d0d3f0`](https://hashscan.io/testnet/transaction/0x6e478f708e1c58cb3a97c76f8d53174df0c70bebada44dc84de0bd5698d0d3f0);
+      the ask shrinks to 2 and the trade appears in the fills table.
+    - The issuer withdraws 20 HBAR ([`0xea779b76…dc2b7c`](https://hashscan.io/testnet/transaction/0xea779b76a91d961617d3ae00d29491b394f31e7518429d4b779c79a4e1dc2b7c));
+      coverage drops from 5.95% to 4.46%. The simulator (`bun run sim:bond`, log
+      `docs/cre-evidence/bond-monitor-20260912-1634-freeze.log`) now signs **FREEZE** at nonce 9.
+    - The relayer wallet pastes the `VERDICT_JSON` line into the Risk tab: *signature valid for 0xaDC8…*,
+      nonce 9 above the last applied 8, then submits: [`0x10f8e581…774d34`](https://hashscan.io/testnet/transaction/0x10f8e581774d34)
+      at 11:08:46 UTC. The registry goes **FROZEN**; the same line pasted again is refused by the app as
+      *nonce 9 is not above the last applied nonce 9*.
+    - Investor 1, KYC'd and holding 11 bonds, cannot buy: the order book is greyed out with *the market rejects
+      new orders (BondNotActive)*, and the contract agrees, `fill(1,1)` from that wallet reverts with
+      `0x34823ce5` = `BondNotActive(1, Frozen)`.
+    - The issuer, who is the desk admin, presses *Unfreeze*: [`0x2531b7e7…bf9d93`](https://hashscan.io/testnet/transaction/0x2531b7e79267272bdf01410b522ba09e8397c5a8a7013b669ca48ee6c3bf9d93).
+      Status **ACTIVE**, coverage still 4.46%: the app says so, and the deployed monitor will say so too at the
+      next hour (step 19).
+    - Investor 1 claims its share of coupon 2, 0.001506 USDC for 11 of 100 bonds at snapshot 3:
+      [`0x9016e15e…e59fbd`](https://hashscan.io/testnet/transaction/0x9016e15ee59fbd).
+    - The compliance officer looks investor 3 up, freezes it on the token
+      ([`0x9a5f6677…0d022d`](https://hashscan.io/testnet/transaction/0x9a5f66770d022d)), the token's own probe
+      answers `AccountIsBlocked` (code 0x10), unfreezes it
+      ([`0xc9d2ad6c…9bff25`](https://hashscan.io/testnet/transaction/0xc9d2ad6c9bff25)) and finally revokes its
+      KYC ([`0x1811e69d…6ce1d1`](https://hashscan.io/testnet/transaction/0x1811e69d6ce1d1)), so the demo starts
+      again from a wallet without KYC.
+
+    Two things the walkthrough taught us, both fixed the same hour: on this ATS build `setAddressFrozen`
+    puts the account on the *control list* (`isInControlList` is the getter; `isFrozen` stays false), and
+    Hedera's `eth_call` does not impersonate a contract as `from`, so a read-only `canTransferFrom` can never be
+    asked "as the market": the app now says that instead of quoting the allowance code as a refusal.
+
 ## The app
 
 The same origin that serves the API serves a browser app for every role in the storyline. A browser navigation
@@ -436,6 +474,12 @@ live policy, and the check now reports no hit across all logs. The check is in
   bucket, a plan word), and the deployed bond-monitor delivers its own verdict (`deliver: "direct"` in
   `workflow/bond-monitor/config.production.json`, hourly) rather than relying on a log-line relay; the relayer
   remains the courier for simulator-produced verdicts and for re-submitting a signed verdict from a log.
+- **EVM wallets only, and one that behaves.** The app needs an EIP-1193 wallet on Hedera testnet (chain 296);
+  HashPack is not one. Every wallet that announces itself over EIP-6963 is listed by name; the generic
+  `window.ethereum` entry appears only when none does. Phantom's EVM provider claims to be MetaMask,
+  auto-connects to origins it has authorised and re-fires `accountsChanged` after a disconnect, so it can take a
+  session over; pick MetaMask by name, or in development open `?burners=1`, which ignores wallet extensions and
+  offers the demo keys from `web/.env.local`.
 - **One process, one cache.** The API caches reads for 10 s in memory. It is a demo service, not an HA
   deployment.
 - **The relayer inbox is gitignored.** `relayer/inbox/*.json` and every `.env` are excluded, so the extracted

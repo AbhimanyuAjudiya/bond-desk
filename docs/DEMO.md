@@ -26,8 +26,12 @@ export SCHEDULE=$(jq -r .schedule deployments/testnet.json)   # coupon 3's sched
 export BOND_ID=$(jq -r .bondId deployments/testnet.json)      # 1
 ```
 
-Wallets in MetaMask, on Hedera testnet (chain 296, RPC `https://testnet.hashio.io/api`, symbol HBAR, explorer
-`https://hashscan.io/testnet`), named so the connector chip reads well on camera:
+Wallets: either MetaMask on Hedera testnet (chain 296, RPC `https://testnet.hashio.io/api`, symbol HBAR, explorer
+`https://hashscan.io/testnet`) with the keys below imported and named so the connector chip reads well on camera,
+or, simpler for a recording, the dev server with `?burners=1` (`cd web && npm run dev`, then
+`http://localhost:5173/?burners=1` with the API on `localhost:8787`): every demo key in `web/.env.local` appears as
+*Burner: investor 1 … relayer*, signs without a popup, and no installed wallet extension (Phantom in particular)
+can take the session over. The hosted URL is for the judges; the burner mode is for the take.
 
 | Name in MetaMask | Key | Used in |
 |---|---|---|

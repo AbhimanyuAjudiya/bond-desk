@@ -319,3 +319,23 @@ Solidity team can ship here in a week.
   added the confirmation instead of a duplicate.
 - Hedera Harness: [hedera-dev/hedera-harness#62](https://github.com/hedera-dev/hedera-harness/pull/62), the
   scheduled-transaction result check described in the schedule section above.
+
+
+## `setAddressFrozen` is reflected by `isInControlList`, not `isFrozen` (ATS v8 testnet build)
+
+Observed 2026-09-12 on token `0x0100526434C821d0df24f6CC60352F830F8b4504`: after the freeze manager called
+`setAddressFrozen(account, true)` (tx `0x9a5f6677…0d022d`), `isFrozen(account)` still returned `false`, while
+`isInControlList(account)` returned `true` and `canTransferFrom(issuer, account, 1, "")` answered
+`(false, 0x10, AccountIsBlocked)`. After `setAddressFrozen(account, false)` (`0xc9d2ad6c…9bff25`) the control-list
+flag cleared and the probe returned `(true, 0x01)`. Anyone who wires a dashboard to `isFrozen` will show a frozen
+account as free. Worth one sentence in the freeze docs: which getter mirrors `setAddressFrozen`, and what
+`isFrozen` means on this build.
+
+## `eth_call` on the relay does not impersonate a contract as `from`
+
+`canTransferFrom` judges the operator (`msg.sender`). Calling it read-only with `from` set to our market contract
+returns the same answer as with an EOA that holds no allowance (`0x54`, `InsufficientAllowance`), although the
+issuer's allowance to the market is unlimited and the market's real fills pass. Hedera's `eth_call` appears to
+accept `from` only for accounts, so a front end cannot preview "what would the token say to the market"; it can
+only preview the wallet-level checks (KYC, freeze, pause) and must explain the allowance code away. A note in the
+JSON-RPC relay docs about which `from` values `eth_call` honours would save the guessing.
