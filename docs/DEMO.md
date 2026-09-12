@@ -7,7 +7,7 @@ a sponsor track requires them on screen.
 
 Nothing here deploys anything. Deployment, bond creation, KYC and the coupon schedule all happened before
 recording, so the video shows a system that is already running. Every transaction the script produces is
-linkable on HashScan afterwards; the ones already recorded are in the root `README.md` storyline.
+linkable on HashScan afterwards; the ones already recorded are in `docs/STORYLINE.md`.
 
 Two recordings come out of this session: the main video below, and a separate 3–5 minute Bazantic screen
 recording whose shot list is in [`api/bazantic/dashboard-steps.md`](../api/bazantic/dashboard-steps.md).
@@ -35,7 +35,7 @@ wallet extension (Phantom in particular) can take the session over. The hosted U
 mode is for the take.
 
 Three bonds are live on the desk (BDB27 daily 5%, BDB28 weekly 7.25%, BDB30 30-day 3.75%), each with its own
-book quoted by the issuer and investors 1 and 2 (`README.md` step 20). The script below stays on bond #1, which
+book quoted by the issuer and investors 1 and 2 (`docs/STORYLINE.md` step 20). The script below stays on bond #1, which
 is the one the deployed enclave monitor watches; bonds 2 and 3 are there to show the desk as a desk, and their
 risk status only changes by hand or through the simulator with `bondId` overridden.
 
@@ -130,7 +130,7 @@ same order fills for the same wallet the moment the token says yes. The officer 
 the check it satisfies is the token's.
 
 The recorded version of this beat, if a take fails: rejected read at
-`README.md` step 4, fill `0x07e85a43…067bd4`, self-service grants are in the **Activity** page as
+`docs/STORYLINE.md` step 4, fill `0x07e85a43…067bd4`, self-service grants are in the **Activity** page as
 `KycGranted` events.
 
 ---

@@ -60,7 +60,7 @@ contracts/script/verify.sh deployments/testnet.json     # Sourcify exact match, 
 
 Registering a second token with the desk, granting the lifecycle and vault their snapshot roles, funding, and
 posting orders are ordinary `cast send` calls against the addresses in the artifact. The full sequence used for
-bonds 2 and 3, with every receipt, is in the repository's `README.md` under step 20 and in
+bonds 2 and 3, with every receipt, is in the repository's `docs/STORYLINE.md` under step 20 and in
 `docs/seed-20260912.json`.
 
 <Note>
@@ -72,4 +72,4 @@ bonds 2 and 3, with every receipt, is in the repository's `README.md` under step
 
 `contracts/script/Demo.s.sol` replays the storyline one beat at a time: approvals, the issuer's ask, the
 rejected buy (read-only), the KYC buy, the collateral deposit, the coupon. Each is a `--sig` entrypoint; the
-repository README lists them in order.
+repository's `docs/RUNBOOK.md` lists them in order.
