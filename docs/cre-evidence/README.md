@@ -170,5 +170,8 @@ submission.
 `liquidation-protection-production` `00cdbaa2…48554f`), `cre execution list` for both, and for execution
 `a45b819e…6537ba` its `status` (SUCCESS, 06:20:01 to 06:20:08 UTC), `events` (trigger, one `http-actions
 SendRequest`) and `logs` (`liq plan=scenario-inactive (gate closed)` from nine nodes). The bond monitor is on an
-hourly cron with `deliver: "direct"`, so from 07:00 UTC each run signs a verdict and lands it on Hedera itself;
-the resulting `VerdictApplied` events are on RiskGate and in the app's Risk tab.
+hourly cron with `deliver: "direct"`; its first network run, execution `b20c80c2…92fa` (2026-09-12 07:00:02 to
+07:00:12 UTC, `SUCCESS`), signed a WARN verdict and landed it on Hedera itself as
+[`0xe1bc8a6d…2e5cb2`](https://hashscan.io/testnet/transaction/0xe1bc8a6d205c62d0d0123a91a77100dcb8da5a77810fbbe0e85de4de5f2e5cb2) (`VerdictApplied(1, WARN, 595, nonce 4)`, sent
+from the submit key `0xc469…ba91`, 58,086 gas); every hourly run since is a further `VerdictApplied` on RiskGate and
+a row in the app's Risk tab.

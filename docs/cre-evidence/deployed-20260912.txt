@@ -56,3 +56,15 @@ Executions
 Resolving workflow "bond-monitor-production"...
 Fetching executions...
 ! No executions found
+
+# 07:00 UTC update: first bond-monitor-production execution and its on-chain effect
+cre execution list bond-monitor-production
+1. b20c80c280c9104016116883b6f0a5c69c314f8f0954d27b77b5e0d604cd92fa
+     Workflow:  bond-monitor-production
+     Status:    SUCCESS
+     Started:   2026-09-12 07:00:02 UTC
+     Finished:  2026-09-12 07:00:12 UTC (10s)
+mirror node /contracts/results/0xe1bc8a6d205c62d0d0123a91a77100dcb8da5a77810fbbe0e85de4de5f2e5cb2
+     result SUCCESS  to 0x1dff1d5458d6a6f6af46014de76474dc3170c31b  from 0x00000000000000000000000000000000009f8b9b (= 0xc4691b9250FbAbB2102485D8AE2B8955f901ba91, the HEDERA_SUBMIT_KEY account)
+     gas_used 58086  timestamp 1789196412.555347594  block 40414052
+     log topics [VerdictApplied, bondId 1]  data: action 1 (WARN), coverageObserved 0x253 = 595, nonce 4, relayer 0xc4691b9250fbabb2102485d8ae2b8955f901ba91
