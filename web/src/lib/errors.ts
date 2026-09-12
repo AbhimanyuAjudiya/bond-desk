@@ -6,11 +6,14 @@ import { STATUS, fmtBps, fmtTime, fmtUsdc, statusName } from "./format"
 const ATS_REASONS: Record<string, string> = {
   [toFunctionSelector("InvalidKycStatus()")]: "KYC status invalid",
   [toFunctionSelector("IsPaused()")]: "the token is paused",
-  [toFunctionSelector("AccountIsBlocked(address)")]: "the account is blocked",
-  [toFunctionSelector("InsufficientAllowance(address,address)")]: "the market's token allowance is too low",
+  [toFunctionSelector("AccountIsBlocked(address)")]: "the account is frozen (on the token's control list)",
+  [toFunctionSelector("InsufficientAllowance(address,address)")]: "the operator's token allowance is too low",
   [toFunctionSelector("InsufficientBalance(address,uint256,uint256,bytes32)")]: "the seller does not hold that many bonds",
 }
 const EIP1066: Record<string, string> = { "0x10": "disallowed", "0x11": "allowed", "0x42": "paused", "0x54": "insufficient funds", "0x50": "transfer failed" }
+
+/** True when the only thing the token objected to is the operator's allowance: KYC, freeze and pause all passed. */
+export const isAllowanceOnly = (reason: Hex): boolean => reason.slice(0, 10).toLowerCase() === toFunctionSelector("InsufficientAllowance(address,address)")
 
 /** bytes32 reason → sentence fragment: an ATS error selector, a short string, or the raw selector. */
 export const explainReason = (reason: Hex): string => {

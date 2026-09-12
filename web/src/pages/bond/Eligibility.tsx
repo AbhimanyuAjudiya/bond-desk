@@ -1,12 +1,11 @@
 import { useAccount, useReadContracts } from "wagmi"
 import { tokenAbi } from "../../config/abi"
-import { DEP } from "../../config/deployments"
 import { FAUCET } from "../../config/chain"
 import { KycDesk } from "../../components/SelfService"
 import { AddressChip, Badge, Empty, ErrorNote, Ext, KV, Loading, Note, Panel } from "../../components/ui"
 import { useEligibility, useHealth } from "../../hooks/data"
 import type { Bond } from "../../lib/api"
-import { explainReason } from "../../lib/errors"
+import { explainReason, isAllowanceOnly } from "../../lib/errors"
 import { fmtInt } from "../../lib/format"
 
 /** The connected wallet's standing with this bond's token, spelled out, plus the testnet KYC desk. */
@@ -18,14 +17,13 @@ export function Eligibility({ bond }: { bond: Bond }) {
     contracts: address
       ? [
           { abi: tokenAbi, address: bond.token, functionName: "getKycStatusFor", args: [address] },
-          { abi: tokenAbi, address: bond.token, functionName: "isFrozen", args: [address] },
+          { abi: tokenAbi, address: bond.token, functionName: "isInControlList", args: [address] },
           { abi: tokenAbi, address: bond.token, functionName: "balanceOf", args: [address] },
           { abi: tokenAbi, address: bond.token, functionName: "canTransferFrom", args: [bond.terms.issuer, address, 1n, "0x"] },
           { abi: tokenAbi, address: bond.token, functionName: "canTransferFrom", args: [address, bond.terms.issuer, 1n, "0x"] },
           { abi: tokenAbi, address: bond.token, functionName: "paused" },
         ]
       : [],
-    account: DEP.market, // the probe asks as the market does: the market is the operator canTransferFrom judges
     query: { enabled: !!address, refetchInterval: 15_000 },
   })
   if (!address) return <Panel title="Eligibility"><Empty>Connect a wallet to see whether this bond's token will accept transfers to it.</Empty></Panel>
@@ -42,7 +40,9 @@ export function Eligibility({ bond }: { bond: Bond }) {
   const decision = (probe: typeof inbound, what: string) =>
     !probe ? null : probe[0]
       ? <>The token <strong>allows</strong> {what} (code {probe[1]}, allowed).</>
-      : <>The token <strong>refuses</strong> {what}: {explainReason(probe[2])} (code {probe[1]}).</>
+      : isAllowanceOnly(probe[2])
+        ? <>The token's compliance checks <strong>pass</strong> for {what}: KYC granted, not frozen, not paused. Its last check, the operator's allowance, is the market's to hold (the issuer approved it), so a fill through the market goes ahead; this read-only probe has no operator, hence code {probe[1]}.</>
+        : <>The token <strong>refuses</strong> {what}: {explainReason(probe[2])} (code {probe[1]}).</>
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_380px] items-start">
       <Panel title="Your standing with this bond" aside={<AddressChip address={address} />}>
@@ -65,7 +65,7 @@ export function Eligibility({ bond }: { bond: Bond }) {
             {mine && !mine.canHold && mine.reason === "bond-not-active" && <p>KYC is in place, but the bond is not Active, so the market will refuse fills until a risk verdict or the admin reopens it.</p>}
             {!hasAccount && <p>This address has never received HBAR, so Hedera does not know it as an account yet; fund it from the faucet before anything else.</p>}
           </div>
-          <Note>Read live from the token: getKycStatusFor, isFrozen and canTransferFrom(from, to, 1, ""). The market runs the same canTransferFrom before it moves a single unit of USDC.</Note>
+          <Note>Read live from the token: getKycStatusFor, isInControlList (what setAddressFrozen sets) and canTransferFrom(from, to, 1, ""). The market runs the same canTransferFrom before it moves a single unit of USDC.</Note>
         </div>
       </Panel>
       <Panel title="Testnet KYC desk">

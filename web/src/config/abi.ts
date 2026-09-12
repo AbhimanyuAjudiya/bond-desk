@@ -81,6 +81,8 @@ export const tokenAbi = parseAbi([
   "function decimals() view returns (uint8)",
   "function getKycStatusFor(address account) view returns (uint8)",
   "function isFrozen(address account) view returns (bool)",
+  // setAddressFrozen puts the account on the control list; isFrozen is a different (partition) flag and stays false
+  "function isInControlList(address account) view returns (bool)",
   "function paused() view returns (bool)",
   "function hasRole(bytes32 role, address account) view returns (bool)",
   "function isIssuer(address issuer) view returns (bool)",

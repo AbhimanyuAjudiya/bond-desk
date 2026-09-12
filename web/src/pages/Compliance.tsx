@@ -6,6 +6,7 @@ import { DEP } from "../config/deployments"
 import { AddressChip, Badge, Button, ConfirmButton, ErrorNote, Field, Input, KV, Loading, Note, Panel } from "../components/ui"
 import { useBonds, useEligibility, useRoles } from "../hooks/data"
 import { useTx } from "../hooks/useTx"
+import { explainReason, isAllowanceOnly } from "../lib/errors"
 import { fmtInt, fmtUsdc, sameAddress } from "../lib/format"
 
 const TEN_YEARS = 3650n * 86_400n
@@ -76,13 +77,12 @@ function WalletReport({ address, me }: { address: Address; me?: Address }) {
   const q = useReadContracts({
     contracts: [
       { abi: tokenAbi, address: DEP.token, functionName: "getKycStatusFor", args: [address] },
-      { abi: tokenAbi, address: DEP.token, functionName: "isFrozen", args: [address] },
+      { abi: tokenAbi, address: DEP.token, functionName: "isInControlList", args: [address] },
       { abi: tokenAbi, address: DEP.token, functionName: "balanceOf", args: [address] },
       { abi: erc20Abi, address: DEP.settlement, functionName: "balanceOf", args: [address] },
       { abi: tokenAbi, address: DEP.token, functionName: "canTransferFrom", args: [DEP.deployer, address, 1n, "0x"] },
       { abi: tokenAbi, address: DEP.token, functionName: "paused" },
     ],
-    account: DEP.market, // the probe asks as the market does: the market is the operator canTransferFrom judges
     query: { refetchInterval: 15_000 },
   })
   if (q.isLoading) return <Loading rows={4} />
@@ -112,10 +112,14 @@ function WalletReport({ address, me }: { address: Address; me?: Address }) {
       <div className="flex flex-col gap-2 text-[13px]">
         <span className="label">Compliance decision</span>
         <p className="leading-relaxed">
-          {kyc && !frozen && !paused && <>The token would <strong>allow</strong> a transfer of one bond from the issuer to this wallet{probe ? <> (code {probe[1]})</> : null}. It is KYC-granted and not frozen.</>}
-          {!kyc && <>The token would <strong>refuse</strong> a transfer to this wallet because its KYC status is not granted{probe ? <> (code {probe[1]}, reason selector {probe[2].slice(0, 10)})</> : null}. The market's fill would revert with ComplianceRejected before any USDC moved.</>}
-          {kyc && frozen && <>The token would <strong>refuse</strong> transfers involving this wallet: it is frozen by the freeze manager{probe ? <> (code {probe[1]})</> : null}.</>}
-          {kyc && !frozen && paused && <>The token is paused, so every transfer is refused right now{probe ? <> (code {probe[1]})</> : null}.</>}
+          {/* The probe is the token's own answer and wins; the flags only explain it. */}
+          {probe && probe[0] && <>The token <strong>allows</strong> a transfer of one bond from the issuer to this wallet (code {probe[1]}). It is KYC-granted, not frozen, and the token is not paused.</>}
+          {probe && !probe[0] && isAllowanceOnly(probe[2]) && <>The token's compliance checks <strong>pass</strong> for a transfer from the issuer to this wallet: KYC granted, not frozen, not paused. Its last check, the operator's allowance, is the market's to hold (the issuer approved it); a read-only probe has no operator, hence code {probe[1]}.</>}
+          {probe && !probe[0] && !isAllowanceOnly(probe[2]) && <>The token would <strong>refuse</strong> a transfer from the issuer to this wallet: {explainReason(probe[2])} (code {probe[1]}, reason selector {probe[2].slice(0, 10)}). The market's fill would revert with ComplianceRejected before any USDC moved.</>}
+          {!probe && !kyc && <>The token would <strong>refuse</strong> a transfer to this wallet because its KYC status is not granted.</>}
+          {!probe && kyc && frozen && <>The token would <strong>refuse</strong> transfers involving this wallet: it is on the control list (frozen by the freeze manager).</>}
+          {!probe && kyc && !frozen && paused && <>The token is paused, so every transfer is refused right now.</>}
+          {!probe && kyc && !frozen && !paused && <>The token would <strong>allow</strong> a transfer of one bond from the issuer to this wallet. It is KYC-granted and not frozen.</>}
         </p>
         <Note>Probe: canTransferFrom(issuer → this wallet, 1 bond) as answered by the token itself.</Note>
       </div>
