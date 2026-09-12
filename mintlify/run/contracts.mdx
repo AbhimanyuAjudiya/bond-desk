@@ -1,0 +1,75 @@
+---
+title: "Contracts and the bond"
+description: "Build and test the desk contracts, issue a bond through ATS, deploy the desk, verify the source."
+---
+
+## Build and test, no credentials needed
+
+```sh
+forge build
+forge test                                   # unit, fuzz and invariant tests
+FOUNDRY_PROFILE=harness forge test           # the Hedera harness: HSS and HTS mocks, the probe loop, the lag
+FORK=1 forge test --match-path 'contracts/test/fork/*' --fork-url https://testnet.hashio.io/api
+```
+
+## Issue a bond through the live ATS factory
+
+The script calls Hedera's testnet factory, then `addIssuer`, `grantKyc` and `mint` in the order ATS requires,
+and writes the token to `ats/testnet.json`.
+
+```sh
+source .env
+export HEDERA_RPC_URL=https://testnet.hashio.io/api
+
+# the first bond: run() uses the defaults from .env
+forge script ats/script/CreateBond.s.sol:CreateBond --rpc-url hedera --broadcast --slow
+
+# another bond with its own terms: name, symbol, ISIN, supply, maturity (unix seconds)
+forge script ats/script/CreateBond.s.sol:CreateBond \
+  --sig "create(string,string,string,uint256,uint256)" \
+  "Bond Desk 7.25% 2028" BDB28 XS2028091200 60 1852329600 \
+  --rpc-url hedera --broadcast --slow
+```
+
+The ISIN has to pass the factory's checksum. `forge script ... --sig "dryRun()"` prints the encoded `deployBond`
+call without a chain.
+
+## Deploy the desk
+
+```sh
+export BOND_TOKEN=$(jq -r .bond.token ats/testnet.json)
+export HBAR_USD_FEED=0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a
+
+# --skip-simulation is mandatory: forge's local EVM has no code at the Schedule Service address 0x16b
+forge script contracts/script/Deploy.s.sol:Deploy --rpc-url hedera --broadcast --slow --skip-simulation
+
+# overwrite the artifact's schedule address with the real one from the chain
+forge script contracts/script/Deploy.s.sol:Deploy --sig 'patchSchedule()' --rpc-url hedera
+```
+
+The deploy writes `deployments/testnet.json`: the six contracts, the settlement token, the bond token, the
+feed, the signer, the schedule and the demo wallets. Every other component reads that file.
+
+## Verify the source
+
+```sh
+contracts/script/verify.sh deployments/testnet.json     # Sourcify exact match, HashScan's verifier as fallback
+```
+
+## Register more bonds and seed books
+
+Registering a second token with the desk, granting the lifecycle and vault their snapshot roles, funding, and
+posting orders are ordinary `cast send` calls against the addresses in the artifact. The full sequence used for
+bonds 2 and 3, with every receipt, is in the repository's `README.md` under step 20 and in
+`docs/seed-20260912.json`.
+
+<Note>
+  Two calls need explicit gas because the Hedera relay under-estimates them: `CollateralVault.withdraw`
+  (`--gas-limit 400000`) and `BondLifecycle.schedule` (`--gas-limit 3000000`).
+</Note>
+
+## The demo storyline as scripts
+
+`contracts/script/Demo.s.sol` replays the storyline one beat at a time: approvals, the issuer's ask, the
+rejected buy (read-only), the KYC buy, the collateral deposit, the coupon. Each is a `--sig` entrypoint; the
+repository README lists them in order.

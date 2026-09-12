@@ -1,0 +1,89 @@
+---
+title: "Risk verdicts"
+description: "How a Chainlink CRE confidential workflow watches coverage, signs a verdict inside an enclave, and how RiskGate applies it."
+---
+
+The risk monitor is a Chainlink CRE workflow whose handler runs inside a trusted execution environment. It is
+deployed on the CRE network as `bond-monitor-production` and runs every hour.
+
+<Frame caption="Bond 1's Risk tab: the last verdict, the verdict history with nonces, the trusted signer and the relay box.">
+  <img src="/images/app-risk.jpg" alt="Risk tab" />
+</Frame>
+
+## One run, step by step
+
+<Steps>
+  <Step title="Fetch the secrets">
+    One batched call to the CRE secrets store returns the verdict signer key, the submit key and the three
+    thresholds. They exist only inside the enclave.
+  </Step>
+  <Step title="Read the bond">
+    One JSON-RPC request to Hedera, an `eth_call` to `RiskGate.snapshot(bondId)`, returns the coverage, whether
+    the feed is fresh, the bond status, the mark, the collateral, the last nonce and the last action.
+  </Step>
+  <Step title="Decide">
+    A pure policy function compares the coverage with the private ladder. A stale feed ends the run without a
+    verdict.
+
+    | Coverage | Action | What it means |
+    |---|---|---|
+    | at or above the WARN line | OK | Healthy |
+    | below WARN, above FREEZE | WARN | A signal, re-sent every run; nothing changes on chain |
+    | below FREEZE | FREEZE | Trading halts |
+    | below DEFAULT (disabled in the demo policy) | DEFAULT | Collateral is seized for holders |
+
+    A FREEZE is not re-sent while the bond is already Frozen, and nothing is sent for a Matured or Defaulted
+    bond.
+  </Step>
+  <Step title="Sign">
+    The verdict is an EIP-712 message with the bond id, the action, the coverage observed, the issue time and
+    the next nonce, signed with the enclave-held key. The log line shows only a coverage bucket and the action
+    name, never a threshold.
+  </Step>
+  <Step title="Deliver">
+    The deployed workflow signs a Hedera transaction with its submit key and sends `RiskGate.submit(verdict,
+    signature)` itself. In simulation it prints the verdict as one `VERDICT_JSON` line for a relayer to carry.
+  </Step>
+</Steps>
+
+## What the gate checks
+
+`RiskGate.submit` does not care who sends the transaction. It checks:
+
+| Check | Reverts with | Why |
+|---|---|---|
+| The signature recovers to the trusted signer | `BadSignature` | Only the enclave key can produce a verdict |
+| The nonce is above the last one applied for that bond | `StaleNonce` | A verdict cannot be replayed or reordered |
+| The issue time is not more than 300 s in the future | `FutureVerdict` | Clock sanity |
+| The issue time is not older than the freshness window, 900 s | `StaleVerdict` | An old verdict cannot be landed late |
+
+Then it records the verdict and acts: FREEZE moves an Active bond to Frozen; DEFAULT seizes the collateral and
+marks the bond Defaulted; OK and WARN only record. Every applied verdict emits `VerdictApplied(bondId, action,
+coverageObserved, nonce, relayer)`, which is what the **Risk** tab lists.
+
+Only the desk admin can `unfreeze` a Frozen bond. There is no un-default.
+
+## Why the coverage is public and the thresholds are not
+
+The verdict carries `coverageObserved` because the contract needs it to be auditable: anyone can read the
+verdict history and confirm that every FREEZE came with a coverage lower than every OK. What nobody can read
+is the number the enclave compared it with, so nobody can position themselves just above the line.
+
+## What the network has done so far
+
+| When (UTC) | Action | Nonce | Receipt |
+|---|---|---|---|
+| 2026-09-12 07:00 | WARN, the first verdict from the deployed workflow, delivered by the enclave's own key | 4 | [0xe1bc…cb2](https://hashscan.io/testnet/transaction/0xe1bc8a6d205c62d0d0123a91a77100dcb8da5a77810fbbe0e85de4de5f2e5cb2) |
+| 2026-09-12 12:00 | FREEZE, coverage 448 bps, bond 1 Active to Frozen in one transaction | 10 | [0x7916…b5a](https://hashscan.io/testnet/transaction/0x79168dab6bc406a757a4c7aa76039f94da662512430ec9cae4e6611ad6657b5a) |
+
+The monitor watches bond 1 only. Nonces are per bond, so bonds 2 and 3 would start at nonce 1.
+
+## Known limits
+
+- The signature proves the key was used, not that a genuine enclave used it. CRE has no attested signing
+  primitive today.
+- Runs are stateless, so DEFAULT is a coverage floor, not "the coupon is N days late".
+- Logs from a deployed confidential handler can be read per node with the CRE CLI; Bond Desk logs a bucket and
+  an action word, nothing sensitive.
+
+The full list is on the [limits](/reference/limits) page.

@@ -1,0 +1,76 @@
+---
+title: "Coupons and maturity"
+description: "How the BondLifecycle contract pays coupons, how the Hedera Schedule Service fires them on time, and how holders claim and redeem."
+---
+
+Coupons are handled by the contract `BondLifecycle`. It holds a USDC pool per bond, pays each coupon against a
+snapshot of holders, and asks the Hedera Schedule Service (HSS) to call it again when the next coupon is due.
+
+## The pool
+
+The issuer funds coupons in advance with `fund(bondId, amount)`, which pulls USDC into the pool. `couponDue`
+shows what the next coupon would cost against the live supply. A coupon that is due but not funded reverts with
+`CouponUnderfunded(due, funded)`, and the app says so before you sign.
+
+## Paying a coupon
+
+`payCoupon(bondId)` can be called by anyone once the coupon is due. It is what the scheduled execution calls.
+
+<Steps>
+  <Step title="Checks">
+    The bond must be Active or Frozen, the due second must have passed, and there must be a coupon left before
+    maturity.
+  </Step>
+  <Step title="Snapshot">
+    The contract takes an ATS snapshot of every holder's balance. The coupon is computed on the supply at that
+    snapshot: face value, times the annual rate, times the interval, for every bond.
+  </Step>
+  <Step title="Reserve and record">
+    The amount is moved from the pool to the coupon record. `nextCoupon` advances by one interval.
+  </Step>
+  <Step title="Schedule the next one">
+    From inside the same call, the contract asks HSS to run `payCoupon` again at the next due second. See below.
+  </Step>
+</Steps>
+
+Holders then pull their share with `claim(bondId, couponId)`: their balance at the snapshot, divided by the
+snapshot supply, times the coupon. `claimable` shows the unclaimed amount. A holder who joined after the snapshot
+gets nothing for that coupon.
+
+## How the network fires it
+
+Hedera's Schedule Service is a system contract at address `0x16b`. Since HIP-1215, a contract can ask it to
+call any function at a chosen future second with `scheduleCall`. Bond Desk uses it like this:
+
+| Detail | Value | Why |
+|---|---|---|
+| Gas reserved per execution | 4,000,000 | The call takes a snapshot on the ATS token and schedules the next run; the first attempt with 2,000,000 ran out of gas |
+| Capacity probing | up to 8 probes | A second can be full; the contract probes later seconds with a back-off until one has capacity |
+| Lag | 10 seconds after the due second | A scheduled execution runs in a block whose timestamp can sit a couple of seconds before the target second. Coupon 2 fired two seconds early and reverted `CouponNotDue`; the lag fixes that |
+| Payer | the lifecycle contract itself | The contract that schedules a call pays for its execution, so it keeps a small HBAR float |
+| Re-arm | permissionless `schedule(bondId)` | If a scheduled run fails to arm (network busy, nested-scheduling limit), anyone can re-arm it |
+
+The proof that a coupon was paid lives on the mirror node, not in the scheduling receipt. A schedule that
+"executed" may have reverted inside; the check that matters is `executed_timestamp` on the schedule plus the
+child transaction's result. The harness script `harness/scripts/validate-schedule.sh` checks both.
+
+<Note>
+  Coupon 3 of bond 1 is the clean example: HSS schedule
+  [0.0.10482928](https://hashscan.io/testnet/schedule/0.0.10482928) executed at its second, the child call
+  succeeded, coupon id 2 was recorded and the next schedule
+  [0.0.10498485](https://hashscan.io/testnet/schedule/0.0.10498485) was armed from inside that call. Bonds 2 and
+  3 have their first coupons armed the same way.
+</Note>
+
+## Maturity
+
+After the maturity date, `redeem(bondId)` pays the caller's principal from the pool (balance times face value),
+burns their bonds through the token's maturity redeemer role, and moves the bond to Matured on the first
+redemption. A defaulted bond cannot be redeemed; its holders claim seized collateral instead
+([collateral](/how-it-works/collateral)).
+
+## In the app
+
+The **Coupons** tab lists every paid coupon with its snapshot, the pending schedule with its due time, and a
+**Claim** button per coupon for the connected wallet. The issuer sees **Fund**, **Pay coupon**, **Schedule** and
+**Redeem** there too.

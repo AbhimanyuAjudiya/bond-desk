@@ -1,0 +1,68 @@
+---
+title: "API overview"
+description: "The JSON API: base URL, conventions, the typical flow, caching and errors."
+---
+
+Base URL: `https://wd6nrvmajt.ap-south-1.awsapprunner.com`. No authentication. The same host serves the app to
+browsers; a request that asks for JSON gets JSON.
+
+```sh
+curl -s https://wd6nrvmajt.ap-south-1.awsapprunner.com/bonds | jq '.bonds[] | {id, symbol, status, bestAsk, coverageBps}'
+```
+
+## Conventions
+
+| Convention | Detail |
+|---|---|
+| Big numbers | Decimal strings. `"990000"` is a price of 0.99 USDC |
+| Timestamps | Unix seconds |
+| Prices | Settlement-token base units per whole bond (USDC has six decimals) |
+| Rates and coverage | Basis points; `10000` is 100% |
+| Status | `None`, `Active`, `Frozen`, `Matured`, `Defaulted` |
+| Verdict action | `OK`, `WARN`, `FREEZE`, `DEFAULT` |
+| `coverageBps` | `null` while the Chainlink feed is stale |
+| Links | Every bond and transaction carries a HashScan link |
+
+## The typical flow for a program
+
+<Steps>
+  <Step title="List the bonds">
+    `GET /bonds`. Keep the ones with `status: "Active"`; sort by `currentYieldBps`.
+  </Step>
+  <Step title="Check the wallet">
+    `GET /wallets/{address}/eligibility`. Only bonds with `canHold: true` are worth recommending; each
+    exclusion carries a reason: `no-kyc`, `no-hedera-account` or `bond-not-active`.
+  </Step>
+  <Step title="Check the risk">
+    `GET /bonds/{id}/risk`. Skip FREEZE and DEFAULT; mention WARN.
+  </Step>
+  <Step title="Look at the book">
+    `GET /bonds/{id}/orderbook` for the asks, then answer with the HashScan link.
+  </Step>
+</Steps>
+
+The OpenAPI document at `/openapi.json` carries these hints in each operation's description, so an agent that
+reads the spec gets the same guidance.
+
+## Where the data comes from
+
+Live state is read with batched `eth_call` requests to the Hedera relay: the registry's terms, the market's
+quote and orders, the gate's snapshot, the token's KYC status. History (fills, verdicts, every event on the
+Activity page) comes from the mirror node's newest logs per contract, because the relay caps log queries at
+seven days. Responses are cached in memory for ten seconds; the order book for three.
+
+## Errors
+
+| Status | Body |
+|---|---|
+| 400 | `{"error":"bad-address"}` |
+| 404 | `{"error":"bond-not-found"}` |
+| 502 | `{"error":"upstream","detail":"<method>"}`, the RPC or mirror node failed; retry later |
+| 503 | the KYC desk is off on this deployment |
+
+`GET /healthz` returns `ok: false` when the API is up but the Hedera RPC is unreachable.
+
+## Running your own
+
+`cd api && npm install && npm start` serves the same routes on `localhost:8787` against
+`deployments/testnet.json`. See [run the API and the app](/run/api-app).

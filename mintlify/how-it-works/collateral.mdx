@@ -1,0 +1,54 @@
+---
+title: "Collateral and coverage"
+description: "How the issuer backs a bond with HBAR, how the vault values it with the Chainlink feed, and what coverage means."
+---
+
+## The vault
+
+`CollateralVault` holds HBAR per bond. Only the issuer can deposit and withdraw.
+
+| Call | Who | Rule |
+|---|---|---|
+| `deposit(bondId)` with value | issuer | While the bond is Active or Frozen |
+| `withdraw(bondId, amount)` | issuer | While Active or Matured, never after a seizure, and only if coverage stays at or above the floor (`CoverageTooLow` otherwise) |
+| `seize(bondId)` | the risk gate | On a DEFAULT verdict: snapshots the holders and locks the whole balance for pro-rata claims |
+| `claimSeized(bondId)` | any holder at the seizure snapshot | Their share, once |
+
+The floor (`minCoverageBps`) is a desk-wide setting the admin can change. On Hedera the EVM counts value in
+tinybar: sending 100 HBAR through the JSON-RPC relay stores `10,000,000,000` in the contract.
+
+## Coverage
+
+Coverage answers "how much of the outstanding principal does the collateral cover right now", in basis points:
+
+```text
+coverageBps = (collateral in HBAR × HBAR/USD price) / (bonds outstanding × face value) × 10,000
+```
+
+The price comes from Chainlink's HBAR/USD aggregator on Hedera testnet
+([0x59bC…B4a](https://hashscan.io/testnet/contract/0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a), 8 decimals),
+read on chain by `NavOracle.hbarUsd()`. If the feed has not updated within the allowed age the read reverts
+`StaleFeed`, and the risk gate's snapshot reports `feedFresh: false` instead of a number, so a stale price can
+never look like a healthy one.
+
+Bond 1 was backed with 100 HBAR against 100 bonds, which gave a coverage of 762 bps at the time. Faucet-sized
+collateral keeps every demo number small; a real bond would sit far above 100%. The ladder the enclave applies
+is the same, only the numbers differ.
+
+## The mark
+
+`NavOracle.mark(bondId)` is the reference price the desk shows next to the bid and ask: the face value plus
+the coupon accrued so far in the current period, and the face value after maturity. It never reads the price
+feed, so it is always available. The order book can be told to reject orders too far from the mark with a
+per-bond band; the demo bonds have the band switched off.
+
+## In the app
+
+The **Collateral** tab shows the vault balance, the live feed price and the coverage, and gives the issuer the
+**Deposit** and **Withdraw** forms. A withdrawal that would drop coverage below the floor is refused before it
+is signed.
+
+<Note>
+  The Hedera relay under-estimates gas for a contract call that forwards HBAR, so `withdraw` is sent with an
+  explicit gas limit of 400,000. The app sets it for you; from a script, pass `--gas-limit 400000`.
+</Note>

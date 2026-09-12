@@ -1,0 +1,59 @@
+---
+title: "Compliance"
+description: "Who grants KYC, how freezes work, and what the testnet KYC desk does."
+---
+
+Compliance lives in the bond token, not in the app. The app and the API only ask the token and, on testnet,
+help you get on its list.
+
+## The officer's rights
+
+The compliance officer holds the token's KYC, freeze and pause roles.
+
+| Action | Token call | Effect |
+|---|---|---|
+| Grant KYC | `grantKyc(account, vcId, validFrom, validTo, issuer)` | The address may hold and transfer the bond |
+| Revoke KYC | `revokeKyc(account)` | Fills to or from the address are refused with `InvalidKycStatus` |
+| Freeze an address | `setAddressFrozen(account, true)` | The address goes on the control list; every transfer involving it is refused with `AccountIsBlocked`, KYC or not |
+| Unfreeze | `setAddressFrozen(account, false)` | Removed from the control list |
+| Pause | `pause()` | Every transfer of the token is refused with `IsPaused` |
+
+The **Compliance** page in the app does all of this for whichever bond token you pick, and shows, for any
+address, the KYC status, the freeze state and the token's live answer to `canTransferFrom`.
+
+## The testnet KYC desk
+
+On testnet you should not need to find a human. The API holds the officer key and grants KYC to anyone who
+proves they control an address:
+
+<Steps>
+  <Step title="You sign a message">
+    The app asks your wallet to sign `Bond Desk testnet KYC request for <address> at <unix minute>`. No gas is
+    spent.
+  </Step>
+  <Step title="The API checks it">
+    The signature must match the address and be at most five minutes old. Three requests per hour per address
+    and per IP, one in-flight transaction per address.
+  </Step>
+  <Step title="The officer bot acts">
+    For every bond token: `addIssuer` if the bond issuer is not yet registered, then `grantKyc` with a ten-year
+    validity, the same arguments the issuance script used.
+  </Step>
+</Steps>
+
+Revocation works the same way with the message `Bond Desk testnet KYC revocation for <address> at <unix
+minute>`. The issuer's own KYC cannot be revoked through the desk.
+
+<Warning>
+  The desk is a testnet convenience, not a compliance model. In production the officer is a person or a KYC
+  provider, and nobody grants themselves KYC. What does not change is that the token enforces the result at every
+  transfer.
+</Warning>
+
+## A freeze in practice
+
+On 2026-09-12 at 12:00 UTC the deployed monitor froze bond 1 from the CRE network. A KYC'd investor with a valid
+order could not fill it: the market reverted `BondNotActive(1, Frozen)` before the token was even asked. The
+admin later unfroze the bond. Both receipts are on the [receipts](/reference/receipts) page. A frozen **bond** is
+a registry status set by the risk gate; a frozen **address** is the token's control list set by the officer.
+They are separate gates and both live in contracts.

@@ -1,0 +1,52 @@
+---
+title: "The bond page"
+description: "The five tabs of a bond: order book, eligibility, coupons, collateral and risk."
+---
+
+Open a bond from the desk, or go to `/bonds/1`, `/bonds/2` or `/bonds/3`. The header shows the symbol, the
+status, the terms in one line, and the best bid, best ask and mark. Below it: the token and settlement addresses
+with copy buttons, the issuer, the next coupon, the current yield, the coverage and a HashScan link.
+
+<Tabs>
+  <Tab title="Order book">
+    The ladder: asks from the highest down to the best ask, a strip with the spread and the mid, then bids from
+    the best down. Each row shows the price, the amount left, the total in USDC, the maker and the expiry. Your
+    own rows are marked and have a **Cancel** button.
+
+    **Buy** on an ask or **Sell** on a bid opens the fill form under that row: an amount up to what the order
+    has left, the total, a note on the fee, and the button. If your USDC or bond allowance to the market is too
+    low, the app asks for the approval first.
+
+    **Place an order** on the right: bid or ask, amount, price (the mark and the face are shown for reference),
+    and an expiry. **Recent fills** lists trades with maker, taker and the HashScan link.
+  </Tab>
+  <Tab title="Eligibility">
+    Your standing with this bond's token: KYC granted or not, frozen or not, Hedera account or not, bond status,
+    and your bond balance. Two sentences give the token's live answer to a transfer from the issuer to you and
+    from you to the issuer, with the EIP-1066 code.
+
+    The **testnet KYC desk** panel requests or revokes KYC for the connected wallet.
+  </Tab>
+  <Tab title="Coupons">
+    Every paid coupon with its snapshot id, amount and time, a **Claim** button for your share, and the pending
+    schedule with its due time and HSS entity. The issuer also gets **Fund the pool**, **Pay coupon**,
+    **Schedule** and, after maturity, **Redeem**.
+  </Tab>
+  <Tab title="Collateral">
+    The vault balance in HBAR, the live Chainlink HBAR/USD price, the coverage and the floor. The issuer gets
+    **Deposit** and **Withdraw**.
+  </Tab>
+  <Tab title="Risk">
+    The registry status, the coverage, the mark and chain time on the left; the last verdict with its nonce,
+    the coverage it observed, when it was issued, who relayed it, the trusted signer and the freshness window on
+    the right. Below, the **verdict history** from `VerdictApplied` events, newest first.
+
+    **Relayer**: paste a `VERDICT_JSON` line from a workflow run. The app parses it, verifies the EIP-712
+    signature against the gate's trusted signer, shows the recovered address, and lets any wallet submit it.
+    **Admin**: the desk admin sees **Unfreeze** when the bond is Frozen.
+  </Tab>
+</Tabs>
+
+<Frame caption="Bond 1's Risk tab after the network freeze and the unfreeze.">
+  <img src="/images/app-risk.jpg" alt="Risk tab" />
+</Frame>

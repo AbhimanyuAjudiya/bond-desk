@@ -1,0 +1,42 @@
+---
+title: "If you run a relayer"
+description: "Carry a signed verdict from a workflow log to the risk gate. Anyone can; nobody can forge one."
+---
+
+The deployed monitor delivers its own verdicts. A relayer is needed for verdicts produced by the simulator, or
+to re-send a signed verdict from a log. The relayer key only pays gas: the gate checks the signature and the
+nonce, not the sender.
+
+## From the app
+
+1. Run the workflow in the simulator and copy the `VERDICT_JSON` line from its output.
+2. Open the bond's **Risk** tab, paste the line into **Relayer**, click **Parse and verify**. The app checks the
+   EIP-712 signature against the gate's trusted signer and shows the recovered address.
+3. Click **Relay** with any funded wallet. The status badge flips on FREEZE and the history gains a row.
+
+## From the terminal
+
+```sh
+relayer/scripts/extract-verdict.sh < docs/cre-evidence/bond-monitor-20260910-1533-freeze.log > relayer/inbox/freeze.json
+cd relayer
+npm run relayer -- submit --file inbox/freeze.json --dry   # verify locally, read the nonce, send nothing
+npm run relayer -- submit --file inbox/freeze.json         # send; prints the hash and the HashScan link
+npm run relayer -- watch --dir inbox                       # relay every file dropped in the folder
+```
+
+The CLI verifies the signature before any write, skips a verdict whose nonce the gate has already passed, and
+never retries a revert. See [run the relayer](/run/relayer).
+
+## What can go wrong
+
+| Result | Meaning |
+|---|---|
+| `verified=false`, exit 2 | The signature does not recover to the trusted signer. Do not send |
+| `already-applied` | The gate's last nonce is at or above this verdict's; nothing to do |
+| `StaleVerdict` | More than 900 s passed since the verdict was issued. Produce a fresh one |
+| `delivered-direct` | The file already carries a transaction hash; the workflow delivered it itself |
+
+<Note>
+  The deployed monitor fires at the top of every hour and takes the next nonce for bond 1. Relay a simulator
+  verdict within the same hour or it becomes stale by nonce.
+</Note>

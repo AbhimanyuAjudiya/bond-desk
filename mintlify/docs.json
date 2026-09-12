@@ -1,0 +1,93 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Bond Desk",
+  "description": "A compliant corporate bond desk on Hedera testnet: ATS-issued bonds, an on-chain order book, coupons paid by the Hedera Schedule Service, HBAR collateral valued by Chainlink, and risk verdicts signed inside a Chainlink CRE enclave.",
+  "colors": {
+    "primary": "#2E7D4F",
+    "light": "#5BB381",
+    "dark": "#2E7D4F"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://wd6nrvmajt.ap-south-1.awsapprunner.com"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["index", "quickstart", "concepts", "live"]
+          },
+          {
+            "group": "How it works",
+            "pages": [
+              "how-it-works/overview",
+              "how-it-works/bond-token",
+              "how-it-works/order-book",
+              "how-it-works/coupons",
+              "how-it-works/collateral",
+              "how-it-works/risk",
+              "how-it-works/compliance",
+              "how-it-works/agents"
+            ]
+          },
+          {
+            "group": "Using the app",
+            "pages": ["app/desk", "app/bond", "app/compliance-activity", "app/wallets"]
+          },
+          {
+            "group": "By role",
+            "pages": ["roles/investor", "roles/issuer", "roles/officer", "roles/relayer"]
+          },
+          {
+            "group": "Run it yourself",
+            "pages": ["run/prerequisites", "run/contracts", "run/api-app", "run/workflows", "run/relayer"]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/contracts",
+              "reference/errors",
+              "reference/receipts",
+              "reference/limits",
+              "reference/faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api/overview", "api/agents"]
+          },
+          {
+            "group": "Endpoints",
+            "openapi": "openapi.json"
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      { "label": "GitHub", "href": "https://github.com/AbhimanyuAjudiya/bond-desk" }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Open the desk",
+      "href": "https://wd6nrvmajt.ap-south-1.awsapprunner.com/desk"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/AbhimanyuAjudiya/bond-desk"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+---
+title: "Wallets"
+description: "Which wallets work, how to set up MetaMask for Hedera testnet, and the development-only burner wallets."
+---
+
+The app needs an EVM wallet that speaks EIP-1193 and can sit on Hedera testnet, chain id 296. MetaMask works.
+HashPack is not an EVM wallet in this sense and does not.
+
+## MetaMask on Hedera testnet
+
+Click **Connect** on the desk and pick MetaMask by name; the app asks MetaMask to add and switch to the network.
+To add it by hand:
+
+| Field | Value |
+|---|---|
+| Network name | Hedera testnet |
+| RPC URL | `https://testnet.hashio.io/api` |
+| Chain id | `296` |
+| Currency symbol | `HBAR` |
+| Block explorer | `https://hashscan.io/testnet` |
+
+Then fund the address from the [Hedera testnet faucet](https://portal.hedera.com/faucet). An address that has
+never received HBAR has no Hedera account yet and cannot do anything.
+
+## The wallet chooser
+
+Every wallet that announces itself over EIP-6963 is listed by its own name. A generic "other browser wallet"
+entry appears only when no wallet announces. Connection errors are shown under the button rather than swallowed.
+
+<Warning>
+  Phantom's EVM provider claims to be MetaMask, auto-connects to sites it has authorised, and reconnects after a
+  disconnect, so it can take over a session. Pick MetaMask by name, or disable Phantom for this site.
+</Warning>
+
+## Gas
+
+Every write is paid in HBAR. Hedera testnet gas prices swing, and a transaction lands in roughly five to fifteen
+seconds. Two calls need more gas than the relay estimates, a collateral withdrawal and a coupon schedule; the
+app sets explicit limits for them. Do not lower them in the wallet.
+
+## Burner wallets, development only
+
+When the app runs from the Vite dev server, opening `http://localhost:5173/?burners=1` ignores wallet
+extensions and offers in-page wallets built from the private keys in `web/.env.local`, named *investor 1*,
+*investor 2*, *investor 3*, *issuer*, *officer* and *relayer*. They sign without a popup. They never exist in
+a production build. The file is gitignored; never commit it.

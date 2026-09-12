@@ -1,0 +1,1573 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Bond Desk API",
+    "version": "1.0.0",
+    "description": "API over Bond Desk on Hedera testnet (the same host serves the Bond Desk web app to browsers): ATS-issued corporate bonds, an on-chain order book with ATS compliance at every fill, HBAR collateral valued by Chainlink feeds, and TEE-signed risk verdicts. Typical agent flow: listBonds (pick Active bonds, highest currentYieldBps) -> getWalletEligibility (can this wallet hold it?) -> getBondRisk (skip FREEZE/DEFAULT, mention WARN) -> answer with the HashScan link. All big numbers are decimal strings; timestamps are unix seconds; prices are settlement-token base units per whole bond token; bps = basis points (10000 = 100%)."
+  },
+  "servers": [
+    {
+      "url": "https://wd6nrvmajt.ap-south-1.awsapprunner.com"
+    }
+  ],
+  "paths": {
+    "/bonds": {
+      "get": {
+        "operationId": "listBonds",
+        "summary": "List every bond with price, yield, coverage and status",
+        "description": "Call this before recommending a bond. Returns all registered bonds with best bid/ask from the on-chain order book, the Chainlink-derived collateral coverage and the current yield. Only bonds with status Active can be traded; Frozen bonds reject fills until a risk verdict lifts the freeze.",
+        "x-agent-hints": [
+          "Sort by currentYieldBps desc; break ties by lower bestAsk.",
+          "Filter status == 'Active' before recommending; Frozen/Matured/Defaulted cannot be bought.",
+          "bestAsk == '0' means nobody is selling right now; say so instead of quoting a price.",
+          "coverageBps null means the price feed is stale; treat as unknown risk, not as safe.",
+          "Follow up with getWalletEligibility for the user's wallet and getBondRisk for the chosen bond."
+        ],
+        "responses": {
+          "200": {
+            "description": "Bonds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "bonds"
+                  ],
+                  "properties": {
+                    "bonds": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BondSummary"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Hedera RPC or mirror node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "upstream"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bonds/{id}": {
+      "get": {
+        "operationId": "getBond",
+        "summary": "One bond with its raw on-chain terms",
+        "description": "Same fields as listBonds plus the raw BondTerms struct from BondRegistry. Use when you need issuer, decimals or the exact coupon schedule.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Bond id (1..bondCount). Use the `id` field from listBonds.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bond",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bond"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown bond id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "bond-not-found"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Hedera RPC unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "upstream"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bonds/{id}/orderbook": {
+      "get": {
+        "operationId": "getOrderbook",
+        "summary": "Open bids/asks and the last 50 fills",
+        "description": "Order book rebuilt from BondMarket storage (open, unexpired orders only; expiry '0' = good-till-cancelled) plus recent Filled events from the Hedera mirror node. Bids are sorted price desc, asks price asc. Cost of taking an order = amount * price / 10^bondDecimals in settlement base units, before the market fee.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Bond id (1..bondCount). Use the `id` field from listBonds.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orderbook",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Orderbook"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown bond id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "bond-not-found"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Hedera RPC or mirror node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "upstream"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bonds/{id}/risk": {
+      "get": {
+        "operationId": "getBondRisk",
+        "summary": "Collateral coverage, status and the last risk verdict",
+        "description": "Live RiskGate snapshot: coverageBps = collateral value / outstanding face value in bps (10000 = 100%). lastVerdict is the most recent EIP-712 verdict signed inside the Chainlink CRE enclave and applied on Hedera. Interpretation: OK = healthy, WARN = mention the risk, FREEZE = trading halted (do not recommend), DEFAULT = collateral seized.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Bond id (1..bondCount). Use the `id` field from listBonds.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Risk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Risk"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown bond id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "bond-not-found"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Hedera RPC or mirror node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "upstream"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wallets/{address}/eligibility": {
+      "get": {
+        "operationId": "getWalletEligibility",
+        "summary": "Can this wallet hold a bond? (Hedera account, HBAR for gas, ATS KYC)",
+        "description": "Checks, per bond, whether an EVM address can receive the ATS bond token: the wallet must exist as a Hedera account (mirror node), hold HBAR for gas, and be KYC-granted on the token. canHold is false with a reason otherwise. Call this before telling a user to buy; a fill for a non-KYC wallet reverts on-chain.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "EVM address (0x + 40 hex)",
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            }
+          },
+          {
+            "name": "bondId",
+            "in": "query",
+            "required": false,
+            "description": "Restrict to one bond; omit for all bonds",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eligibility",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Eligibility"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed EVM address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "bad-address"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown bondId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "bond-not-found"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Hedera RPC or mirror node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "upstream"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bonds/{id}/verdicts": {
+      "get": {
+        "operationId": "listBondVerdicts",
+        "summary": "Every risk verdict applied to a bond, newest first",
+        "description": "VerdictApplied events from RiskGate (mirror node, newest 100 logs of the contract). Each row is one EIP-712 verdict the enclave signed and a relayer landed: the action, the coverage the enclave observed, the per-bond nonce and who relayed it.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Bond id (1..bondCount). Use the `id` field from listBonds.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verdicts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "bondId",
+                    "verdicts"
+                  ],
+                  "properties": {
+                    "bondId": {
+                      "type": "string",
+                      "pattern": "^[0-9]+$",
+                      "description": "Bond id"
+                    },
+                    "verdicts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VerdictRow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown bond id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "bond-not-found"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Mirror node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "upstream"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "listEvents",
+        "summary": "Recent desk activity across every contract, newest first",
+        "description": "Decoded events from BondMarket (OrderPlaced, OrderCancelled, Filled), BondLifecycle (Funded, CouponPaid, CouponClaimed, CouponScheduled, Redeemed), RiskGate (VerdictApplied, Unfrozen), CollateralVault (Deposited, Withdrawn, Seized), BondRegistry (StatusChanged, ...) and the ATS token (KycGranted, KycRevoked). Read from the mirror node's newest 100 logs per contract; `args` keys follow the Solidity event parameter names, enums stay numeric (status: 0 None 1 Active 2 Frozen 3 Matured 4 Defaulted; action: 0 OK 1 WARN 2 FREEZE 3 DEFAULT).",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Rows to return (1..200, default 50)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "events"
+                  ],
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Mirror node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "upstream"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wallets/{address}/kyc": {
+      "post": {
+        "operationId": "requestTestnetKyc",
+        "summary": "Testnet only: ask the compliance-officer bot to grant this wallet KYC on every bond token",
+        "x-testnet-only": true,
+        "description": "Self-service KYC for Hedera testnet. The wallet signs the EIP-191 message `Bond Desk testnet KYC request for <checksummed address> at <unix minute>` and posts the signature; the API verifies it (five-minute window), then the compliance officer key held by the API performs what ats/script/CreateBond.s.sol does: addIssuer if the bond issuer is not yet an SSI issuer, then grantKyc(account, vc id, now-1, now+10y, issuer). On testnet the officer is a bot that approves anyone who asks; in production it is a human or a KYC provider. The token, not this API, enforces the result at every transfer. Rate limited to three requests per hour per address and per IP, one in-flight transaction per address. Returns 503 when the deployment has no officer key.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "EVM address (0x + 40 hex)",
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KycRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result per bond token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KycResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, bad address, or a signature older than five minutes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "stale-signature"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signature does not recover to the address in the path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "bad-signature"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A transaction for this address is still in flight",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "pending"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than three requests in an hour",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "rate-limited"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The officer's transaction reverted (message carries the decoded reason)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "tx-failed"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "COMPLIANCE_OFFICER_KEY is not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "kyc-desk-offline"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "revokeTestnetKyc",
+        "summary": "Testnet only: revoke this wallet's own KYC on every bond token",
+        "x-testnet-only": true,
+        "description": "Same signature scheme with the message `Bond Desk testnet KYC revocation for <checksummed address> at <unix minute>`; the officer key calls revokeKyc(account). The bond issuer's own KYC cannot be revoked here (403). After this, fills to or from the wallet revert with ComplianceRejected(0x10, InvalidKycStatus).",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "EVM address (0x + 40 hex)",
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KycRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result per bond token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KycResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, bad address, or a signature older than five minutes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "stale-signature"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signature does not recover to the address in the path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "bad-signature"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The issuer's KYC is not self-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "issuer-kyc"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A transaction for this address is still in flight",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "pending"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than three requests in an hour",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "rate-limited"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The officer's transaction reverted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "tx-failed"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "COMPLIANCE_OFFICER_KEY is not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                  "examples": [
+                    {
+                      "error": "kyc-desk-offline"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "healthz",
+        "summary": "Liveness and latest Hedera block",
+        "description": "ok=false means the API is up but the Hedera RPC is unreachable; retry other calls later.",
+        "responses": {
+          "200": {
+            "description": "Health",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Machine-readable code",
+            "enum": [
+              "bond-not-found",
+              "bad-address",
+              "upstream",
+              "not-found",
+              "internal",
+              "bad-request",
+              "stale-signature",
+              "bad-signature",
+              "pending",
+              "rate-limited",
+              "tx-failed",
+              "kyc-desk-offline",
+              "issuer-kyc"
+            ]
+          }
+        }
+      },
+      "BondSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "symbol",
+          "token",
+          "settlement",
+          "vault",
+          "faceValue",
+          "couponRateBps",
+          "couponInterval",
+          "nextCoupon",
+          "maturity",
+          "status",
+          "mark",
+          "coverageBps",
+          "bestBid",
+          "bestAsk",
+          "currentYieldBps",
+          "links"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Bond id"
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Bond token symbol"
+          },
+          "token": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "ATS bond token (ERC-20 compatible security token)"
+          },
+          "settlement": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Settlement token (stablecoin) the book is quoted in"
+          },
+          "vault": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "CollateralVault holding the HBAR collateral"
+          },
+          "faceValue": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Face value per whole bond token, in settlement base units"
+          },
+          "couponRateBps": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Annual coupon rate in bps"
+          },
+          "couponInterval": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Seconds between coupons"
+          },
+          "nextCoupon": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Unix time of the next scheduled coupon"
+          },
+          "maturity": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Unix time of maturity"
+          },
+          "status": {
+            "type": "string",
+            "description": "Lifecycle status; only Active is tradable",
+            "enum": [
+              "Active",
+              "Frozen",
+              "Matured",
+              "Defaulted",
+              "None"
+            ]
+          },
+          "mark": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Oracle mark: settlement base units per whole bond token"
+          },
+          "coverageBps": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Collateral coverage in bps; null when the price feed is stale"
+          },
+          "bestBid": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Highest open bid price ('0' = none)"
+          },
+          "bestAsk": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Lowest open ask price ('0' = none)"
+          },
+          "currentYieldBps": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "faceValue * couponRateBps / bestAsk, or couponRateBps when there is no ask"
+          },
+          "links": {
+            "type": "object",
+            "required": [
+              "token",
+              "orderbook",
+              "risk"
+            ],
+            "properties": {
+              "token": {
+                "type": "string",
+                "description": "HashScan page of the token"
+              },
+              "orderbook": {
+                "type": "string",
+                "description": "getOrderbook URL"
+              },
+              "risk": {
+                "type": "string",
+                "description": "getBondRisk URL"
+              }
+            }
+          }
+        }
+      },
+      "Bond": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BondSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "terms"
+            ],
+            "properties": {
+              "terms": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "settlement",
+                  "issuer",
+                  "bondDecimals",
+                  "settlementDecimals",
+                  "faceValue",
+                  "couponRateBps",
+                  "couponInterval",
+                  "nextCoupon",
+                  "maturity",
+                  "status"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "description": "Bond token"
+                  },
+                  "settlement": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "description": "Settlement token"
+                  },
+                  "issuer": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "description": "Issuer wallet"
+                  },
+                  "bondDecimals": {
+                    "type": "integer"
+                  },
+                  "settlementDecimals": {
+                    "type": "integer"
+                  },
+                  "faceValue": {
+                    "type": "string",
+                    "pattern": "^[0-9]+$",
+                    "description": "Face value"
+                  },
+                  "couponRateBps": {
+                    "type": "string",
+                    "pattern": "^[0-9]+$",
+                    "description": "Coupon bps"
+                  },
+                  "couponInterval": {
+                    "type": "string",
+                    "pattern": "^[0-9]+$",
+                    "description": "Seconds"
+                  },
+                  "nextCoupon": {
+                    "type": "string",
+                    "pattern": "^[0-9]+$",
+                    "description": "Unix time"
+                  },
+                  "maturity": {
+                    "type": "string",
+                    "pattern": "^[0-9]+$",
+                    "description": "Unix time"
+                  },
+                  "status": {
+                    "type": "integer",
+                    "description": "0 None, 1 Active, 2 Frozen, 3 Matured, 4 Defaulted"
+                  }
+                },
+                "description": "Raw BondRegistry.terms(id)"
+              }
+            }
+          }
+        ]
+      },
+      "Order": {
+        "type": "object",
+        "required": [
+          "orderId",
+          "maker",
+          "amount",
+          "price",
+          "expiry"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Order id"
+          },
+          "maker": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Maker"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Bond tokens (base units)"
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Settlement base units per whole bond token"
+          },
+          "expiry": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Unix time; '0' = good-till-cancelled"
+          }
+        }
+      },
+      "Trade": {
+        "type": "object",
+        "required": [
+          "orderId",
+          "maker",
+          "taker",
+          "amount",
+          "price",
+          "txHash",
+          "timestamp"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Order that was filled"
+          },
+          "maker": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Maker"
+          },
+          "taker": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Taker"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Filled amount"
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Fill price"
+          },
+          "txHash": {
+            "type": "string",
+            "description": "Hedera EVM transaction hash"
+          },
+          "timestamp": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Unix time"
+          }
+        }
+      },
+      "Orderbook": {
+        "type": "object",
+        "required": [
+          "bondId",
+          "bestBid",
+          "bestAsk",
+          "bids",
+          "asks",
+          "trades"
+        ],
+        "properties": {
+          "bondId": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Bond id"
+          },
+          "bestBid": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Best bid"
+          },
+          "bestAsk": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Best ask"
+          },
+          "bids": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "asks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "trades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Trade"
+            }
+          }
+        }
+      },
+      "Verdict": {
+        "type": "object",
+        "required": [
+          "action",
+          "coverageObserved",
+          "nonce",
+          "txHash",
+          "timestamp"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Applied action",
+            "enum": [
+              "OK",
+              "WARN",
+              "FREEZE",
+              "DEFAULT"
+            ]
+          },
+          "coverageObserved": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Coverage bps the enclave observed"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Verdict nonce"
+          },
+          "txHash": {
+            "type": "string",
+            "description": "Transaction that applied it"
+          },
+          "timestamp": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Unix time"
+          }
+        }
+      },
+      "Risk": {
+        "type": "object",
+        "required": [
+          "bondId",
+          "status",
+          "coverageBps",
+          "mark",
+          "lastNonce",
+          "blockTime",
+          "lastVerdict"
+        ],
+        "properties": {
+          "bondId": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Bond id"
+          },
+          "status": {
+            "type": "string",
+            "description": "Lifecycle status",
+            "enum": [
+              "Active",
+              "Frozen",
+              "Matured",
+              "Defaulted",
+              "None"
+            ]
+          },
+          "coverageBps": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Coverage bps; null = stale feed"
+          },
+          "mark": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Oracle mark"
+          },
+          "lastNonce": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Last applied verdict nonce"
+          },
+          "blockTime": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Chain time of the snapshot"
+          },
+          "lastVerdict": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Verdict"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null when no verdict has been applied yet"
+          }
+        }
+      },
+      "WalletBond": {
+        "type": "object",
+        "required": [
+          "bondId",
+          "token",
+          "kycGranted",
+          "canHold",
+          "reason"
+        ],
+        "properties": {
+          "bondId": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Bond id"
+          },
+          "token": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Bond token"
+          },
+          "kycGranted": {
+            "type": "boolean"
+          },
+          "canHold": {
+            "type": "boolean",
+            "description": "true only when the account exists, KYC is granted and the bond is Active"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why canHold is what it is",
+            "enum": [
+              "kyc-granted",
+              "no-kyc",
+              "no-hedera-account",
+              "bond-not-active"
+            ]
+          }
+        }
+      },
+      "Eligibility": {
+        "type": "object",
+        "required": [
+          "address",
+          "hederaAccount",
+          "hbarTinybar",
+          "hbarSufficientForGas",
+          "tokens",
+          "bonds"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Queried EVM address"
+          },
+          "hederaAccount": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hedera account id (0.0.x) or null when the address has never been funded"
+          },
+          "hbarTinybar": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "HBAR balance in tinybar (1e8 = 1 HBAR)"
+          },
+          "hbarSufficientForGas": {
+            "type": "boolean",
+            "description": "true when balance >= 1 HBAR"
+          },
+          "tokens": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "tokenId",
+                "balance"
+              ],
+              "properties": {
+                "tokenId": {
+                  "type": "string",
+                  "description": "HTS token id"
+                },
+                "balance": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$",
+                  "description": "Balance"
+                }
+              }
+            }
+          },
+          "bonds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletBond"
+            }
+          }
+        }
+      },
+      "VerdictRow": {
+        "type": "object",
+        "required": [
+          "action",
+          "coverageObserved",
+          "nonce",
+          "relayer",
+          "txHash",
+          "timestamp"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Applied action",
+            "enum": [
+              "OK",
+              "WARN",
+              "FREEZE",
+              "DEFAULT"
+            ]
+          },
+          "coverageObserved": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Coverage bps the enclave observed"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Verdict nonce"
+          },
+          "relayer": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Wallet that relayed the verdict"
+          },
+          "txHash": {
+            "type": "string",
+            "description": "Transaction that applied it"
+          },
+          "timestamp": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Unix time"
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "contract",
+          "address",
+          "name",
+          "args",
+          "txHash",
+          "timestamp",
+          "blockNumber"
+        ],
+        "properties": {
+          "contract": {
+            "type": "string",
+            "description": "Emitting contract",
+            "enum": [
+              "BondMarket",
+              "BondLifecycle",
+              "RiskGate",
+              "CollateralVault",
+              "BondRegistry",
+              "BondToken"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Contract address"
+          },
+          "name": {
+            "type": "string",
+            "description": "Event name as declared in Solidity"
+          },
+          "args": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Decoded parameters keyed by name; big numbers as decimal strings"
+          },
+          "txHash": {
+            "type": "string",
+            "description": "Hedera EVM transaction hash"
+          },
+          "timestamp": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Unix time"
+          },
+          "blockNumber": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Block number when the mirror node reports one"
+          }
+        }
+      },
+      "KycRequest": {
+        "type": "object",
+        "required": [
+          "minute",
+          "signature"
+        ],
+        "properties": {
+          "minute": {
+            "type": "integer",
+            "description": "floor(unix seconds / 60) used in the signed message; must be within five minutes of now"
+          },
+          "signature": {
+            "type": "string",
+            "description": "EIP-191 personal_sign of the message by the wallet in the path",
+            "pattern": "^0x[0-9a-fA-F]+$"
+          }
+        }
+      },
+      "KycResult": {
+        "type": "object",
+        "required": [
+          "address",
+          "officer",
+          "action",
+          "results"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Wallet acted on"
+          },
+          "officer": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "Compliance officer wallet that signed the transactions"
+          },
+          "action": {
+            "type": "string",
+            "description": "What was requested",
+            "enum": [
+              "grant",
+              "revoke"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "bondId",
+                "token",
+                "result",
+                "txHashes"
+              ],
+              "properties": {
+                "bondId": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$",
+                  "description": "Bond id"
+                },
+                "token": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-fA-F]{40}$",
+                  "description": "ATS bond token"
+                },
+                "result": {
+                  "type": "string",
+                  "description": "Outcome on this token",
+                  "enum": [
+                    "granted",
+                    "already-granted",
+                    "revoked",
+                    "not-granted"
+                  ]
+                },
+                "txHashes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "Transaction hashes (addIssuer then grantKyc, or revokeKyc); empty when nothing changed"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "ok",
+          "chainId",
+          "block",
+          "kycDesk"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "chainId": {
+            "type": "integer",
+            "const": 296
+          },
+          "block": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Latest block number (decimal string), null when RPC is down"
+          },
+          "kycDesk": {
+            "type": "boolean",
+            "description": "true when the testnet KYC desk (POST/DELETE /wallets/{address}/kyc) is configured"
+          }
+        }
+      }
+    }
+  }
+}

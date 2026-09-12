@@ -1,0 +1,35 @@
+---
+title: "If you are the compliance officer"
+description: "Grant and revoke KYC, freeze and unfreeze addresses, and read what the token will answer."
+---
+
+The officer wallet holds the KYC, freeze and pause roles on every bond token. On testnet a bot behind the API
+also holds the KYC role, so self-service grants work without you.
+
+## The Compliance page
+
+Pick the bond token at the top. Then:
+
+- **Look up** any address: KYC status, whether it is on the control list, and the token's live answer to a
+  transfer to it and from it.
+- **Grant KYC** with the same arguments the issuance script uses, or **Revoke** it.
+- **Freeze** an address to put it on the control list, or **Unfreeze** it.
+
+Each action is one transaction on the token. The page decodes refusals into sentences, so you can see the
+effect of a freeze before a trade is even attempted.
+
+## What each state does at a fill
+
+| State of the seller or buyer | The token answers | The market reverts with |
+|---|---|---|
+| No KYC | `0x10`, `InvalidKycStatus` | `ComplianceRejected(0x10, InvalidKycStatus)` |
+| Frozen | `0x10`, `AccountIsBlocked` | `ComplianceRejected(0x10, AccountIsBlocked)` |
+| Token paused | `0x42`, `IsPaused` | `ComplianceRejected(0x42, IsPaused)` |
+
+A freeze on an **address** is yours. A freeze on the **bond** belongs to the risk gate and the admin.
+
+## The testnet KYC desk
+
+The desk grants KYC to anyone who signs a request, three times an hour per address. It cannot revoke the
+issuer's KYC. If it should be off for a deployment, run the API without the officer key; the app then says the
+desk is offline. See [compliance](/how-it-works/compliance).

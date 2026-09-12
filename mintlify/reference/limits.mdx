@@ -1,0 +1,53 @@
+---
+title: "Known limits"
+description: "What Bond Desk does not do, and why, stated plainly."
+---
+
+## Design limits
+
+- **The verdict signature is not enclave-attested.** CRE has no enclave-held signing primitive, so a verdict
+  proves the key was used, not that a genuine TEE used it. Not fixable from user code.
+- **DEFAULT is a coverage floor, or an admin action.** Workflow runs are stateless, so "the coupon has been
+  late for N days" has nowhere to live. A real deployment keeps missed-payment state on chain.
+- **WARN repeats every run** by design. It is a signal, not a state change.
+- **The monitor watches bond 1 only.** Bonds 2 and 3 have books and coupons; their risk status changes by hand
+  or through the simulator.
+- **Demo thresholds are scaled to faucet-sized collateral**, so coverage sits in the hundreds of bps. The
+  ladder is the same as a real one; only the numbers are small.
+- **Testnet KYC is self-service.** The officer is a bot that approves anyone. The enforcement, in the token,
+  is real; the vetting is not.
+
+## Hedera and tooling limits
+
+- **The public relay under-estimates gas** for calls that forward HBAR and for calls that reach the Schedule
+  Service. `withdraw` needs 400,000 and `schedule` needs 3,000,000 as explicit limits.
+- **A scheduled call's gas has to cover what the call itself schedules.** The first coupon ran out of gas at
+  2,000,000; the budget is now 4,000,000. The failure is only visible on the mirror node's transactions
+  endpoint.
+- **The relay's `eth_getLogs` caps at seven days or a thousand blocks**, so all history comes from the mirror
+  node, which trails consensus by a few seconds.
+- **One process, one cache.** The API caches reads for ten seconds in memory. It is a demo service, not a
+  high-availability one.
+- **EVM wallets only, and one that behaves.** HashPack is not an EIP-1193 wallet. Phantom's EVM provider can
+  take over a session; pick MetaMask by name.
+
+## Contract behaviours as deployed
+
+Documented rather than changed, so the source verification stays exact.
+
+- `schedule()` refuses with `AlreadyScheduled` after a run that executed and reverted; recovery is a manual
+  `payCoupon`.
+- Any coupon still due at maturity must be paid before holders redeem; the first `redeem` sets Matured and
+  `payCoupon` rejects Matured.
+- Seized collateral is shared across the whole snapshot supply, including the issuer's unsold inventory.
+- The settlement pool has no withdrawal path; only the HBAR float is recoverable.
+- `quote()` scans every order id ever placed; enough spam orders would push it past the relay's `eth_call`
+  limit. It is a read, so funds are unaffected.
+- A fill against your own order is not rejected, and `cost()` floors in the buyer's favour for bonds with
+  decimals (the demo bonds have none).
+
+## Bazantic
+
+Pricing, activation and Recipe editing are dashboard-only, so they are documented in the repository rather
+than applied from it. The marketplace listing awaits Bazantic's verification. The benchmark curve is Canadian
+dollars against a USD-settled testnet bond, a relative-value sanity check rather than a hedgeable spread.

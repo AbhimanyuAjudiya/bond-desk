@@ -1,0 +1,37 @@
+---
+title: "The relayer"
+description: "Set up and run the verdict courier."
+---
+
+```sh
+cd relayer && npm install && cp .env.example .env    # fill RELAYER_PRIVATE_KEY, funded from the faucet
+npm run check       # offline: verifies test/fixture.json, prints verified=true
+npm test && npm run typecheck
+```
+
+| Variable | Meaning |
+|---|---|
+| `HEDERA_RPC_URL` | default `https://testnet.hashio.io/api` |
+| `RELAYER_PRIVATE_KEY` | pays gas; not needed for `--dry` |
+| `RISKGATE_ADDRESS` | overrides the artifact; unset makes `--dry` fully offline |
+| `VERDICT_SIGNER_ADDRESS` | optional; default `RiskGate.signer()` |
+
+## Relay a verdict
+
+```sh
+relayer/scripts/extract-verdict.sh < path/to/simulate.log > relayer/inbox/verdict.json
+cd relayer
+npm run relayer -- submit --file inbox/verdict.json --dry
+npm run relayer -- submit --file inbox/verdict.json
+npm run relayer -- watch --dir inbox
+```
+
+`submit` validates the chain id and the gate address, verifies the EIP-712 signature locally (exit 2 before
+any write if it fails), skips a file that already carries a transaction hash, reads the gate's last nonce and
+skips a verdict at or below it, then sends as a legacy transaction with 500,000 gas and prints the hash and the
+HashScan link. Transport errors are retried three times with back-off; a revert is printed and never retried.
+
+`watch` submits every `*.json` in the folder every five seconds and renames handled files to `*.done.json`. A
+file that fails stays put and is not retried until the process restarts, so a reverting verdict cannot loop.
+
+Exit codes: 0 ok or skipped, 1 error or revert, 2 bad signature.

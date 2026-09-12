@@ -1,0 +1,44 @@
+---
+title: "FAQ"
+description: "Short answers to the questions people ask first."
+---
+
+<AccordionGroup>
+  <Accordion title="Is any of this real money?">
+    No. Hedera testnet, a mock USDC with an open mint, faucet HBAR. Every asset is a test asset.
+  </Accordion>
+  <Accordion title="Why does the app refuse my buy before I even sign?">
+    Every write is run as a dry run first. The token's compliance answer, or the market's own check, comes back
+    as a sentence. It saves you gas; nothing was sent.
+  </Accordion>
+  <Accordion title="Who can see the risk thresholds?">
+    Nobody outside the enclave. They are shipped to CRE as secrets and only ever exist inside the handler. What
+    is public is every verdict, with the coverage it observed.
+  </Accordion>
+  <Accordion title="Can the relayer forge a verdict?">
+    No. The gate recovers the signer from the EIP-712 signature and compares it with its trusted signer, and
+    requires a nonce above the last one. A relayer can only carry a verdict, or fail to.
+  </Accordion>
+  <Accordion title="Who pays for the coupon executions?">
+    The lifecycle contract. The contract that schedules a call is the payer of its future execution, so it keeps
+    a small HBAR float.
+  </Accordion>
+  <Accordion title="What is the difference between a frozen bond and a frozen address?">
+    A frozen bond is a registry status set by the risk gate; the market refuses every fill. A frozen address is
+    the token's control list set by the officer; the token refuses transfers involving that address.
+  </Accordion>
+  <Accordion title="Why is Hedera read over plain JSON-RPC from the enclave?">
+    Hedera is not a CRE-supported chain, so the EVM capability cannot read or write it. The only I/O inside
+    the enclave is an HTTP client, so the workflow speaks JSON-RPC to the public relay directly.
+  </Accordion>
+  <Accordion title="Why is my address 'not a Hedera account'?">
+    An EVM address becomes a Hedera account the first time it receives HBAR. Use the faucet, then try again.
+  </Accordion>
+  <Accordion title="Can I run this against my own bond?">
+    Yes. Issue through the ATS factory, deploy the desk, register the bond, and point the API and the app at the
+    artifact. [Run it yourself](/run/prerequisites).
+  </Accordion>
+  <Accordion title="Where is the source?">
+    [github.com/AbhimanyuAjudiya/bond-desk](https://github.com/AbhimanyuAjudiya/bond-desk), Apache-2.0.
+  </Accordion>
+</AccordionGroup>

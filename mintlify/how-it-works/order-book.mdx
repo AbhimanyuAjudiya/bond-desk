@@ -1,0 +1,78 @@
+---
+title: "The order book"
+description: "How orders are placed, filled and settled by the BondMarket contract, with the compliance check inside every fill."
+---
+
+The order book is the contract `BondMarket`. Every order is a row in its storage; there is no off-chain matching
+engine. The app and the API rebuild the ladder from the contract and show trades from the mirror node.
+
+<Frame caption="Bond 2's order book: four asks and two bids from three makers, the spread and the mid, and the fill form under the row it came from.">
+  <img src="/images/app-order-book.jpg" alt="Order book for BDB28" />
+</Frame>
+
+## Placing an order
+
+`place(bondId, isSell, amount, price, expiry)` writes an order and emits `OrderPlaced`.
+
+| Field | Meaning |
+|---|---|
+| `isSell` | `true` for an ask, `false` for a bid |
+| `amount` | Whole bonds; the bond tokens have zero decimals |
+| `price` | USDC per bond in base units: `990000` is 0.99 USDC |
+| `expiry` | A unix second, or `0` for good-till-cancelled. The app uses seven days |
+
+Nothing is locked when an order is placed. Allowances are only used at fill time: a bid needs USDC approved to
+the market, an ask needs bonds approved to the market. The app asks for the approval right before the fill.
+
+A price band can be switched on per bond (`setBand`), which rejects orders too far from the oracle mark with
+`PriceOutOfBand`. It is off for all three demo bonds.
+
+`cancel(orderId)` removes an order; only its maker can call it.
+
+## Filling an order
+
+`fill(orderId, amount)` runs these checks in this order and reverts on the first failure:
+
+<Steps>
+  <Step title="The order exists and has not expired">
+    `OrderNotFound` if it was filled or cancelled, `OrderExpired` if its expiry has passed.
+  </Step>
+  <Step title="The amount is sane">
+    `BadAmount` if it is zero, larger than what the order has left, or rounds to nothing in USDC.
+  </Step>
+  <Step title="The bond is Active">
+    `BondNotActive(bondId, status)` otherwise. A frozen bond fails here, whoever the buyer is.
+  </Step>
+  <Step title="The token allows the transfer">
+    The market calls the bond token's `canTransferFrom(seller, buyer, amount, "")`. Anything but allowed reverts
+    with `ComplianceRejected(code, reason)`. See [the bond token](/how-it-works/bond-token) for the order of
+    the token's own checks.
+  </Step>
+  <Step title="Settlement">
+    USDC moves from the buyer to the seller, plus the fee to the treasury. Then the bonds move from the seller
+    to the buyer with the token's `transferFrom`. Both happen in the same transaction, so a failure anywhere
+    leaves both sides untouched.
+  </Step>
+</Steps>
+
+A fill can be partial. The order keeps the remainder; a full fill deletes the row.
+
+## Cost and fee
+
+The cost of taking `amount` bonds at `price` is `amount × price` in USDC base units (the bond has zero
+decimals). The fee is a percentage of that cost, charged to the buyer on top and sent to the treasury. It is
+currently **0%** and can never exceed 1%. The maker pays nothing.
+
+## What the book shows
+
+- **Best bid, best ask, spread, mid** come from the open, unexpired orders. `quote(bondId)` on the contract
+  returns the best bid and ask.
+- **Depth** on the desk is the count of bids and asks.
+- **Recent fills** come from `Filled` events read through the mirror node, so a new trade appears a few seconds
+  after it lands.
+- **Your rows** are marked and can be cancelled from the ladder.
+
+## Reading the numbers on the API
+
+`GET /bonds/2/orderbook` returns bids sorted by price descending, asks ascending, and the last fifty fills.
+Prices and amounts are decimal strings in base units. See the [API reference](/api/overview).

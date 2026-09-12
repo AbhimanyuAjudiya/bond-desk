@@ -1,0 +1,46 @@
+---
+title: "For agents"
+description: "Pay per call over x402, use the MCP endpoint, or run the Recipe."
+---
+
+The API is also a Bazantic gateway. An agent that can pay in USDC on Base calls it without an account.
+
+## Pay per call
+
+```sh
+curl -i https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/bonds | head -12
+```
+
+The first response is a `402 Payment Required` with an x402 challenge. A client that supports x402 pays and
+retries; the gateway forwards the call to the API and returns the JSON unchanged.
+
+| Operation | Path | Price |
+|---|---|---|
+| `listBonds` | `GET /bonds` | $0.005 |
+| `getBond` | `GET /bonds/{id}` | $0.002 |
+| `getOrderbook` | `GET /bonds/{id}/orderbook` | $0.01 |
+| `getBondRisk` | `GET /bonds/{id}/risk` | $0.01 |
+| `getWalletEligibility` | `GET /wallets/{address}/eligibility` | $0.01 |
+| `healthz` | `GET /healthz` | $0.0001 |
+
+With the Bazantic CLI, `baz login` then `baz curl <gateway url>/bonds` handles the payment.
+
+## MCP
+
+Point an MCP client at `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/mcp`. `tools/list` returns the six
+operations above as tools, with the same descriptions as the OpenAPI document. Payment is handled by the
+gateway the same way.
+
+## The Recipe
+
+[Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation)
+takes a wallet address and chains the Hedera mirror-node gateway, this gateway and the Bank of Canada Valet
+gateway to name one bond the wallet can actually buy, with its yield, its spread over the benchmark, its
+coverage and its last verdict. One full run costs about $0.025 on this gateway plus the mirror-node calls.
+The steps are on the [agents](/how-it-works/agents) page.
+
+## What is not on the gateway
+
+The verdict history, the activity feed and the testnet KYC desk are on the API but deliberately not on the
+paid gateway. The KYC desk in particular stays a same-origin call from the app: an agent should not be able to
+grant itself KYC through a marketplace tool.

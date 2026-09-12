@@ -1,0 +1,42 @@
+---
+title: "If you are the issuer"
+description: "Issue a bond, post inventory, fund coupons, back it with collateral, and keep it trading."
+---
+
+The issuer is the wallet that created the bond through the ATS factory. It holds the unsold units, funds the
+coupon pool, posts collateral and, as the desk admin, can unfreeze.
+
+## Issue
+
+Issuance is a script, not a page: `ats/script/CreateBond.s.sol` calls the live ATS factory, grants KYC in the
+order ATS requires, mints the supply to you and appends the token to `ats/testnet.json`. The desk contracts
+then `register` the bond with its terms. See [run the contracts](/run/contracts).
+
+## Sell inventory
+
+On the bond's **Order book** tab, **Place an order** as an ask: amount, price, expiry. Approve the bond token
+to the market when the first fill needs it. Every fill runs the token's compliance check on the buyer, so a
+non-KYC wallet can never take your ask.
+
+## Fund coupons
+
+On the **Coupons** tab, **Fund the pool** with USDC before a coupon is due. The tab shows what the next coupon
+costs. A scheduled coupon that finds an underfunded pool reverts and has to be paid by hand once funded.
+
+The Hedera Schedule Service pays each coupon on time and arms the next one from inside the executed call. If a
+schedule fails to arm, **Schedule** re-arms it; anyone may call it.
+
+## Post collateral
+
+On the **Collateral** tab, **Deposit** HBAR. Coverage updates immediately from the Chainlink price.
+**Withdraw** works while coverage stays above the floor. Remember that the enclave monitor reads coverage every
+hour: a withdrawal that drops coverage below its private FREEZE line halts trading at the next run.
+
+## When the bond is frozen
+
+The **Risk** tab shows the verdict that froze it and the coverage it observed. Restore collateral, then
+**Unfreeze** from the Admin panel. The next hourly verdict decides again.
+
+## At maturity
+
+Pay any coupon still due, then holders **Redeem** against the pool. Fund the pool with the principal first.

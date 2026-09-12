@@ -1,0 +1,50 @@
+---
+title: "The API and the app"
+description: "Run the JSON API and the web app locally, build the image, and how the hosted deployment is set up."
+---
+
+## The API
+
+```sh
+cd api && npm install
+cp .env.example .env          # defaults match testnet; add COMPLIANCE_OFFICER_KEY to enable the KYC desk
+npm start                     # http://localhost:8787/healthz
+npm run check                 # boots against a placeholder deployment, asserts routes and openapi.json
+npm run typecheck
+```
+
+Hono on Node 22, run directly from TypeScript. It reads `deployments/testnet.json`, batches `eth_call` reads
+to the Hedera relay, reads history from the mirror node, and caches responses in memory for ten seconds. Without
+an officer key the KYC routes answer 503 and the app shows the desk as offline.
+
+## The app
+
+```sh
+cd web && npm install
+npm run dev                   # http://localhost:5173, against the API in VITE_API_URL (default localhost:8787)
+npm run typecheck && npm test
+npm run build                 # writes api/public, which the API serves at /
+```
+
+Vite, React, wagmi and Tailwind. ABIs come from `api/src/abi` and addresses from `deployments/testnet.json`
+at build time, so the app cannot drift from the API or the deployment. In development,
+`http://localhost:5173/?burners=1` offers the demo keys from `web/.env.local` as in-page wallets.
+
+## One image for both
+
+```sh
+docker build -f api/Dockerfile -t bond-desk-api .        # from the repo root
+docker run -p 8787:8787 -e PUBLIC_URL=http://localhost:8787 bond-desk-api
+```
+
+Stage one builds the app, stage two runs the API and serves the built app. A browser navigation to any path
+gets the app; a request for JSON gets JSON.
+
+## The hosted deployment
+
+The image runs on AWS App Runner in `ap-south-1` at `https://wd6nrvmajt.ap-south-1.awsapprunner.com`, from a
+tag pushed to ECR. App Runner health-checks `/healthz` and supplies `PUBLIC_URL`, which the OpenAPI document
+reports as its server. Bazantic pins the gateway's endpoint at registration, so the API stays on this host.
+
+To roll a new version: build for `linux/amd64` from a clean `git archive HEAD`, push the tag to ECR, and update
+the service's image identifier. Redeploys take three to five minutes.

@@ -1,0 +1,56 @@
+---
+title: "What Bond Desk is"
+description: "A corporate bond desk on Hedera testnet where the token enforces compliance and an enclave polices the collateral."
+---
+
+Bond Desk is a small, complete bond market running on Hedera testnet. Nothing on it is real money. The bonds, the
+USDC and the collateral are test assets, and every transaction is public on HashScan.
+
+It has four parts:
+
+<CardGroup cols={2}>
+  <Card title="Bonds issued through ATS" icon="file-certificate" href="/how-it-works/bond-token">
+    Each bond is a security token created by Hedera's Asset Tokenization Studio. The token carries its own KYC
+    list, freeze list and transfer rules.
+  </Card>
+  <Card title="An order book that asks the token first" icon="scale-balanced" href="/how-it-works/order-book">
+    Before a trade settles, the market asks the bond token whether the transfer is allowed. If the token says no,
+    nothing moves.
+  </Card>
+  <Card title="Coupons paid by the network" icon="calendar-check" href="/how-it-works/coupons">
+    The Hedera Schedule Service fires each coupon payment on time. The contract pays, and the executed call
+    schedules the next one.
+  </Card>
+  <Card title="Collateral watched from inside an enclave" icon="shield-check" href="/how-it-works/risk">
+    A Chainlink CRE confidential workflow reads the collateral coverage, compares it with thresholds nobody on
+    chain can read, and signs a verdict that can freeze trading.
+  </Card>
+</CardGroup>
+
+## The one idea to keep
+
+**The policy is private, the verdict is public and verifiable.** The thresholds that decide a freeze never leave
+the enclave. Every verdict the enclave signs lands on chain with the coverage it saw, so anyone can check that a
+freeze was justified without learning where the line sits.
+
+## Three ways in
+
+| Door | For whom | Where |
+|---|---|---|
+| The app | People with a wallet: investors, the issuer, the compliance officer, relayers | [wd6nrvmajt.ap-south-1.awsapprunner.com](https://wd6nrvmajt.ap-south-1.awsapprunner.com) |
+| The JSON API | Programs. Same host, same routes, plain JSON | [API reference](/api/overview) |
+| The paid gateway | AI agents that pay per call, over x402 or MCP | [Agents](/how-it-works/agents) |
+
+<Frame caption="The front page of the app: the statement, the live strip and the first diagram.">
+  <img src="/images/app-landing.jpg" alt="Bond Desk front page" />
+</Frame>
+
+## Where to go next
+
+- New here? Follow the [quickstart](/quickstart) and buy a bond with a test wallet in a few minutes.
+- Unsure about a word? The [concepts](/concepts) page defines everything in one line each.
+- Want the addresses and the receipts? See [what is live](/live) and the [receipts](/reference/receipts).
+- Building on it? Start at [run it yourself](/run/prerequisites) and the [API reference](/api/overview).
+
+Bond Desk was built for ETHOnline 2026. The source is on
+[GitHub](https://github.com/AbhimanyuAjudiya/bond-desk).

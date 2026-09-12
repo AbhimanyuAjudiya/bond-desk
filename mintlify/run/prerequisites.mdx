@@ -1,0 +1,46 @@
+---
+title: "Prerequisites"
+description: "Toolchain, accounts and environment files needed to run any part of Bond Desk."
+---
+
+## Tools
+
+| Tool | Version | Used by |
+|---|---|---|
+| Foundry (`forge`, `cast`) | 1.5 or newer | contracts, ATS scripts, harness |
+| Node.js | 22.9 or newer | API, web app, relayer (they run TypeScript directly, no build step) |
+| Bun | 1.2.21 or newer | the CRE workflows |
+| Chainlink CRE CLI (`cre`) | current | simulating and deploying the workflows |
+| `jq` | any | the scripts |
+| Docker | any | building the hosted image |
+
+`harness/scripts/doctor.sh` checks the Hedera-specific half of this: forge and solc versions, the RPC, a funded
+key, Sourcify and the mirror node.
+
+## Accounts and keys
+
+Nothing below is in the repository. Each component reads a gitignored `.env`.
+
+| File | Variables (names only) | Purpose |
+|---|---|---|
+| `.env` at the root | `HEDERA_RPC_URL`, `HEDERA_PRIVATE_KEY`, `COMPLIANCE_OFFICER`, `INVESTOR1`, `INVESTOR2`, `INVESTOR3_NOKYC`, `INVESTOR1_KEY`, `INVESTOR3_KEY`, `RISK_SIGNER`, `RISK_SIGNER_KEY`, `TREASURY`, `SETTLEMENT`, `HBAR_USD_FEED`, `COMPLIANCE_OFFICER_KEY` | deploy and demo scripts, the API's KYC desk |
+| `workflow/.env` | `CRE_ETH_PRIVATE_KEY`, `CRE_VERDICT_SIGNER_KEY`, `CRE_HEDERA_SUBMIT_KEY`, `CRE_BOND_WARN_BPS`, `CRE_BOND_FREEZE_BPS`, `CRE_BOND_DEFAULT_BPS`, `CRE_LIQ_*` | the workflows' secrets and the private policy |
+| `relayer/.env` | `RELAYER_PRIVATE_KEY`, optional `RISKGATE_ADDRESS`, `HEDERA_RPC_URL` | the relayer's gas key |
+| `api/.env` | `PORT`, `PUBLIC_URL`, `HEDERA_RPC_URL`, `MIRROR_URL`, `DEPLOYMENTS_FILE`, `CACHE_TTL_MS`, `COMPLIANCE_OFFICER_KEY` | the API |
+| `web/.env.local` | `VITE_API_URL`, optional `VITE_BURNER_KEYS` | the dev server |
+
+Fund the Hedera keys from the [testnet faucet](https://portal.hedera.com/faucet). The verdict signer key is
+never funded; only its address goes on chain.
+
+<Warning>
+  Never commit an `.env` file, never paste one into a log, and never show one on screen. The committed
+  simulation logs were checked for every value in `workflow/.env` before they went in.
+</Warning>
+
+## Clone
+
+```sh
+git clone https://github.com/AbhimanyuAjudiya/bond-desk
+cd bond-desk
+forge build
+```

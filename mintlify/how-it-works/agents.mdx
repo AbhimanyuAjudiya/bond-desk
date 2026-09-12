@@ -1,0 +1,96 @@
+---
+title: "Agents and the paid gateway"
+description: "The same API, exposed through Bazantic as a pay-per-call service over x402 and MCP, and a Recipe that chains three services."
+---
+
+The JSON API judges open in a browser is the same one an AI agent can pay per call for. Bazantic wraps it as a
+gateway: a subdomain that fronts the API, prices each operation, accepts payment over the x402 protocol in USDC
+on Base, and exposes every operation as an MCP tool.
+
+## The Bond Desk gateway
+
+| Item | Value |
+|---|---|
+| Gateway | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` |
+| MCP endpoint | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/mcp` |
+| Auth | x402 or MPP; the upstream API needs no credential |
+| Status | active and published |
+
+| Operation | Price | Why |
+|---|---|---|
+| `listBonds` | $0.005 | The cheap entry point agents call first |
+| `getBond` | $0.002 | One bond's detail |
+| `getOrderbook` | $0.01 | The rebuilt book plus trade history |
+| `getBondRisk` | $0.01 | Coverage and the last enclave verdict, the signal agents pay for |
+| `getWalletEligibility` | $0.01 | The compliance answer for one wallet |
+| `healthz` | $0.0001 | Priced so a liveness probe is still metered |
+
+An unpaid request gets a 402 with the payment challenge:
+
+```sh
+curl -i https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/bonds | head -12
+```
+
+The gateway exposes exactly these six operations. The newer routes on the API (verdict history, the activity
+feed and the testnet KYC desk) are deliberately outside the paid surface. The KYC desk in particular stays a
+same-origin call from the app, not a marketplace tool.
+
+## Two more gateways
+
+| Gateway | URL | Tools | Why it exists |
+|---|---|---|---|
+| Hedera Mirror Node (testnet) | `https://txrkgk2mezhbln4aeo2tdji6s4.bazgateway.com` | `getAccount`, `getTransactions` | Answers whether a wallet exists on Hedera, what it holds and what it has done. The pre-existing mirror-node service is mainnet only |
+| Bank of Canada Valet | `https://4q4fqndwcnhxrfk6thlgjnodca.bazgateway.com` | `getGroupObservations` | A daily, keyless government benchmark yield curve, so a coupon can be compared with a risk-free rate |
+
+## The Recipe
+
+[Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation)
+takes one input, a Hedera EVM wallet address, and answers "which bond can this wallet actually buy, and is it
+worth it". It chains the three gateways:
+
+<Steps>
+  <Step title="Does the wallet exist on Hedera?">
+    Mirror node `getAccount`. A 404 ends the run: the address has no Hedera account yet.
+  </Step>
+  <Step title="What has it done?">
+    Mirror node `getTransactions` by the account id, newest five.
+  </Step>
+  <Step title="What may it hold?">
+    Bond Desk `getWalletEligibility`. Only bonds with `canHold: true` continue; every exclusion and its reason is
+    kept for the answer.
+  </Step>
+  <Step title="Which are candidates?">
+    Bond Desk `listBonds`, restricted to eligible, Active bonds with an ask on the book.
+  </Step>
+  <Step title="Is any of them risky?">
+    Bond Desk `getBondRisk` per candidate. FREEZE or DEFAULT drops the bond; WARN is mentioned.
+  </Step>
+  <Step title="Is the coupon worth it?">
+    Bank of Canada `getGroupObservations` for the benchmark curve; the Recipe computes each candidate's spread
+    over the benchmark for its remaining life.
+  </Step>
+  <Step title="Answer">
+    One bond, its yield, ask, spread, coverage, risk status and last verdict, a HashScan link, the wallet's
+    account and recent activity, and the list of what was excluded and why.
+  </Step>
+</Steps>
+
+Remove any one service and the answer changes: the mirror node knows the wallet, the desk knows compliance and
+risk, the central bank knows the benchmark.
+
+<Frame caption="A dashboard test run of the Recipe on a KYC'd wallet.">
+  <img src="/images/bazantic-test-kyc.jpg" alt="Bazantic Recipe test run" />
+</Frame>
+
+## Calling it yourself
+
+With the Bazantic CLI:
+
+```sh
+npm i -g @bazantic/cli
+baz login
+baz curl https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/bonds
+```
+
+Or point any MCP client at the MCP endpoint above; `tools/list` returns the six operations with the same
+descriptions the OpenAPI document carries.

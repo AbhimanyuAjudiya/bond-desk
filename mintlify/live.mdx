@@ -1,0 +1,80 @@
+---
+title: "What is live on testnet"
+description: "Every address, bond, workflow and gateway that is running right now, with links."
+---
+
+Everything below is on Hedera testnet, chain id 296, and is read live by the app and the API. The machine-readable
+source of truth is `deployments/testnet.json` in the repository.
+
+## The app and the API
+
+| Item | Where |
+|---|---|
+| App, front page | [wd6nrvmajt.ap-south-1.awsapprunner.com](https://wd6nrvmajt.ap-south-1.awsapprunner.com) |
+| App, the desk | [/desk](https://wd6nrvmajt.ap-south-1.awsapprunner.com/desk) |
+| JSON API, health | [/healthz](https://wd6nrvmajt.ap-south-1.awsapprunner.com/healthz) |
+| OpenAPI document | [/openapi.json](https://wd6nrvmajt.ap-south-1.awsapprunner.com/openapi.json) |
+| Source | [github.com/AbhimanyuAjudiya/bond-desk](https://github.com/AbhimanyuAjudiya/bond-desk) |
+
+The same host answers both: a browser gets the app, a program asking for JSON gets JSON.
+
+## The bonds
+
+| Bond | Symbol | Coupon | Supply | Matures | Token |
+|---|---|---|---|---|---|
+| 1 | BDB27 | 5.00% a year, paid daily | 100 | 2027-09-10 | [0x0100…4504](https://hashscan.io/testnet/contract/0x0100526434C821d0df24f6CC60352F830F8b4504) |
+| 2 | BDB28 | 7.25% a year, paid weekly | 60 | 2028-09-12 | [0xf175…F40D](https://hashscan.io/testnet/contract/0xf175d5B081d8A5187Bdb5b7fA6F621eFe9c6F40D) |
+| 3 | BDB30 | 3.75% a year, paid every 30 days | 40 | 2030-09-12 | [0xd675…983f](https://hashscan.io/testnet/contract/0xd6752FfC596C8F9D4F5D530246e5698ec65a983f) |
+
+All three have a face of 1.00 USDC, zero decimals on the bond token and six on the settlement token, and were
+issued through the ATS factory already deployed on testnet. Each has an open book with bids and asks from the
+issuer and two investors.
+
+## The desk contracts
+
+| Contract | Address | Job |
+|---|---|---|
+| BondRegistry | [0x378F…b53E](https://hashscan.io/testnet/contract/0x378F45197809358b10d4F4FaBc1F9AAD6bB9b53E) | Terms and status of every bond |
+| BondMarket | [0x9e39…04B1](https://hashscan.io/testnet/contract/0x9e393461E165E9975A0A74f7FC378E6C342104B1) | The order book and compliance-gated fills |
+| CollateralVault | [0x82db…FaF7](https://hashscan.io/testnet/contract/0x82db4a2ba9859816D60E3d3CE2F6F1E29818FaF7) | HBAR collateral and coverage |
+| NavOracle | [0x5626…5505](https://hashscan.io/testnet/contract/0x56260E6CF630043421C1469Ee511E66c3eE95505) | The mark and the HBAR/USD price |
+| BondLifecycle | [0xeB36…C956](https://hashscan.io/testnet/contract/0xeB363F5aEd5D2a94b41EBF0876bd36864255C956) | Coupons, claims, schedules, redemption |
+| RiskGate | [0x1dFF…C31B](https://hashscan.io/testnet/contract/0x1dFF1d5458D6a6f6af46014de76474DC3170C31B) | Verifies and applies enclave verdicts |
+| MockUSDC | [0xF712…21B1](https://hashscan.io/testnet/contract/0xF712daABfF190B34fd6C870761Ac4efa54E821B1) | The settlement token, open mint |
+
+All seven are source-verified on Sourcify and show as verified on HashScan. The bond tokens are proxies deployed
+by the ATS factory, so their source lives in the ATS repository.
+
+## Things the desk depends on
+
+| Item | Value |
+|---|---|
+| ATS factory (Hedera's testnet deployment) | [0xd1F1…379d](https://hashscan.io/testnet/contract/0xd1F118A40f3b02883D35909eF2517e7EDd78379d) |
+| Chainlink HBAR/USD feed, 8 decimals | [0x59bC…B4a](https://hashscan.io/testnet/contract/0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a) |
+| Verdict signer (the enclave key's address, never funded) | `0xaDC8997EfbE1925d07a002A2f31Bd3cE0e6F1dcE` |
+| Next coupon of bond 1, HSS schedule | [0.0.10498485](https://hashscan.io/testnet/schedule/0.0.10498485), due 2026-09-13 10:14:52 UTC |
+| First coupon of bond 2 | [0.0.10500672](https://hashscan.io/testnet/schedule/0.0.10500672), due 2026-09-19 |
+| First coupon of bond 3 | [0.0.10501036](https://hashscan.io/testnet/schedule/0.0.10501036), due 2026-10-12 |
+
+## Chainlink CRE workflows
+
+Both run on the CRE network from the private registry since 2026-09-12.
+
+| Workflow | Runs | What it does |
+|---|---|---|
+| `bond-monitor-production` | every hour | Reads bond 1's coverage inside the enclave, signs a verdict, delivers it to RiskGate itself |
+| `liquidation-protection-production` | every 30 seconds | Defends a position in Chainlink's liquidation challenge on Sepolia |
+
+The monitor watches bond 1 only. Bonds 2 and 3 have books and coupons but no monitor; their status changes by
+hand or through the simulator.
+
+## Bazantic gateways
+
+| Gateway | URL | Tools |
+|---|---|---|
+| Bond Desk API | `https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com` (MCP at `/mcp`) | listBonds, getBond, getOrderbook, getBondRisk, getWalletEligibility, healthz |
+| Hedera Mirror Node (testnet) | `https://txrkgk2mezhbln4aeo2tdji6s4.bazgateway.com` | getAccount, getTransactions |
+| Bank of Canada Valet | `https://4q4fqndwcnhxrfk6thlgjnodca.bazgateway.com` | getGroupObservations |
+
+The published Recipe [Best Eligible Hedera Bond Recommendation](https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation)
+chains all three. See [Agents](/how-it-works/agents).

@@ -1,0 +1,44 @@
+---
+title: "If you are an investor"
+description: "Get set up, buy and sell bonds, claim coupons, redeem at maturity."
+---
+
+You need MetaMask on Hedera testnet, test HBAR and test USDC, and KYC on the bond tokens. The
+[quickstart](/quickstart) walks through all four in five minutes.
+
+## Buy
+
+1. Open a bond from the desk. Read the header: best bid, best ask, mark, coverage, next coupon.
+2. On the **Order book** tab, click **Buy** on an ask. Enter up to the amount shown. Confirm the USDC approval
+   if asked, then the fill.
+3. The trade shows under **Recent fills**; your balance shows on the **Eligibility** tab.
+
+If you would rather wait for a price, place a **bid** with **Place an order**: amount, price in USDC per bond,
+expiry. Nothing is locked until someone fills it. You can cancel it from the ladder at any time.
+
+## Sell
+
+Click **Sell** on a bid, or place an **ask**. A fill needs your bonds approved to the market; the app asks
+for the approval first.
+
+## Coupons
+
+When a coupon is paid, the **Coupons** tab shows it with a **Claim** button. Your share is your balance at the
+coupon's snapshot divided by the supply at that snapshot. Claim any time; nothing expires.
+
+## Redeem
+
+After the maturity date, **Redeem** on the Coupons tab pays your principal in USDC and burns your bonds.
+
+## What can stop you
+
+| Message | Meaning |
+|---|---|
+| `ComplianceRejected(0x10, InvalidKycStatus)` | You, or the counterparty, have no KYC on this token |
+| `ComplianceRejected(0x10, AccountIsBlocked)` | One side is frozen by the officer |
+| `BondNotActive(id, Frozen)` | The risk gate has frozen the bond; wait for the admin to unfreeze |
+| `OrderExpired`, `OrderNotFound` | The order left the book; refresh the ladder |
+
+<Tip>
+  The app runs every fill as a dry run first and shows the reason before you sign, so a refusal costs no gas.
+</Tip>

@@ -1,0 +1,84 @@
+---
+title: "The bond token"
+description: "How each bond is issued through Hedera's Asset Tokenization Studio, and how the token enforces its own rules."
+---
+
+Each bond is a security token deployed by the Asset Tokenization Studio (ATS) factory that Hedera already runs on
+testnet at [0xd1F1…379d](https://hashscan.io/testnet/contract/0xd1F118A40f3b02883D35909eF2517e7EDd78379d).
+Bond Desk did not fork or redeploy ATS. It calls the factory, then works with the token the factory made.
+
+## Issuance
+
+The script `ats/script/CreateBond.s.sol` builds one `deployBond` call with:
+
+| Setting | Value | Effect |
+|---|---|---|
+| Configuration | ATS bond config `0x…02`, version 1 | A bond token with the ATS bond facets |
+| Regulation | Reg S | The compliance profile ATS applies |
+| Internal KYC | on | The token keeps its own KYC list and checks it on every transfer |
+| Controllable | on | The compliance officer can freeze an address or pause the token |
+| Decimals | 0 | One unit is one bond |
+| Face | 1.00 USDC | The amount repaid per bond at maturity |
+| Roles | nine roles in the `Rbac` list | KYC, snapshot and maturity-redeemer rights go to the desk's contracts and the officer at creation |
+
+Then, in the order ATS requires:
+
+1. `addIssuer(issuer)` registers the issuer as a credential issuer for KYC.
+2. `grantKyc(...)` for the issuer and each approved investor.
+3. `mint(issuer, supply)` mints every unit to the issuer. ATS refuses to mint to an address without KYC.
+
+The ISIN has to pass the factory's checksum, so the demo bonds carry valid-looking test ISINs. They are testnet
+demo data, not real issuances.
+
+## The check the market relies on
+
+Before a fill moves anything, the market calls the token's `canTransferFrom(seller, buyer, amount, "")`. The
+token answers `(allowed, code, reason)` and stops at the first failing check, in this order:
+
+| Check | Code | Reason | Plain meaning |
+|---|---|---|---|
+| Paused | `0x42` | `IsPaused()` | The officer paused the whole token |
+| Control list | `0x10` | `AccountIsBlocked(address)` | The seller or buyer is frozen |
+| KYC of the seller, then the buyer | `0x10` | `InvalidKycStatus()` | One of them is not on the KYC list |
+| Allowance (only when an operator moves the tokens) | `0x54` | `InsufficientAllowance(spender, from)` | The market has not been approved for this many bonds |
+| Balance | `0x54` | `InsufficientBalance(...)` | The seller does not hold that many |
+| OK | `0x01` | none | Allowed |
+
+The market reverts with `ComplianceRejected(code, reason)` when the answer is anything but allowed, and the app
+turns that into a sentence before you sign.
+
+<Tip>
+  The **Eligibility** tab runs the same call with your address as buyer and as seller and prints the token's
+  answer. The **Compliance** page does it for any address.
+</Tip>
+
+## What each role can do on the token
+
+| Role | Held by | Rights |
+|---|---|---|
+| Default admin, issuer, controller | The issuer wallet | Mint, manage roles, corporate actions |
+| KYC, freeze, pause | The compliance officer (on testnet, the API's bot) | Grant and revoke KYC, freeze and unfreeze addresses, pause |
+| Snapshot | BondLifecycle and CollateralVault | Take a holder snapshot for a coupon or a seizure |
+| Maturity redeemer | BondLifecycle | Burn a holder's bonds at maturity when they redeem |
+
+## Three bonds, one script
+
+| Bond | Name | Coupon | Interval | Supply | Maturity |
+|---|---|---|---|---|---|
+| 1, BDB27 | Bond Desk 5% 2027 | 500 bps | daily | 100 | 2027-09-10 |
+| 2, BDB28 | Bond Desk 7.25% 2028 | 725 bps | weekly | 60 | 2028-09-12 |
+| 3, BDB30 | Bond Desk 3.75% 2030 | 375 bps | every 30 days | 40 | 2030-09-12 |
+
+Bonds 2 and 3 were issued with the same script's `create(name, symbol, isin, supply, maturity)` entrypoint,
+through the same factory and configuration as bond 1. The receipts for every step are on the
+[receipts](/reference/receipts) page.
+
+## Things worth knowing
+
+- `isFrozen` on the token does not reflect an address freeze. The freeze list is the **control list**, read with
+  `isInControlList(address)`. The app reads the right one.
+- A read-only `canTransferFrom` from the app cannot pretend to be the market, so its last check, the operator's
+  allowance, reports `InsufficientAllowance` even when a real fill would pass. The app explains that case rather
+  than calling it a refusal.
+- The ATS `transferFrom` operator is never KYC-checked, only the seller and the buyer. Bond Desk reported this
+  upstream as an issue on the ATS repository.

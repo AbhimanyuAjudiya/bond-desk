@@ -1,0 +1,25 @@
+---
+title: "Compliance and Activity"
+description: "The officer's desk and the event feed."
+---
+
+## Compliance
+
+`/compliance` is the compliance officer's desk. Pick a bond token at the top; the page then works on that token.
+
+| Panel | What it does |
+|---|---|
+| Look up an address | KYC status, freeze state (the token's control list) and the token's live `canTransferFrom` answer for a transfer to and from that address |
+| Grant KYC, revoke KYC | The officer wallet calls the token. The grant uses the same arguments as the issuance script |
+| Freeze, unfreeze | Puts the address on, or takes it off, the token's control list |
+
+Anyone can look up; only the officer wallet can act. The page decodes the token's refusal codes the same way
+the order book does, so you can see exactly why a transfer would fail before anyone tries it.
+
+## Activity
+
+`/activity` lists every decoded event across the desk's contracts and the bond tokens, newest first: orders
+placed, cancelled and filled; the pool funded, coupons paid and claimed, schedules armed; collateral deposited
+and withdrawn; verdicts applied and bonds unfrozen; status changes; KYC granted and revoked. Each row links to
+the transaction on HashScan. The data comes from the mirror node, so a new event shows up a few seconds after it
+lands. Toasts in the app link to the same rows.

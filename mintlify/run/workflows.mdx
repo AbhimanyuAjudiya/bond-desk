@@ -1,0 +1,83 @@
+---
+title: "The CRE workflows"
+description: "Simulate the confidential workflows locally, choose a private policy, ship secrets and deploy to the CRE network."
+---
+
+Two workflows on the Chainlink CRE TypeScript SDK, both registered with `handlerInTee`:
+
+| Workflow | Trigger | Job |
+|---|---|---|
+| `bond-monitor` | cron, hourly in production | Reads bond 1's coverage, signs a verdict, delivers it |
+| `liquidation-protection` | cron, every 30 s | Defends a position in Chainlink's liquidation challenge on Sepolia |
+
+They share `workflow/shared/`: JSON-RPC batching over the CRE HTTP client, transaction signing, the EIP-712
+verdict types, and `decide.ts`, the pure policy both use.
+
+## Set up
+
+```sh
+curl -sSL https://app.chain.link/cre/install.sh | bash && cre version
+cre login && cre whoami                      # required even for simulate
+
+cd workflow
+cp .env.example .env                         # fill the keys and pick your policy values
+bun install
+bun test && bun run typecheck
+```
+
+## Choose a policy
+
+The eight policy values are private inputs and are not in the repository.
+
+| Variable | Unit | Rule |
+|---|---|---|
+| `CRE_BOND_WARN_BPS` | coverage in bps | above FREEZE; WARN fires below it |
+| `CRE_BOND_FREEZE_BPS` | bps | FREEZE fires below it |
+| `CRE_BOND_DEFAULT_BPS` | bps | floor for DEFAULT; `0` disables it |
+| `CRE_LIQ_TRIGGER_HF` | health factor × 100 | above 100, with a margin |
+| `CRE_LIQ_TARGET_HF` | × 100 | above the trigger |
+| `CRE_LIQ_MAX_REPAY_VUSD` | vUSD, 2 decimals | per-intervention cap |
+| `CRE_LIQ_MAX_DEPOSIT_VETH` | vETH, 2 decimals | per-intervention cap |
+| `CRE_LIQ_COOLDOWN_SECS` | seconds | at least the cron period |
+
+The demo bond's coverage sits in the hundreds of bps, so its ladder is small.
+
+## Simulate
+
+```sh
+bun run sim:bond 2>&1 | tee ../docs/cre-evidence/bond-monitor-$(date +%Y%m%d-%H%M).log
+bun run sim:liq  2>&1 | tee ../docs/cre-evidence/liquidation-protection-$(date +%Y%m%d-%H%M).log
+
+# a FREEZE on demand: raise the private freeze line above the bond's coverage; only the verdict changes
+CRE_BOND_FREEZE_BPS=99999 bun run sim:bond
+```
+
+The simulator's banner names the enclave constraint it resolved (AWS Nitro in us-west-2). The `[USER LOG]`
+line shows a coverage bucket and the action; the last line is `VERDICT_JSON`, which a relayer can carry.
+
+Before committing a log, check that nothing from `.env` leaked into it; the one-liner is in
+`workflow/README.md` and the history of that check is in `docs/cre-evidence/README.md`.
+
+## Deploy
+
+Secrets go to the private registry one file per workflow (the registry caps a payload at ten ids), then the
+workflows:
+
+```sh
+cre secrets create bond-monitor/secrets.yaml           --target production-settings --secrets-auth=browser
+cre secrets create liquidation-protection/secrets.yaml --target production-settings --secrets-auth=browser
+cre workflow deploy liquidation-protection --target production-settings
+cre workflow deploy bond-monitor           --target production-settings
+cre workflow list --registry private
+cre execution list bond-monitor-production
+```
+
+`secrets.yaml` maps secret ids to environment variable names, never values. `config.production.json` sets the
+bond id, the gate address, the RPC and `deliver: "direct"`, which makes the enclave send the verdict itself.
+
+## What the CLI can and cannot show
+
+`cre execution list` shows every run and its result; `cre execution logs` returns the handler's log line from
+every node. Whether the network ran the handler inside the Nitro enclave the constraint asks for is not visible
+from the CLI. The attested-execution evidence is the simulator runs in `docs/cre-evidence/`, whose banner names
+the enclave.

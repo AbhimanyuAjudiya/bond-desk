@@ -1,0 +1,52 @@
+---
+title: "Receipts"
+description: "The transactions that prove each part of the storyline, in order, with HashScan links."
+---
+
+Everything below happened on Hedera testnet. The full narrative with every intermediate hash is in the
+repository's `README.md`; this page keeps the ones that prove a claim.
+
+## Issuance and compliance
+
+| Beat | Receipt |
+|---|---|
+| `deployBond` on the live ATS factory, bond 1 | [0xf12b…f173](https://hashscan.io/testnet/transaction/0xf12ba21df080b14138f1a48adc31bb777ed192278d71f87ae98c021212bcf173) |
+| `addIssuer`, then `grantKyc` for the issuer and two investors, then `mint(issuer, 100)` | [0x08bd…40d6](https://hashscan.io/testnet/transaction/0x08bde15a0ffad60a406bc5ad5c3b3ddfb6936c5460bf0ba6b09d2209122040d6), [0x6a43…8c66](https://hashscan.io/testnet/transaction/0x6a438b61fa6aca3666917ad9bba0eb9b1e927e358f264bfd67dd2d348d748c66), [0xf6ed…1b7a](https://hashscan.io/testnet/transaction/0xf6ed0aa4d158b8b32e11f250470c11ba8d96181e92ce1bf9dd44ce30fe931b7a) |
+| The issuer's first ask, 20 bonds at 0.99 | [0x0e44…2ba](https://hashscan.io/testnet/transaction/0x0e44ff6eef3aaf178d164f196572222e7b91622cf479e222ba48f64ff90bf2ba) |
+| A KYC'd investor fills it | [0x07e8…7bd4](https://hashscan.io/testnet/transaction/0x07e85a43f2528f87172d71beaf61f60d8f0552859d01b29bf7536dbb7d067bd4) |
+| The non-KYC wallet cannot: `ComplianceRejected(0x10, InvalidKycStatus)` | a read against the same order, no gas spent |
+| Bond 2 `deployBond` | [0xa709…36d3](https://hashscan.io/testnet/transaction/0xa7095a24565eb49d9250dc2d02f9427e4f9f59c4e9dbe5083cd7296abb8036d3) |
+| Bond 3 `deployBond` | [0x5fa1…b273](https://hashscan.io/testnet/transaction/0x5fa1d505b1baf0c09d080aaff8652447438a1795addba54ea72e11341389b273) |
+
+## Collateral and coupons
+
+| Beat | Receipt |
+|---|---|
+| 100 HBAR of collateral, coverage 762 bps at the time | [0xe804…4acd](https://hashscan.io/testnet/transaction/0xe80415c206375cbe2580ce4c4bf415de7782ecb1b20dc2398224e5de0cab4acd) |
+| Coupon 1, the first schedule created via HIP-1215 | [0.0.10457460](https://hashscan.io/testnet/schedule/0.0.10457460) |
+| Coupon 2's schedule executed two seconds early and reverted `CouponNotDue` (the lag finding) | [0.0.10457462](https://hashscan.io/testnet/schedule/0.0.10457462) |
+| Coupon 3, executed on time, child call succeeded | [0.0.10482928](https://hashscan.io/testnet/schedule/0.0.10482928) |
+| Coupon 4, armed from inside coupon 3 | [0.0.10498485](https://hashscan.io/testnet/schedule/0.0.10498485) |
+| Bond 2's first coupon, armed | [0.0.10500672](https://hashscan.io/testnet/schedule/0.0.10500672) |
+| Bond 3's first coupon, armed | [0.0.10501036](https://hashscan.io/testnet/schedule/0.0.10501036) |
+
+## Verdicts
+
+| Beat | Receipt |
+|---|---|
+| A relayed WARN from a simulator run | [0xe534…d7b6](https://hashscan.io/testnet/transaction/0xe534d72b2f9ec132756dc66b63e1476b05a50d13f8613b69a327ac6e085dd7b6) |
+| A relayed FREEZE from a simulator run | [0x18d4…b14e](https://hashscan.io/testnet/transaction/0x18d46f9627d0e7808d2c78d73848c5aefd813d73147bd19abc74c8e0573db14e) |
+| A WARN the enclave delivered itself, no relayer | [0x681c…95b](https://hashscan.io/testnet/transaction/0x681cb6a29fd3b39144d3e799090fa2c25efcb1376760943f2cf7edb66f2bb95b) |
+| The first verdict from the deployed workflow on the CRE network, 07:00 UTC | [0xe1bc…cb2](https://hashscan.io/testnet/transaction/0xe1bc8a6d205c62d0d0123a91a77100dcb8da5a77810fbbe0e85de4de5f2e5cb2) |
+| The network FREEZE, 12:00 UTC, coverage 448 bps, nonce 10 | [0x7916…b5a](https://hashscan.io/testnet/transaction/0x79168dab6bc406a757a4c7aa76039f94da662512430ec9cae4e6611ad6657b5a) |
+
+## Chainlink liquidation challenge
+
+| Beat | Receipt |
+|---|---|
+| `join()` on Sepolia | [0x22fe…64a9](https://sepolia.etherscan.io/tx/0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9) |
+
+## Everything else
+
+The **Activity** page of the app lists every event across the contracts newest first with a HashScan link, and
+`docs/seed-20260912.json` in the repository holds every hash from the seeding of bonds 2 and 3 and their books.

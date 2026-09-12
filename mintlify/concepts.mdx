@@ -1,0 +1,69 @@
+---
+title: "Concepts in one line each"
+description: "Every word used on the desk and in these docs, defined plainly."
+---
+
+## The bond
+
+| Term | Meaning |
+|---|---|
+| Bond | A loan split into units. Each unit has a face value of 1.00 USDC, pays a coupon at a fixed rate, and is repaid at maturity. |
+| Bond token | The Hedera token that represents the units. It is an Asset Tokenization Studio (ATS) security token with its own compliance rules. |
+| Face | The amount one bond is worth at maturity: 1.00 USDC here. |
+| Coupon | The periodic interest payment. BDB27 pays 5% a year, split daily; BDB28 7.25% weekly; BDB30 3.75% every 30 days. |
+| Maturity | The date the principal is repaid and the token is redeemed. |
+| Issuer | The wallet that created the bond, holds the unsold inventory, funds coupons and posts collateral. |
+| Supply | How many units exist: 100 for BDB27, 60 for BDB28, 40 for BDB30. |
+
+## The market
+
+| Term | Meaning |
+|---|---|
+| Order book | The list of open offers to buy (bids) and sell (asks) one bond, kept on chain by the market contract. |
+| Bid | An offer to buy a number of bonds at a price. Shown in green. |
+| Ask | An offer to sell. Shown in red. |
+| Best bid, best ask | The highest bid and the lowest ask. The gap between them is the spread. |
+| Mid | Halfway between the best bid and the best ask. |
+| Mark | The reference price from the desk's oracle, close to 1.00 USDC for a bond near par. |
+| Fill | Taking an open order, fully or partly. USDC goes from the buyer to the seller, bonds go the other way, in one transaction. |
+| Maker, taker | The maker placed the order; the taker fills it. The maker pays no fee; the fee, currently 0%, is charged to the buyer. |
+| Expiry | When an order leaves the book on its own. Orders here expire after seven days by default. |
+| Price | USDC per one bond, with six decimals under the hood. `990000` on the API means 0.99 USDC. |
+
+## Compliance
+
+| Term | Meaning |
+|---|---|
+| KYC | The token's list of addresses allowed to hold it. A transfer to or from an address that is not on the list is refused by the token itself. |
+| Compliance officer | The wallet with the right to grant or revoke KYC and to freeze an address. On testnet, a bot behind the API plays this role. |
+| Control list | The token's freeze list. A frozen address cannot send or receive, even with KYC. |
+| `canTransferFrom` | The question the market asks the token before every fill: may this seller send this many bonds to this buyer? |
+| EIP-1066 code | The one-byte answer that comes back: `0x01` allowed, `0x10` disallowed, `0x42` paused, `0x54` insufficient funds. |
+
+## Risk
+
+| Term | Meaning |
+|---|---|
+| Collateral | HBAR the issuer locks in the vault to back the bond. |
+| Coverage | Collateral value divided by the outstanding face value, in basis points. 10,000 bps is 100%. |
+| Basis point (bps) | One hundredth of a percent. 598 bps is 5.98%. |
+| Chainlink feed | The HBAR/USD price the vault uses to value collateral, read on chain from Chainlink's aggregator on Hedera testnet. |
+| Enclave, TEE | A trusted execution environment. The risk workflow runs inside one, so its thresholds and signing key are never visible. |
+| CRE | Chainlink Runtime Environment, where the confidential workflow is deployed and scheduled. |
+| Verdict | The enclave's signed decision about one bond: OK, WARN, FREEZE or DEFAULT, plus the coverage it observed. |
+| Nonce | A counter per bond that every verdict must increase. It stops a verdict from being replayed. |
+| Relayer | Any wallet that carries a signed verdict to the risk gate. It pays gas and nothing else; it cannot forge or change a verdict. |
+| Risk gate | The contract that checks a verdict's signature and nonce, records it, and freezes the bond on FREEZE. |
+| Frozen | The bond status in which the market refuses every fill. The admin can unfreeze. |
+
+## Hedera words
+
+| Term | Meaning |
+|---|---|
+| HBAR | Hedera's native coin. Gas and collateral are paid in it. |
+| Tinybar | One hundred-millionth of an HBAR. The EVM on Hedera counts balances in tinybar. |
+| Hedera account | Every address that has received HBAR has an account id like `0.0.10455954`. An address with no account cannot do anything yet. |
+| Mirror node | Hedera's public history service. The app and the API read past events from it, a few seconds behind consensus. |
+| HashScan | The Hedera block explorer. Every receipt in these docs links to it. |
+| Schedule Service, HSS | The Hedera system contract that runs a contract call at a chosen future second. It pays the coupons here. |
+| HIP-1215 | The Hedera improvement proposal that lets a contract schedule a future call. |

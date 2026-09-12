@@ -1,0 +1,99 @@
+---
+title: "Contracts"
+description: "The six desk contracts and the settlement token: what each one does, who may call what, and the events they emit."
+---
+
+All six are in `contracts/src/`, written in Solidity 0.8.28, verified on Sourcify. Addresses are on the
+[live](/live) page. Access control is one shared module (`RegistryAuth`): the desk **admin** is the deployer,
+each bond has one **issuer**, and the **gate** is `RiskGate`.
+
+## BondRegistry
+
+The list of bonds. Each bond has terms (token, settlement token, face value, coupon rate in bps, coupon
+interval, next coupon, maturity, decimals, issuer) and a status: `None`, `Active`, `Frozen`, `Matured`,
+`Defaulted`.
+
+| Function | Who | What |
+|---|---|---|
+| `register(...)` | admin | Adds a bond with its terms; emits `BondRegistered` |
+| `terms(bondId)`, `status(bondId)` | anyone | Read |
+| `setStatus(bondId, status)` | gate role | Used by RiskGate and BondLifecycle; emits `StatusChanged` |
+| `setNextCoupon(bondId, when)` | gate role | Advanced by BondLifecycle after each coupon |
+
+## BondMarket
+
+The order book. See [the order book](/how-it-works/order-book).
+
+| Function | Who | What |
+|---|---|---|
+| `place(bondId, isSell, amount, price, expiry)` | anyone | Adds an order; emits `OrderPlaced` |
+| `cancel(orderId)` | the maker | Removes it; emits `OrderCancelled` |
+| `fill(orderId, amount)` | anyone | Compliance check, USDC then bonds, in one transaction; emits `Filled` |
+| `quote(bondId)` | anyone | Best bid and best ask |
+| `cost(amount, price, bondDecimals)` | anyone | The USDC cost before fee |
+| `setBand(bondId, bps)`, `setFee(treasury, bps)` | admin | Price band per bond (off by default); the fee, at most 100 bps |
+
+## CollateralVault
+
+HBAR collateral per bond and the coverage calculation. See [collateral](/how-it-works/collateral).
+
+| Function | Who | What |
+|---|---|---|
+| `deposit(bondId)` payable | issuer | Adds collateral; emits `Deposited` |
+| `withdraw(bondId, amount)` | issuer | Removes collateral if coverage stays above the floor; emits `Withdrawn` |
+| `coverageBps(bondId)` | anyone | Collateral value over outstanding principal, in bps |
+| `seize(bondId)` | gate | Locks everything for holders after DEFAULT; emits `Seized` |
+| `claimSeized(bondId)` | holders | Pro-rata share at the seizure snapshot |
+| `setMinCoverage(bps)` | admin | The withdrawal floor |
+
+## NavOracle
+
+| Function | What |
+|---|---|
+| `hbarUsd()` | The Chainlink HBAR/USD answer, 8 decimals; reverts `StaleFeed` past the allowed age |
+| `mark(bondId)` | Face value plus accrued coupon for the current period; face after maturity |
+| `setStaleAfter(seconds)` | admin only |
+
+## BondLifecycle
+
+Coupons, claims, scheduling and redemption. See [coupons](/how-it-works/coupons).
+
+| Function | Who | What |
+|---|---|---|
+| `fund(bondId, amount)` | anyone, usually the issuer | Pulls USDC into the pool; emits `Funded` |
+| `couponDue(bondId)` | anyone | What the next coupon costs now |
+| `payCoupon(bondId)` | anyone, including the scheduled execution | Snapshot, reserve, advance, schedule the next; emits `CouponPaid`, `CouponScheduled` |
+| `claim(bondId, couponId)`, `claimable(...)` | holders | Pull a share; emits `CouponClaimed` |
+| `schedule(bondId)` | anyone | Re-arm the next run if nothing is armed |
+| `redeem(bondId)` | holders, after maturity | Principal from the pool, bonds burned; emits `Redeemed` |
+| `withdrawHbar(to, amount)` | admin | Recover the HBAR float that pays for scheduled executions |
+
+Constants: `SCHEDULE_GAS` 4,000,000, `PROBE_MAX` 8, `SCHEDULE_LAG` 10 seconds.
+
+## RiskGate
+
+Verifies and applies verdicts. See [risk verdicts](/how-it-works/risk).
+
+| Function | Who | What |
+|---|---|---|
+| `submit(verdict, signature)` | anyone | Checks signer, nonce and freshness; records; freezes or defaults; emits `VerdictApplied` |
+| `unfreeze(bondId)` | admin | Frozen back to Active; emits `Unfrozen` |
+| `snapshot(bondId)` | anyone | Everything the monitor reads in one call |
+| `hashVerdict(verdict)` | anyone | The EIP-712 digest |
+| `setSigner(address)`, `setFreshness(seconds)` | admin | The trusted signer; the freshness window, 900 s |
+
+The verdict type is `Verdict(uint256 bondId, uint8 action, uint256 coverageObserved, uint64 issuedAt, uint64
+nonce)` under the domain `BondDeskRiskGate`, version `1`, chain 296, verifying contract RiskGate. Actions:
+0 OK, 1 WARN, 2 FREEZE, 3 DEFAULT.
+
+## MockUSDC
+
+The settlement token on testnet: six decimals and an open `mint(to, amount)` anyone can call. The desk's
+**Get 10,000 test USDC** button uses it.
+
+## The bond tokens
+
+ATS resolver proxies deployed by the factory. The desk calls `canTransferFrom`, `transferFrom`,
+`takeSnapshot`, `balanceOfAtSnapshot`, `totalSupplyAtSnapshot`, `getKycStatusFor`, `isInControlList`,
+`paused` and `fullRedeemAtMaturity` on them. Their ABI-exact interfaces, pinned to an ATS commit, are in
+`ats/src/` and `contracts/src/interfaces/IATSBond.sol`.

@@ -1,0 +1,76 @@
+---
+title: "Quickstart"
+description: "Buy a test bond on Hedera testnet in about five minutes, with MetaMask and nothing else."
+---
+
+You need a browser with MetaMask and about five minutes. Everything you touch is a test asset.
+
+<Steps>
+  <Step title="Add Hedera testnet to MetaMask">
+    Open the desk at [wd6nrvmajt.ap-south-1.awsapprunner.com/desk](https://wd6nrvmajt.ap-south-1.awsapprunner.com/desk)
+    and click **Connect**. Pick MetaMask by name. The app asks MetaMask to add and switch to Hedera testnet for
+    you. If you prefer to add it by hand, use these values:
+
+    | Field | Value |
+    |---|---|
+    | Network name | Hedera testnet |
+    | RPC URL | `https://testnet.hashio.io/api` |
+    | Chain id | `296` |
+    | Currency symbol | `HBAR` |
+    | Block explorer | `https://hashscan.io/testnet` |
+  </Step>
+  <Step title="Get test HBAR for gas">
+    Every transaction is paid in HBAR. Copy your address from the wallet chip at the top right and paste it into
+    the [Hedera testnet faucet](https://portal.hedera.com/faucet). The desk shows your balance under
+    **Testnet self-service** once the HBAR arrives.
+
+    <Note>
+      An address that has never received HBAR does not exist as a Hedera account yet. Fund it before anything
+      else; the **Eligibility** tab says "no Hedera account" until you do.
+    </Note>
+  </Step>
+  <Step title="Get test USDC">
+    On the desk, click **Get 10,000 test USDC**. The settlement token is a mock USDC with an open mint, so
+    anyone can take some. Confirm in MetaMask.
+  </Step>
+  <Step title="Request testnet KYC">
+    Click **Request testnet KYC**. MetaMask asks you to sign a one-line message; no gas is spent. The API's
+    compliance-officer bot then grants KYC to your address on every bond token. On testnet the officer approves
+    anyone who asks. In production it is a human or a KYC provider. Either way the token, not the page, enforces
+    the result.
+
+    The **Eligibility** tab of any bond turns from **not eligible** to **KYC granted** once the grant lands,
+    usually within fifteen seconds.
+  </Step>
+  <Step title="Buy from the order book">
+    Open a bond from the desk (BDB28 is a good first one), stay on the **Order book** tab and click **Buy** on
+    one of the red ask rows. Enter an amount up to the size shown, then confirm. MetaMask asks twice: once to
+    approve USDC to the market, once for the fill itself.
+
+    The trade appears under **Recent fills** with its HashScan link, the ask shrinks, and your bond balance
+    shows on the **Eligibility** tab.
+  </Step>
+  <Step title="See what the token would have said">
+    Curious what happens without KYC? Revoke your own KYC from the **Eligibility** tab, then try the same
+    **Buy**. The app runs the fill as a dry run first and shows the token's answer,
+    `ComplianceRejected(0x10, InvalidKycStatus)`, before anything is signed. Nothing is sent; nothing moves.
+    Request KYC again to continue.
+  </Step>
+</Steps>
+
+## What you just did
+
+- The bond you bought is an ATS security token. Its own compliance check ran inside the fill.
+- The price you paid is in USDC per bond, quoted against a live mark from the Chainlink HBAR/USD feed.
+- Your holding earns the next coupon. When it is paid, the **Coupons** tab shows a **Claim** button.
+
+## If something refuses
+
+| What you see | Why | What to do |
+|---|---|---|
+| `ComplianceRejected(0x10, InvalidKycStatus)` | The token has not granted KYC to your address | Request testnet KYC on the Eligibility tab |
+| `BondNotActive(1, Frozen)` | The risk gate has frozen this bond | Wait for the admin to unfreeze, or trade another bond |
+| "no Hedera account" | The address has never received HBAR | Use the faucet |
+| `BadAmount` | You asked for more than the order has left | Enter an amount up to the size shown |
+
+The [errors reference](/reference/errors) lists every message the app can decode.

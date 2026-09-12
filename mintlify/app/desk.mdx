@@ -1,0 +1,52 @@
+---
+title: "The front page and the desk"
+description: "What the two top-level pages show and what a connected wallet can do from the desk."
+---
+
+## The front page
+
+`/` is a single page for someone who has never seen the project: one statement, a live strip read from the
+API (number of bonds, best ask, coverage, the last verdict with its nonce, the next coupon, the current block),
+two hand-drawn diagrams of how a fill is judged and how a freeze happens, receipts with HashScan links, and the
+three doors: the app, the API and the agents.
+
+## The desk
+
+`/desk` is the trading view.
+
+<Frame caption="The desk with three bonds.">
+  <img src="/images/app-desk.jpg" alt="The desk" />
+</Frame>
+
+### Bonds
+
+One row per bond: status, coupon, maturity, best bid and ask, depth (count of bids and asks), current yield,
+coverage with a **thin** tag when it is low, the next coupon, and a HashScan link. Click the symbol to open the
+bond. The yield column sorts.
+
+### Your eligibility
+
+Once a wallet is connected, this panel shows its Hedera account id, HBAR balance and HTS token count, and one
+line per bond saying whether the bond token would accept a transfer to this wallet and why not.
+
+### Testnet self-service
+
+Three things a new wallet needs, in order:
+
+1. **HBAR for gas**, from the [Hedera testnet faucet](https://portal.hedera.com/faucet). The panel shows your
+   balance.
+2. **Test USDC**: the settlement token is a mock USDC with an open mint. The button mints 10,000 to you.
+3. **KYC on the bond tokens**: sign one message; the API's officer bot grants KYC on every bond token. See
+   [compliance](/how-it-works/compliance).
+
+## The header
+
+The top bar shows the live HBAR/USD price and the latest block, and the wallet chip with the connected address
+and its HBAR balance. Clicking the chip opens the wallet chooser or disconnects. If the wallet is on another
+network, a bar asks it to switch to Hedera testnet and shows the network details for adding it by hand.
+
+## Every write, the same way
+
+Every transaction the app sends goes through one pipeline: a dry run first, so a revert is decoded into a
+sentence before anything is signed; then send, wait for the receipt, and refresh. Confirm buttons arm for eight
+seconds and disarm on their own.

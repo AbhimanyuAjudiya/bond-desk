@@ -1,0 +1,79 @@
+---
+title: "Errors"
+description: "Every revert the app can decode, what it means, and what to do."
+---
+
+The app runs every write as a dry run first and turns a revert into a sentence before you sign. This is the
+full list, grouped by contract.
+
+## Compliance and the market
+
+| Error | Meaning | What to do |
+|---|---|---|
+| `ComplianceRejected(0x10, InvalidKycStatus)` | The seller or the buyer has no KYC on the token | Request KYC on the Eligibility tab |
+| `ComplianceRejected(0x10, AccountIsBlocked)` | One side is on the token's control list (frozen) | Ask the officer |
+| `ComplianceRejected(0x42, IsPaused)` | The token is paused | Wait for the officer to unpause |
+| `ComplianceRejected(0x54, InsufficientAllowance)` | The market is not approved to move that many bonds | Approve the bond token to the market; the app offers it |
+| `ComplianceRejected(0x54, InsufficientBalance)` | The seller does not hold that many | Fill less |
+| `BondNotActive(id, status)` | Only Active bonds trade; the bond is Frozen, Matured or Defaulted | Wait for the admin, or trade another bond |
+| `OrderNotFound(id)` | The order was filled or cancelled | Refresh the ladder |
+| `OrderExpired(id)` | Its expiry has passed | Refresh the ladder |
+| `NotMaker` | Only the wallet that placed an order can cancel it | |
+| `BadAmount` | Zero, more than the order has left, or rounds to nothing in USDC | Enter an amount up to the size shown |
+| `BadPrice`, `BadExpiry` | Price must be positive; expiry must be in the future or zero | |
+| `PriceOutOfBand(price, mark, band)` | The bond has a price band and the order is outside it | Price closer to the mark |
+| `BondTransferFailed` | The token's `transferFrom` returned false | Report it |
+| `FeeTooHigh` | The admin tried to set a fee above 1% | |
+
+## Coupons and redemption
+
+| Error | Meaning |
+|---|---|
+| `CouponNotDue(next)` | The next coupon is not due yet |
+| `NoMoreCoupons` | Every coupon up to maturity has been paid |
+| `CouponUnderfunded(due, funded)` | The pool holds less than the coupon; fund it first |
+| `NoCoupon` | That coupon has not been paid |
+| `AlreadyClaimed`, `NothingToClaim` | This wallet already claimed, or held nothing at the snapshot |
+| `NotMatured(maturity)` | Redemption opens at maturity |
+| `NothingToRedeem` | The wallet holds no bonds |
+| `PrincipalUnderfunded(need, funded)` | The pool holds less than the principal |
+| `AlreadyScheduled` | The next run is already armed |
+| `BadStatus(status)` | The bond's status does not allow this action |
+
+## Collateral
+
+| Error | Meaning |
+|---|---|
+| `CoverageTooLow(after, min)` | The withdrawal would drop coverage below the floor |
+| `DirectDepositNotAllowed` | Send collateral through `deposit(bondId)`, not a plain transfer |
+| `AlreadySeized`, `NotSeized` | The collateral has, or has not, been seized after a DEFAULT |
+| `StaleFeed(updatedAt, allowedAge)` | The HBAR/USD feed is older than allowed |
+| `BadAnswer` | The feed returned a non-positive price |
+
+## Risk gate
+
+| Error | Meaning |
+|---|---|
+| `BadSignature` | The verdict does not recover to the trusted signer |
+| `StaleNonce(got, last)` | The nonce is not above the last applied one; already applied or superseded |
+| `StaleVerdict(issuedAt, now)` | More than 900 s since the verdict was issued |
+| `FutureVerdict(issuedAt, now)` | The verdict is dated more than 300 s ahead of chain time |
+| `BadAction(action)` | Unknown action |
+| `NotFrozen(status)` | Nothing to unfreeze |
+
+## Access
+
+| Error | Meaning |
+|---|---|
+| `NotAdmin`, `NotIssuer`, `NotGate` | The caller lacks that role |
+| `UnknownBond(id)` | Not registered |
+| `InvalidTerms` | The registration terms are inconsistent |
+
+## API errors
+
+| Status | Body | Meaning |
+|---|---|---|
+| 400 | `{"error":"bad-address"}` | Not a 0x address |
+| 404 | `{"error":"bond-not-found"}` | No such bond id |
+| 502 | `{"error":"upstream","detail":"<method>"}` | The Hedera RPC or the mirror node failed |
+| 503 | KYC desk | The deployment has no officer key |
