@@ -5,7 +5,7 @@ import { RPC_URL, chain } from "../config/chain"
 
 // Dev-only wallets built from private keys in web/.env.local, so real testnet transactions can be driven from the
 // in-app browser. Imported through a DEV-guarded dynamic import: never part of a production bundle.
-const NAMES = ["investor 1", "investor 2", "investor 3", "issuer"]
+const NAMES = ["investor 1", "investor 2", "investor 3", "issuer", "officer", "relayer"]
 const STORAGE = "bond-desk:burner"
 
 export const burnerConnectors = (keys: string) =>

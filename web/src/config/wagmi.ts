@@ -2,7 +2,11 @@ import { createConfig, http, type CreateConnectorFn } from "wagmi"
 import { injected } from "wagmi/connectors"
 import { RPC_URL, chain } from "./chain"
 
-/** Injected (MetaMask) only; in dev, burner wallets from VITE_BURNER_KEYS are added and tree-shaken out of production builds. */
+/**
+ * Every EIP-6963 wallet the browser announces (MetaMask, Rabby, Backpack, …) becomes its own connector so the user picks
+ * one by name; the plain `injected()` entry is the fallback for wallets that only set window.ethereum. In dev, burner
+ * wallets from VITE_BURNER_KEYS are added and tree-shaken out of production builds.
+ */
 export async function makeConfig() {
   const connectors: CreateConnectorFn[] = [injected({ shimDisconnect: true })]
   if (import.meta.env.DEV && import.meta.env.VITE_BURNER_KEYS) {
@@ -12,7 +16,7 @@ export async function makeConfig() {
   return createConfig({
     chains: [chain],
     connectors,
-    multiInjectedProviderDiscovery: false,
+    multiInjectedProviderDiscovery: true,
     // hashio caps JSON-RPC batches at 100; parallel reads from one render share a batch
     transports: { [chain.id]: http(RPC_URL, { batch: { batchSize: 50, wait: 16 } }) },
   })

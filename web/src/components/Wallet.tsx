@@ -42,21 +42,30 @@ export function WalletChip() {
       </div>
     )
   }
+  // Connecting never forces the chain: a wallet that refuses (or cannot) add Hedera testnet still connects, and
+  // NetworkGuard then offers the switch with an explicit add-chain request and a visible error.
+  const pick = (c: (typeof connectors)[number]) => { connect({ connector: c }); setOpen(false) }
+  const label = (c: (typeof connectors)[number]) => (c.id === "injected" ? "Other browser wallet (window.ethereum)" : c.name)
+  const discovered = connectors.filter((c) => c.id !== "injected")
   return (
     <div ref={ref} className="relative">
-      <Button variant="primary" busy={isPending} onClick={() => (connectors.length === 1 ? connect({ connector: connectors[0]!, chainId: chain.id }) : setOpen((o) => !o))} aria-haspopup="menu" aria-expanded={open}>
+      <Button variant="primary" busy={isPending} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
         Connect wallet
       </Button>
       {open && (
-        <div role="menu" className="absolute right-0 mt-1 w-60 panel shadow-lg p-1.5 z-40 flex flex-col">
+        <div role="menu" className="absolute right-0 mt-1 w-72 panel shadow-lg p-1.5 z-40 flex flex-col">
+          {discovered.length === 0 && (
+            <p className="text-[12px] text-muted px-2.5 py-1.5">No wallet extension announced itself. Install MetaMask (or any EVM wallet that supports custom networks), then reload.</p>
+          )}
           {connectors.map((c) => (
-            <button key={c.uid} role="menuitem" className="text-left text-[13px] px-2.5 py-1.5 rounded hover:bg-surface-2" onClick={() => { connect({ connector: c, chainId: chain.id }); setOpen(false) }}>
-              {c.type === "injected" ? "Browser wallet (MetaMask)" : c.name}
+            <button key={c.uid} role="menuitem" className="text-left text-[13px] px-2.5 py-1.5 rounded hover:bg-surface-2" onClick={() => pick(c)}>
+              {label(c)}
             </button>
           ))}
-          {error && <p className="text-bad text-[12px] px-2.5 py-1">{error.message.split("\n")[0]}</p>}
+          <p className="text-[11px] text-muted px-2.5 pt-1.5 border-t border-line mt-1">EVM wallets only (MetaMask, Rabby, …) on Hedera testnet, chain {chain.id}. HashPack is not an EVM wallet.</p>
         </div>
       )}
+      {error && !open && <p className="absolute right-0 mt-1 w-72 text-bad text-[12px] panel p-2 z-40">{error.message.split("\n")[0]}</p>}
     </div>
   )
 }
@@ -66,13 +75,20 @@ export function NetworkGuard() {
   const { isConnected, chainId } = useAccount()
   const { switchChain, isPending, error } = useSwitchChain()
   if (!isConnected || chainId === chain.id) return null
+  const rpc = chain.rpcUrls.default.http[0]!
+  // wallet_switchEthereumChain first; a wallet that does not know chain 296 gets wallet_addEthereumChain with these exact parameters.
+  const add = () => switchChain({
+    chainId: chain.id,
+    addEthereumChainParameter: { chainName: chain.name, nativeCurrency: chain.nativeCurrency, rpcUrls: [rpc], blockExplorerUrls: [chain.blockExplorers!.default.url] },
+  })
   return (
-    <div className="bg-bad-soft text-bad text-[13px] px-4 py-2 flex flex-wrap items-center justify-between gap-2" role="alert">
-      <span>Your wallet is on chain {chainId ?? "?"}. Bond Desk runs on {chain.name} (chain {chain.id}, RPC {chain.rpcUrls.default.http[0]}).</span>
-      <span className="flex items-center gap-2">
-        {error && <span className="text-[12px]">{error.message.split("\n")[0]}</span>}
-        <Button size="sm" busy={isPending} onClick={() => switchChain({ chainId: chain.id })}>Switch to {chain.name}</Button>
-      </span>
+    <div className="bg-bad-soft text-bad text-[13px] px-4 py-2 flex flex-col gap-1.5" role="alert">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span>Your wallet is on chain {chainId ?? "?"}. Bond Desk runs on {chain.name} (chain {chain.id}).</span>
+        <Button size="sm" busy={isPending} onClick={add}>Switch to {chain.name}</Button>
+      </div>
+      {error && <span className="text-[12px]">{error.message.split("\n")[0]}</span>}
+      <span className="text-[12px] opacity-90">If your wallet cannot add it, add the network by hand: name {chain.name} · chain ID {chain.id} · RPC {rpc} · symbol HBAR · explorer {chain.blockExplorers!.default.url}.</span>
     </div>
   )
 }
