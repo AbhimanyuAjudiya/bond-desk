@@ -166,11 +166,11 @@ the direct-API equivalents of each tool; every value below came from them at the
 | 3 | `getWalletEligibility` | `address` matches; bond 1 `canHold: true` (`kyc-granted`); `hbarSufficientForGas: true` |
 | 4 | `listBonds` | bond 1 `BDB27`, `Active`, yield 505 bps, best ask 990000, best bid 0, maturity 1820569075 (2027-09-10) → remaining life ≈ 1 year → bucket 1–3y |
 | 5 | `getGroupObservations` (`bond_yields_all`, `recent=1`) | `d` 2026-09-10, `CDN.AVG.1YTO3Y.AVG` 3.30 → 330 bps → spread **+175 bps** (also on the row: 2y 3.31, 5y 3.63, 10y 3.94) |
-| 6 | `getBondRisk` (bond 1) | `Active`, coverage 595 bps, `lastVerdict` FREEZE at nonce 2 (observed coverage 610, 2026-09-10T09:57:57Z) |
+| 6 | `getBondRisk` (bond 1) | `Active`, coverage 595 bps, `lastVerdict` WARN at nonce 3 (observed coverage 595, 2026-09-12T01:10:42Z, delivered by the enclave directly); the FREEZE at nonce 2 is older history and no longer the last verdict. From 07:00 UTC on 2026-09-12 the deployed hourly monitor advances the nonce, so expect a higher nonce on the day of the run |
 
 Expected answer: recommend **BDB27 (bond 1)** — yield 5.05 %, ask 990000, +175 bps over the Government of Canada
-1–3 year average yield (3.30 % on 2026-09-10, Bank of Canada), coverage 5.95 %, status Active, last verdict FREEZE at
-nonce 2 disclosed as lifted, HashScan link
+1–3 year average yield (3.30 % on 2026-09-10, Bank of Canada), coverage 5.95 %, status Active, last verdict WARN at
+nonce 3 (or the hourly monitor's latest) disclosed, HashScan link
 <https://hashscan.io/testnet/contract/0x0100526434C821d0df24f6CC60352F830F8b4504>; wallet `0.0.10455958`, 8.53 HBAR,
 gas covered, 4 transactions on record with the newest quoted; no exclusions. Thin coverage and the empty bid side are
 the caveats worth a sentence.
