@@ -194,3 +194,26 @@ and fails the attempt unless its `result` is `SUCCESS`, naming the real result o
 against captured mirror-node JSON for `0.0.10457460` (executed, `SUCCESS`) and `0.0.10457462` (executed,
 `CONTRACT_REVERT_EXECUTED`), the two schedules from this repo's storyline, and the write-up explains why the
 lookup goes through the timestamp and not the transaction id.
+
+The PR grew a second commit on 2026-09-13 after the checker was run against every schedule this repo has
+created since: `HARNESS_SCHEDULE_ID=0x…` with the long-zero address that HIP-1215 `scheduleCall` returns is
+accepted and converted to the entity id, and a schedule that waits for an expiry beyond the wait budget fails at
+once, naming the expiry and `HARNESS_SCHEDULE_TIMEOUT_S`, instead of polling for the whole budget (signature-gated
+schedules are still waited for). Twelve offline tests; `npm test` on the branch is 207 passing.
+
+### How the upstream branch was exercised
+
+Everything below ran on the PR branch (`db7d038`) against a copy of the public `scaffold-hbar` template, with
+the harness's own mock generator pattern; logs are in [`docs/harness-evidence/`](../docs/harness-evidence).
+
+| Run | What it proves | Result |
+|---|---|---|
+| `npm test`, `npm run typecheck`, `npm run test:browser` on `dev` | the baseline the PR builds on | 195 tests, 3 browser tests, clean |
+| `npm test` on the PR branch | the PR itself | 207 tests, clean |
+| [run 1](../docs/harness-evidence/upstream-run1-mock.log), generator in fail mode | ASSERT catches a page without the required text, repairs once, stops at the attempt budget, checkpoints the branch | `FAILED — 1 open`, 2 attempts, 2 s |
+| [run 2](../docs/harness-evidence/upstream-run2-mock.log), `--continue` in pass mode | the loop resumes, SMOKE boots the Next dev server (port 3000 was taken; the harness followed the reported 3001) and Playwright walks `/` and `/learn` | `PASSED — 0 open, 1 fixed` |
+| [run 3](../docs/harness-evidence/upstream-run3-chain.log), CHAIN on testnet, two schedules handed over | an ephemeral signer `0.0.10514381` is funded from the operator, the deploy command prints `0.0.10482928` and `0x…a031b5`, the first is proven `SUCCESS`, the second (`0.0.10498485`, due 10:14:52 UTC that day) fails in one read with the expiry named, SMOKE is skipped, the signer is swept and deleted | `FAILED — 1 open`, the finding the PR exists for |
+| [run 4](../docs/harness-evidence/upstream-run4-chain.log), CHAIN with one executed schedule by address | `0x…9ff4f0` resolves to `0.0.10482928`, is proven `SUCCESS`, SMOKE runs, the signer is swept | `PASSED — no findings` |
+
+The operator paid about 0.74 HBAR across both chain runs; both ephemeral accounts show `CRYPTOCREATEACCOUNT` then
+`CRYPTODELETE` on the mirror node.

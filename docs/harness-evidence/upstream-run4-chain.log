@@ -1,0 +1,44 @@
+[hedera-harness] Preparing harness session — learn-page @ <workspace>
+[hedera-harness] Creating harness branch — from master
+[hedera-harness] Harness branch ready — harness/run-learn-page-b88cce
+[hedera-harness] Run artifacts directory — <workspace>/.harness/runs/2026-09-13T01-26-43-072Z-learn-page
+[hedera-harness] Running host baseline health checks — <workspace>
+[hedera-harness] Baseline command — install
+[hedera-harness] Baseline command finished — install exit=0 durationMs=4
+[hedera-harness] Run started — <workspace>/.harness/runs/2026-09-13T01-26-43-072Z-learn-page (harness/run-learn-page-b88cce)
+[hedera-harness] Using in-place workspace — <workspace>
+[hedera-harness] Product skills vendored into ignored runtime — .harness/runtime/skills (11 skill(s))
+[hedera-harness] Chain signer provisioned — 0.0.10514399 (0x0c35b8051ab93bb6f90f7d6690055714d5db40bb)
+[hedera-harness] Stage 1/4 GENERATE — attempt 1 [opus]
+[hedera-harness] Stage 2/4 ASSERT
+[hedera-harness] Chain deploy: schedules — printf 'HARNESS_SCHEDULE_ID=0x00000000000000000000000000000000009ff4f0
+'
+[hedera-harness] Chain verify: waiting for scheduled transaction(s) 0.0.10482928
+[hedera-harness] Schedule 0.0.10482928 executed at 1789208092.013513993: 0.0.7314364-1789154820-474128339 SUCCESS
+[hedera-harness] Stage 3/4 SMOKE — booting dev server
+[hedera-harness] runtime detected a port conflict; health checks will follow the server's reported Local URL.
+[hedera-harness] Dev server using detected URL http://localhost:3001 (config specified http://localhost:3000)
+[hedera-harness] Attempt 1 PASSED — playwright gate passed (2 routes)
+[hedera-harness] Workspace committed — harness: run attempt 1 passed @ 7a212dfe
+[hedera-harness] Run finished: PASSED — no findings — <workspace>/.harness/runs/2026-09-13T01-26-43-072Z-learn-page/reports/report.json
+[hedera-harness] Chain signer swept — 0.0.10514399
+[hedera-harness] Run runtime cleaned — .harness/runtime, .skill-cache
+[hedera-harness] Run passed — harness/run-learn-page-b88cce
+Run PASSED
+branch=harness/run-learn-page-b88cce
+base=master @ eec5901e
+workspace=<workspace>
+report=<workspace>/.harness/runs/2026-09-13T01-26-43-072Z-learn-page/reports/report.json
+session=<workspace>/.harness/runs/2026-09-13T01-26-43-072Z-learn-page/session.json
+attempts=1/2
+findings=0 open
+cleaned=.harness/runtime, .skill-cache
+mcp=unchanged
+workingTree=clean (consumer-relevant)
+
+The harness did not push, open a PR, merge, delete a branch, or switch branches.
+Optional next steps (run manually):
+  git push -u origin harness/run-learn-page-b88cce
+  gh pr create --base master
+
+Optional before merge: squash harness attempt commits.

@@ -97,7 +97,10 @@ scheduled call ran and its child transaction succeeded.
   `harness/scripts/validate-schedule.sh 0.0.10482965` (the harness's own template contract, executed, child
   succeeded).
 - Upstream: [hedera-dev/hedera-harness#62](https://github.com/hedera-dev/hedera-harness/pull/62), a check that a
-  scheduled transaction executed *and* its child succeeded, with our two schedules as fixtures.
+  scheduled transaction executed *and* its child succeeded, with our schedules as fixtures. Two commits: the
+  check, then support for the address `scheduleCall` returns and a fast failure on expiries beyond the wait
+  budget. Exercised on the PR branch with a mock generator and with a real CHAIN run on testnet; the runs and
+  their logs are in [`harness/README.md`](harness/README.md#how-the-upstream-branch-was-exercised).
 
 ### Chainlink: Best Confidential Workflow
 
