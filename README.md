@@ -20,7 +20,6 @@ Nothing here is real money. Everything runs on Hedera testnet, and every transac
 | Documentation | https://bond-desk.mintlify.site |
 | API reference | https://bond-desk.mintlify.site/api/overview |
 | OpenAPI document | https://wd6nrvmajt.ap-south-1.awsapprunner.com/openapi.json, rendered in a browser and JSON for programs |
-| Demo video | _added with the submission_ |
 | Bazantic gateway (paid API for agents) | [listing on Bazantic](https://bazantic.com/gateways/axuvor5zujgk5hdcydzjdi742m); an unpaid `GET` on https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/bonds answers 402 with the payment challenge (the root path is not a route) |
 | Bazantic Recipe | https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation |
 | Every transaction, in order | [docs/STORYLINE.md](docs/STORYLINE.md) |
