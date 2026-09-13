@@ -19,3 +19,14 @@ api/public/
 
 # Claude Code launch config
 .claude/
+
+# local clones of upstream repos, never committed
+upstream/
+
+# internal notes kept locally, not published: demo script, submission text, early idea and research notes, chart prompts, dashboard click list
+docs/DEMO.md
+docs/SUBMISSION.md
+docs/IDEA.md
+docs/TECHNICAL_REFERENCE.md
+docs/mintlify-charts.md
+api/bazantic/dashboard-steps.md

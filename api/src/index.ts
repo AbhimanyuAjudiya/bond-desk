@@ -231,7 +231,14 @@ app.get("/healthz", async (c) => {
   return c.json({ ok: block !== null, chainId: chain.CHAIN_ID, block, kycDesk: chain.officer !== null })
 })
 
-app.get("/openapi.json", (c) => c.json(openapi(PUBLIC_URL)))
+// A person opening the document in a browser gets it rendered; every program (Accept */* or application/json) gets the JSON.
+const OPENAPI_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Bond Desk API</title></head><body style="margin:0;background:#0f1113">
+<noscript><p style="font:14px system-ui;padding:24px;color:#e6e4de">The rendered reference needs JavaScript. The document itself is <a style="color:#8db4e6" href="/openapi.json">/openapi.json</a>; the same reference with a playground is at <a style="color:#8db4e6" href="https://bond-desk.mintlify.site/api/overview">bond-desk.mintlify.site/api/overview</a>.</p></noscript>
+<script id="api-reference" data-url="/openapi.json" data-configuration='{"theme":"kepler","darkMode":true,"layout":"modern","hideModels":false}'></script>
+<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.28.34"></script>
+</body></html>`
+const wantsHtml = (c: { req: { header: (n: string) => string | undefined } }) => (c.req.header("accept") ?? "").trimStart().startsWith("text/html")
+app.get("/openapi.json", (c) => (wantsHtml(c) ? c.html(OPENAPI_HTML) : c.json(openapi(PUBLIC_URL))))
 app.notFound((c) => c.json({ error: "not-found" }, 404))
 app.onError((e, c) => {
   if (e instanceof chain.Upstream) return c.json({ error: "upstream", detail: e.detail }, 502)

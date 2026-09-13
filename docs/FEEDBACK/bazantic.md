@@ -84,7 +84,7 @@ accepted `none` from 0.8.0 without complaint, which is the right behaviour).
 What *is* reachable today with the 0.8.0 session is the control MCP server the docs describe,
 `https://api.bazantic.com/control-mcp` (bearer = the CLI session token): `bazantic_recipe_get` returned our
 published Recipe's full definition, which is how we recovered the exact `prompt_template` and bindings for
-`api/bazantic/dashboard-steps.md` without a browser. One limit worth naming: `bazantic_gateway_list_tools` answers
+the dashboard click list without a browser. One limit worth naming: `bazantic_gateway_list_tools` answers
 `state: "oversized_inventory"` for our 48-operation mirror-node gateway, so an agent cannot enumerate a large gateway's
 tools through the control server at all; paging, or a `name` filter, would fix it.
 

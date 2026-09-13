@@ -310,7 +310,7 @@ baz curl "$BOC_GATEWAY/valet/observations/group/bond_yields_all/json?recent=1" -
 - The published Recipe: **Best Eligible Hedera Bond Recommendation**,
   <https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation> (see `recipe.md`).
 - The 402 response headers and the `baz curl --verbose` settlement line.
-- Screen recording: `dashboard-steps.md` carries the shot list (both 402s, the Recipe's bound tools, a full run).
+- Screen recording: the shot list (both 402s, the Recipe's bound tools, a full run) lives with the recording notes, outside the repository.
 
 ## 8. Listing copy that still needs the dashboard
 

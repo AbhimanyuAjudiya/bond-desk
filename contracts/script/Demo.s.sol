@@ -15,7 +15,7 @@ import {IATSBond} from "../src/interfaces/IATSBond.sol";
 /// @notice The demo storyline against a live deployment (`deployments/testnet.json`), one entrypoint per beat:
 ///           runApprovals  runIssuerSell  runRejectedBuy  runKycBuy  runCollateral  runCoupon
 ///           runFreeze  runUnfreeze  runRedeemPreview  runStatus
-/// @dev Run each as (the `FS` of docs/DEMO.md)
+/// @dev Run each as (the `FS` of docs/RUNBOOK.md)
 ///        forge script contracts/script/Demo.s.sol:Demo --sig "runKycBuy()" --rpc-url hedera --broadcast --legacy --slow
 ///      Add `--skip-simulation` only to runCoupon when the scheduled run has not fired and it must call `payCoupon`
 ///      by hand: that path reaches the Schedule Service (0x16b, no code in forge's EVM; MockHSS is etched for the

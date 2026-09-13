@@ -3,7 +3,7 @@
 **Published:** <https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation>
 (handle `best-eligible-hedera-bond-recommendation`; the handle is derived from the name and immutable, so the name
 never changes). Recipes are authored in the bazantic.com dashboard; this file is the source text and the operator
-notes, and `dashboard-steps.md` is the click list that puts this version into the published Recipe.
+notes; the click list that put this version into the published Recipe is kept with the recording notes, outside the repository.
 
 Three gateways, all ours, all active (`gateway.md` steps 4–6c). A gateway URL is a subdomain per slug:
 
@@ -195,7 +195,7 @@ Run 1's answer is the published `output_example`.
 
 ### Republished, 2026-09-12 06:43 UTC (three services, seven bindings)
 
-Applied through the control MCP with the CLI session (`dashboard-steps.md`, status note): unpublish at 06:43:41,
+Applied through the control MCP with the CLI session (status note): unpublish at 06:43:41,
 update with the four fields of `recipe-update.json` at 06:43:42, publish at 06:43:43 with live binding validation.
 `GET https://api.bazantic.com/v1/recipes/best-eligible-hedera-bond-recommendation` now returns the three-service
 description and the hand-derived `output_example`; the dashboard test runs below replace that example with a real
@@ -232,4 +232,4 @@ thin coverage and the empty bid side. Direct-API transcripts for the A/B arms ar
   `RiskGate.submit` needs an EIP-712 signature from the enclave key — so a bond carries its last FREEZE verdict
   forever. Gating on the verdict would disqualify the bond permanently after one demo freeze.
 - If the demo needs a guaranteed freeze, run the `CRE_BOND_FREEZE_BPS=99999` simulation and relay the verdict
-  (`docs/DEMO.md`, segment 5) before asking the agent the Recipe question; the unfreeze comes after.
+  (the demo's freeze beat) before asking the agent the Recipe question; the unfreeze comes after.

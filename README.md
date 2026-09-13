@@ -18,12 +18,12 @@ Nothing here is real money. Everything runs on Hedera testnet, and every transac
 |---|---|
 | Live app | https://wd6nrvmajt.ap-south-1.awsapprunner.com |
 | Documentation | https://bond-desk.mintlify.site |
-| API document (OpenAPI) | https://wd6nrvmajt.ap-south-1.awsapprunner.com/openapi.json |
+| API reference | https://bond-desk.mintlify.site/api/overview |
+| OpenAPI document | https://wd6nrvmajt.ap-south-1.awsapprunner.com/openapi.json, rendered in a browser and JSON for programs |
 | Demo video | _added with the submission_ |
-| Bazantic gateway (paid API for agents) | https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com |
+| Bazantic gateway (paid API for agents) | [listing on Bazantic](https://bazantic.com/gateways/axuvor5zujgk5hdcydzjdi742m); an unpaid `GET` on https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/bonds answers 402 with the payment challenge (the root path is not a route) |
 | Bazantic Recipe | https://bazantic.com/recipes/best-eligible-hedera-bond-recommendation |
 | Every transaction, in order | [docs/STORYLINE.md](docs/STORYLINE.md) |
-| Demo script | [docs/DEMO.md](docs/DEMO.md) |
 
 ![Architecture: the contracts on Hedera, the enclave that signs verdicts, and the ways in](mintlify/images/chart-architecture.png)
 
@@ -269,7 +269,6 @@ The full list, and why a relayed verdict is the design rather than a workaround:
 - [`docs/STORYLINE.md`](docs/STORYLINE.md): every beat, in order, with the transaction that proves it, including
   the two bugs testnet taught us (a scheduled coupon that ran out of gas, and one that fired two seconds early).
 - [`docs/architecture.md`](docs/architecture.md): the system and verdict diagrams.
-- [`docs/SUBMISSION.md`](docs/SUBMISSION.md): what the ETHGlobal form says.
 - [`docs/FEEDBACK/`](docs/FEEDBACK): notes for the Hedera, Chainlink and Bazantic teams.
 
 License: Apache-2.0.

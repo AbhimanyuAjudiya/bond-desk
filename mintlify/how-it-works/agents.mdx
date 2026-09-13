@@ -31,7 +31,7 @@ An unpaid request gets a 402 with the payment challenge:
 curl -i https://axuvor5zujgk5hdcydzjdi742m.bazgateway.com/bonds | head -12
 ```
 
-The gateway exposes exactly these six operations. The newer routes on the API (verdict history, the activity
+The gateway routes exactly these six operations, so its root path answers 404; `/bonds` is the first door, and the [listing on Bazantic](https://bazantic.com/gateways/axuvor5zujgk5hdcydzjdi742m) is the page for people. The newer routes on the API (verdict history, the activity
 feed and the testnet KYC desk) are deliberately outside the paid surface. The KYC desk in particular stays a
 same-origin call from the app, not a marketplace tool.
 
