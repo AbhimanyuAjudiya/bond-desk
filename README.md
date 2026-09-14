@@ -138,6 +138,9 @@ scoring window, repays or tops up from inside the enclave.
   [`0x22fe…64a9`](https://sepolia.etherscan.io/tx/0x22feaf45d88d5ffada8b10a55a4561e605326218d592d26d81e52e1977fe64a9).
 - Deployed as `liquidation-protection-production`, a `SUCCESS` row every 30 seconds; the record and how the
   position is defended: [`docs/cre-evidence/challenge.md`](docs/cre-evidence/challenge.md).
+- The live scoring run on 14 September, with every intervention's execution id and transaction: the
+  [live-run section](docs/cre-evidence/challenge.md#live-run-14-september-2026-written-after-the-window-closed-no-workflow-change-since-the-deadline)
+  of the same file.
 
 ### Bazantic: Best Recipe that uses sponsor APIs
 
